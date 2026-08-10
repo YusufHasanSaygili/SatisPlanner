@@ -6,18 +6,21 @@
 				"ClassName": "Desc_SP_Ore_C",
 				"mDisplayName": "Synthetic Ore",
 				"mDescription": "Synthetic fixture input",
+				"mSmallIcon": "Texture2D /Game/Synthetic/Resource/Ore/UI/IconDesc_SP_Ore_256.IconDesc_SP_Ore_256",
 				"mForm": "RF_SOLID"
 			},
 			{
 				"ClassName": "Desc_SP_Water_C",
 				"mDisplayName": "Synthetic Water",
 				"mDescription": "Synthetic fixture fluid",
+				"mSmallIcon": "Texture2D /Game/Synthetic/Resource/Water/UI/IconDesc_SP_Water_256.IconDesc_SP_Water_256",
 				"mForm": "RF_LIQUID"
 			},
 			{
 				"ClassName": "Desc_SP_Plate_C",
 				"mDisplayName": "Synthetic Plate",
 				"mDescription": "Synthetic fixture output",
+				"mSmallIcon": "Texture2D /Game/Synthetic/Resource/Plate/UI/IconDesc_SP_Plate_256.IconDesc_SP_Plate_256",
 				"mForm": "RF_SOLID"
 			}
 		]

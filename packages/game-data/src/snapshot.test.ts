@@ -7,6 +7,7 @@ import {
 	importDocsSnapshot,
 	prepareCatalogActivation,
 	rollbackCatalogActivation,
+	validateCatalogSnapshot,
 	verifyCatalogSnapshotIntegrity,
 } from "./snapshot";
 import { encodeUtf16 } from "./test-helpers";
@@ -39,6 +40,14 @@ function changedSnapshot(current: CatalogSnapshot): CatalogSnapshot {
 }
 
 describe("catalog snapshot diff and activation", () => {
+	it("rejects the pre-icon catalog schema so it is re-imported instead of silently upgraded", async () => {
+		const current = await baseSnapshot();
+		const legacy = { ...current, schemaVersion: 1 } as unknown as CatalogSnapshot;
+		expect(validateCatalogSnapshot(legacy)).toContainEqual(
+			expect.objectContaining({ code: "INVALID_SNAPSHOT", path: "$.schemaVersion" }),
+		);
+	});
+
 	it("reports added and changed recipes deterministically", async () => {
 		const current = await baseSnapshot();
 		const next = changedSnapshot(current);

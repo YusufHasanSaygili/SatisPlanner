@@ -267,6 +267,7 @@ export function normalizeDocs(parsed: ParsedDocs): CatalogNormalizationResult {
 					id: classId,
 					displayName: rawString(entry.mDisplayName) || classId,
 					description: rawString(entry.mDescription),
+					iconAssetPath: rawString(entry.mSmallIcon) || null,
 					form,
 					materialForm,
 				},

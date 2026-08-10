@@ -13,4 +13,8 @@ export * from "./discovery";
 export * from "./docs-parser";
 export * from "./encoding";
 export * from "./errors";
+export * from "./icon-cache";
+export * from "./icon-image";
+export * from "./icon-resolver";
+export * from "./icon-types";
 export * from "./snapshot";

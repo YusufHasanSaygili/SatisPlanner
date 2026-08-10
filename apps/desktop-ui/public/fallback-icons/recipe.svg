@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" role="img" aria-label="Generic recipe">
+  <rect width="48" height="48" rx="11" fill="#1b2936"/>
+  <circle cx="13" cy="15" r="5" fill="#64859d" stroke="#dce8f0" stroke-width="2"/>
+  <circle cx="13" cy="33" r="5" fill="#64859d" stroke="#dce8f0" stroke-width="2"/>
+  <path d="M20 15h7c5 0 8 3 8 8v4m-15 6h7c5 0 8-3 8-8" fill="none" stroke="#f0b65d" stroke-linecap="round" stroke-width="2.5"/>
+  <path d="m32 24 3 4 3-4" fill="none" stroke="#f0b65d" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"/>
+</svg>
