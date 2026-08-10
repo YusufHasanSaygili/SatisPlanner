@@ -42,6 +42,8 @@ Observed results:
 - controlled lint, typecheck and unit-test failures were rejected as expected;
 - Rust format and clippy with warnings-as-errors passed;
 - release-mode Windows binary built at `src-tauri/target/release/satisplanner.exe`;
+- the original SatisPlanner SVG produced the required PNG/ICNS/ICO desktop icon
+  inputs for cross-platform Tauri compilation;
 - the clean-checkout binary started successfully and remained running until the
   smoke harness stopped it.
 
