@@ -14,15 +14,17 @@ Audited upstream commit'i yeniden üretilebilir baseline olarak sabitlemek ve re
 
 ## Slice acceptance
 
-- Upstream SHA immutable tag ile kaydedilmiş.
-- Build/behavior/save baseline raporu mevcut.
-- Korunacak davranışlar ve kaldırılabilecek teknik borç listesi mevcut.
-- ADR-001 accepted veya rejected olarak kanıtla güncellenmiş.
-- Eski kod silinmemiş.
+- [x] Upstream SHA immutable tag ile kaydedilmiş.
+- [x] Build/behavior/save baseline raporu mevcut.
+- [x] Korunacak davranışlar ve kaldırılabilecek teknik borç listesi mevcut.
+- [x] ADR-001 accepted veya rejected olarak kanıtla güncellenmiş.
+- [x] Eski kod silinmemiş.
 
 ## Test kapısı
 
 Desktop build smoke, örnek save round-trip, iki graph propagation characterization testi.
+
+**Sonuç:** PASS — Ayrıntılı kanıt: `docs/baseline/SLICE-00-VERIFICATION.md`.
 
 ## Zorunlu release + bildirim + kullanıcı onayı
 
