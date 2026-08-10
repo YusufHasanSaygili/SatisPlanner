@@ -4,7 +4,7 @@ Offline-first, graph-based desktop factory planner for Satisfactory 1.2.
 
 > **Development status:** Slice 01 foundation is implemented on the
 > `slice/01-foundation` branch. The React/Tauri shell, workspace packages,
-> native contract and quality gates are ready for `v0.2.0` verification.
+> native contract and quality gates are available in the `v0.2.1` release.
 
 [![SatisPlanner Quality](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml/badge.svg)](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml)
 
@@ -26,7 +26,7 @@ SatisPlanner will let players model the factory they will actually build:
 The full scope and the 16-slice delivery roadmap are in the
 [development plan](SatisPlanner-development-plan/00-MASTER-PLAN.md).
 
-## Current milestone: v0.2.0
+## Current milestone: v0.2.1
 
 Slice 01 turns the accepted rewrite decision into a production workspace:
 
