@@ -72,7 +72,7 @@ jobs:
           ${{ github.event.repository.name }}-macos-${{ inputs.version }}.zip
           --repo ${{ github.repository }}
           -F release_note.txt
-          -t "Ficsit Companion v${{ inputs.version }}"
+          -t "SatisPlanner v${{ inputs.version }}"
         env:
           GH_TOKEN: ${{ github.token }}
 

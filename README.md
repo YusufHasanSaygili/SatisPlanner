@@ -1,117 +1,123 @@
-<h1 align="center" style="margin-top: 0px;">Ficsit Companion</h1>
+# SatisPlanner
 
-<p align="center">A node-based Satisfactory production planner</p>
+Offline-first, graph-based desktop factory planner for Satisfactory 1.2.
 
-<div align="center">
-    <img src="https://github.com/adepierre/ficsit-companion/actions/workflows/build.yaml/badge.svg" alt="Build status">
-    <a href="https://discord.gg/JntZTZehQB" target="_blank"><img src="https://badgen.net/badge/icon/Discord?icon=discord&label" alt="Discord link"></a>
-    <a href="https://adepierre.github.io/ficsit-companion/" target="_blank"><img src="https://badgen.net/badge/%F0%9F%8C%90/Online%20version/blue" alt="Online version"></a>
-    <img src="https://badgen.net/badge/license/MIT/orange" alt="License MIT">
-</div>
+> **Development status:** Slice 00 (upstream baseline and architecture decision)
+> is complete. The SatisPlanner product workspace has not been scaffolded yet;
+> that work belongs to Slice 01 and requires explicit user approval.
 
-<p align="center" style="margin-bottom: 0px !important;">
-  <video width="720" src="https://github.com/user-attachments/assets/7867f428-bc26-46e7-b9dc-9f7dc76c97be" alt="ficsit companion demo video" align="center">
-</p>
+[![Slice 00 verification](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/slice-00-verify.yaml/badge.svg)](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/slice-00-verify.yaml)
 
-Ficsit Companion is a node based production planner for Satisfactory. You can use the online version [here](https://adepierre.github.io/ficsit-companion/) or download a standalone desktop version from the [release page](https://github.com/adepierre/ficsit-companion/releases/latest).
+[Releases](https://github.com/YusufHasanSaygili/SatisPlanner/releases)
 
-## Plans and ideas
+## Product goal
 
-This is a partial list of what *could* eventually be integrated into Ficsit Companion in the future. Please keep in mind that it is mostly developed by one person on free time (and my factory also needs to grow), so there is no timeline and some features may end up never being implemented.
+SatisPlanner will let players model the factory they will actually build:
 
-<details>
-<summary>UI/UX improvements</summary>
+- every production machine is an independent physical instance;
+- clock, Power Shard, Somersloop and standby settings belong to that instance;
+- resource purity, extractor tier, conveyor and pipeline capacities are part of
+  the graph;
+- exact steady-state material flow, power usage and bottlenecks are calculated
+  outside the UI in deterministic domain functions;
+- plans, imported game data and local icon caches remain offline and
+  user-controlled.
 
-Usually, I tend to favor functionnality before look (please don't judge my shoebox factories). As a consequence the UI and web version are currently not very pretty and lots of thing could be improved visually for a better experience.
-</details>
+The full scope and the 16-slice delivery roadmap are in the
+[development plan](SatisPlanner-development-plan/00-MASTER-PLAN.md).
 
-<details>
-<summary>Pin reordering</summary>
+## Current milestone: v0.1.x
 
-Inside a node, in/out pins order is irrelevant. However, being able to reorder them could be helpful to get cleaner layouts with less link crossing overall. Currently a partial solution is implemented: pins are automatically sorted based on the position of the linked node (if any).
-</details>
+Slice 00 established the evidence needed to choose the implementation path:
 
-<details>
-<summary>Color modifiers</summary>
+- immutable upstream baseline: `d5c449adebe335cf326b6cb2d49c106888fc06c8`;
+- Windows desktop build/runtime smoke;
+- executable `.fcs` v7 save and graph-propagation characterization tests;
+- 200-node React Flow performance spike;
+- framework-independent typed domain-command spike;
+- Tauri 2 read-only local JSON selection probe;
+- accepted controlled-rewrite decision in
+  [ADR-001](SatisPlanner-development-plan/decisions/ADR-001-CONTROLLED-REWRITE.md).
 
-Adding the ability to change colors for links/nodes would definitely help having better organized graphs.
-</details>
+Evidence is collected under [docs/baseline](docs/baseline). The React/Tauri
+decision spike lives under [spikes/rewrite](spikes/rewrite); it is not the
+production application workspace.
 
-<details>
-<summary>Automatic tests</summary>
+## Repository layout
 
-This is more a developper thing, but adding automatic tests using the [ImGui Test Engine](https://github.com/ocornut/imgui_test_engine) would be very helpful to speed up development and debugging, avoid regressions etc...
-</details>
-
-<details>
-<summary>In-game integration</summary>
-
-I don't know much about Satisfactory mods, but as this is a C++ project using ImGui, I think it may be possible to have it integrated directly in game as a mod/part of a mod. At the moment this is just an idea though, and it would probably require a lot of tweaking to have it working.
-</details>
-
-<details>
-<summary>Node placing/sorting</summary>
-
-Having a button to automatically sort/place all the nodes on screen to minimize link crossing would be very useful. Not sure how to implement it properly yet though.
-</details>
-
-<details>
-<summary>Automatic planning</summary>
-
-I'm not a fan of fully automatic tools that can generate full optimized production chains, as I think they take away part of the fun of the planning phase. That being said, it could still be useful to add an option to expand a pin with a full production chain. Development-wise, it may be quite hard to implement from scratch, but using a tool like lpsolve could be fairly easy, assuming it's possible to translate Satisfactory constraints into the chosen solver language.
-</details>
-
-<details>
-<summary>Other games support</summary>
-
-The main concept of node editor production planner is not specific to Satisfactory and could be extended to other similar games (Factorio, Dyson Sphere Program...). The only requirement would be the possibility to generate a similar recipes json file (and potentially have images for the items).
-</details>
-
-<details>
-<summary>Image exporter</summary>
-
-Currently, if you want to visualize a previously generated production chain, you need to reopen it inside Ficsit Companion. It means each node takes a lot of space with all the pins. It would be helpful to have an option to export it to a more compact format, potentially an image, where you can easily see everything at a glance. This could either be integrated directly in the app or as a side script reading from a saved file.
-</details>
-
-
-## Building
-
-```bash
-git clone https://github.com/adepierre/ficsit-companion.git
-cd ficsit-companion
-mkdir build
-cd build
-cmake -DCMAKE_BUILD_TYPE=Release -S .. -B .
-cmake --build . --config Release
+```text
+SatisPlanner-development-plan/   Product, architecture and slice/task plans
+docs/baseline/                   Audits, measurements and verification records
+tests/upstream-characterization/ Executable upstream behavior fixtures
+spikes/rewrite/                  Disposable React/Tauri decision spike
+ficsit-companion/                Preserved upstream C++ baseline
+assets/                          Preserved upstream data/artwork baseline
 ```
 
-To build the web version locally you'll need to first install emscripten. Web version will be located inside ``build/web``
-```bash
-git clone https://github.com/adepierre/ficsit-companion.git
-cd ficsit-companion
-mkdir build
-cd build
-/path/to/emscripten/emsdk activate latest
-emcmake cmake -DCMAKE_BUILD_TYPE=Release -S .. -B .
-cmake --build . --config Release
+The `ficsit-companion/` and `assets/` directories remain in the repository only
+to preserve the audited upstream baseline until parity and migration gates are
+passed. They are not the SatisPlanner product source or a game-data source of
+truth.
+
+## Verify Slice 00 locally
+
+### Upstream characterization
+
+Configure `tests/upstream-characterization` with CMake, build it, then run:
+
+```powershell
+ctest --test-dir build/upstream-characterization --output-on-failure
 ```
 
-## Updating
+### Rewrite spike
 
-The recipes are currently up to date with version 1.0 of the game. To update to a different version, one can use the [provided script](scripts/data_extractor.py). It requires having the Docs.json file provided in the game files as well as item icons extracted from the game. For more informations about the Docs.json file you can check the official [wiki page](https://satisfactory.wiki.gg/wiki/Community_resources) and for icons extraction you can refer to [this tutorial](https://docs.ficsit.app/satisfactory-modding/latest/Development/ExtractGameFiles.html).
+```powershell
+cd spikes/rewrite
+pnpm install --frozen-lockfile
+pnpm format:check
+pnpm lint
+pnpm test
+pnpm build
+pnpm benchmark
+```
 
-Using FModel, you'll have to extract at least these folders for icons:
-- FactoryGame/Content/FactoryGame/Resource/Parts
-- FactoryGame/Content/FactoryGame/Resource/RawResources
-- FactoryGame/Content/FactoryGame/Resource/Environment/Crystal
-- FactoryGame/Content/FactoryGame/Resource/Environment/AnimalParts
-- FactoryGame/Content/FactoryGame/Equipment
-- FactoryGame/Content/FactoryGame/Prototype/WAT (for somersloop icon)
+The Tauri probe additionally requires the Rust stable MSVC toolchain:
 
-## Credits
+```powershell
+cd spikes/rewrite/src-tauri
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
+cargo test
+cargo check
+```
 
-Thanks to the amazing ocornut and thedmd for their libraries ([Dear ImGui](https://github.com/ocornut/imgui/) and [ImGui Node Editor](https://github.com/thedmd/imgui-node-editor) respectively).
+## Game data and artwork policy
+
+SatisPlanner releases do not redistribute Coffee Stain Studios game artwork or
+raw `CommunityResources/Docs` dumps. Future versions will read localized game
+data from the user's own installation and keep imported icons in a user-local
+cache. Original generic fallback visuals remain available when local assets are
+missing.
+
+The upstream runtime build artifacts produced during Slice 00 CI are retained
+only as short-lived private build evidence and are not attached to SatisPlanner
+releases because they contain upstream-bundled game assets.
+
+## Upstream attribution
+
+SatisPlanner uses
+[adepierre/ficsit-companion](https://github.com/adepierre/ficsit-companion) as
+an upstream source, behavior, save-format and architecture reference. The
+audited baseline is commit `d5c449a` (upstream tag `v1.2.2`) and remains locally
+tagged as `upstream-d5c449a`.
+
+The upstream project is MIT licensed, Copyright (c) 2024 adepierre. Its license
+and attribution are preserved in [LICENSE](LICENSE). Dear ImGui and ImGui Node
+Editor credits inherited from the baseline are recorded in the baseline
+inventory and will be included in third-party notices before distribution.
 
 ## Disclaimer
 
-Ficsit Companion is not an official Ficsit nor Coffee Stain Studios product. All images comes from Satisfactory and are Coffee Stain Studios intellectual property.
+SatisPlanner is an independent fan-made planning tool. It is not affiliated
+with, endorsed by or an official product of Coffee Stain Studios. Satisfactory
+and related game artwork and names belong to their respective owners.

@@ -32,6 +32,10 @@ Desktop build smoke, örnek save round-trip, iki graph propagation characterizat
 
 ## Delivery Record
 
+Patch correction: Kullanıcı incelemesinde kök README'nin upstream ürün adını
+taşımaya devam ettiği saptandı. Slice 00 yeniden açıldı; SatisPlanner ürün
+kimliği README ve release workflow'unda düzeltilecek ve `v0.1.1` yayımlanacak.
+
 - Branch:
 - Closing SHA:
 - Remote SHA:
