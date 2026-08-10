@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Minimum capability for the Slice 00 read-only Docs selection probe",
+  "windows": ["main"],
+  "permissions": ["core:default", "dialog:allow-open"]
+}
