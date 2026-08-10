@@ -1,0 +1,134 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://satisplanner.dev/schema/factory-plan-v2.schema.json",
+	"title": "SatisPlanner FactoryPlan v2",
+	"type": "object",
+	"required": [
+		"schemaVersion",
+		"planId",
+		"name",
+		"createdAt",
+		"updatedAt",
+		"gameDataSnapshotId",
+		"gameProfile",
+		"nodes",
+		"edges",
+		"viewport",
+		"userMetadata"
+	],
+	"properties": {
+		"schemaVersion": { "const": 2 },
+		"planId": { "$ref": "#/$defs/uuid" },
+		"name": { "type": "string", "minLength": 1 },
+		"createdAt": { "type": "string", "format": "date-time" },
+		"updatedAt": { "type": "string", "format": "date-time" },
+		"gameDataSnapshotId": { "type": "string", "minLength": 1 },
+		"gameProfile": {
+			"type": "object",
+			"required": ["id", "version"],
+			"properties": {
+				"id": { "type": "string", "minLength": 1 },
+				"version": { "type": "string", "minLength": 1 }
+			},
+			"additionalProperties": true
+		},
+		"nodes": { "type": "array", "items": { "$ref": "#/$defs/machineNode" } },
+		"edges": { "type": "array", "items": { "$ref": "#/$defs/transportEdge" } },
+		"viewport": {
+			"type": "object",
+			"required": ["x", "y", "zoom"],
+			"properties": {
+				"x": { "type": "number" },
+				"y": { "type": "number" },
+				"zoom": { "type": "number", "exclusiveMinimum": 0 }
+			},
+			"additionalProperties": true
+		},
+		"userMetadata": { "type": "object" }
+	},
+	"additionalProperties": true,
+	"$defs": {
+		"uuid": {
+			"type": "string",
+			"pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+		},
+		"rational": {
+			"type": "object",
+			"required": ["numerator", "denominator"],
+			"properties": {
+				"numerator": { "type": "string", "pattern": "^[+-]?\\d+$" },
+				"denominator": { "type": "string", "pattern": "^[+-]?0*[1-9]\\d*$" }
+			},
+			"additionalProperties": true
+		},
+		"port": {
+			"type": "object",
+			"required": ["id", "key", "direction", "materialForm", "materialId"],
+			"properties": {
+				"id": { "$ref": "#/$defs/uuid" },
+				"key": { "type": "string", "minLength": 1 },
+				"direction": { "enum": ["input", "output"] },
+				"materialForm": { "enum": ["solid", "fluid"] },
+				"materialId": { "type": "string", "minLength": 1 }
+			},
+			"additionalProperties": true
+		},
+		"machineNode": {
+			"type": "object",
+			"required": [
+				"kind",
+				"id",
+				"buildingId",
+				"recipeId",
+				"displayName",
+				"position",
+				"clockPercent",
+				"powerShardCount",
+				"somersloopCount",
+				"standby",
+				"ports"
+			],
+			"properties": {
+				"kind": { "const": "machine" },
+				"id": { "$ref": "#/$defs/uuid" },
+				"buildingId": { "type": "string", "minLength": 1 },
+				"recipeId": { "type": "string", "minLength": 1 },
+				"displayName": { "type": "string", "minLength": 1 },
+				"position": {
+					"type": "object",
+					"required": ["x", "y"],
+					"properties": { "x": { "type": "number" }, "y": { "type": "number" } },
+					"additionalProperties": true
+				},
+				"clockPercent": { "type": "string" },
+				"powerShardCount": { "type": "integer", "minimum": 0, "maximum": 3 },
+				"somersloopCount": { "type": "integer", "minimum": 0, "maximum": 4 },
+				"standby": { "type": "boolean" },
+				"ports": { "type": "array", "items": { "$ref": "#/$defs/port" } }
+			},
+			"additionalProperties": true
+		},
+		"transportEdge": {
+			"type": "object",
+			"required": [
+				"id",
+				"fromPortId",
+				"toPortId",
+				"medium",
+				"itemOrFluidId",
+				"requestedRate",
+				"actualRate"
+			],
+			"properties": {
+				"id": { "$ref": "#/$defs/uuid" },
+				"fromPortId": { "$ref": "#/$defs/uuid" },
+				"toPortId": { "$ref": "#/$defs/uuid" },
+				"medium": { "enum": ["conveyor", "pipeline", "virtual"] },
+				"itemOrFluidId": { "type": "string", "minLength": 1 },
+				"requestedRate": { "$ref": "#/$defs/rational" },
+				"actualRate": { "$ref": "#/$defs/rational" }
+			},
+			"additionalProperties": true
+		}
+	}
+}

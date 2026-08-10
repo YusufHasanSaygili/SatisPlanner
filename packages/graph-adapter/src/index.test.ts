@@ -1,10 +1,53 @@
+import type { FactoryPlanV2 } from "@satisplanner/domain";
 import { describe, expect, it } from "vitest";
-import { createFoundationCanvasNodes } from "./index";
+import { projectFactoryPlan } from "./index";
 
-describe("graph adapter foundation", () => {
-	it("projects a view-only placeholder with a stable identity", () => {
-		const nodes = createFoundationCanvasNodes();
-		expect(nodes).toHaveLength(1);
-		expect(nodes[0]?.id).toBe("foundation-placeholder");
+const plan: FactoryPlanV2 = {
+	schemaVersion: 2,
+	planId: "00000000-0000-4000-8000-000000000001",
+	name: "Projection test",
+	createdAt: "2026-08-11T00:00:00.000Z",
+	updatedAt: "2026-08-11T00:00:00.000Z",
+	gameDataSnapshotId: "fallback-graph-catalog-v1",
+	gameProfile: { id: "satisfactory", version: "1.2" },
+	nodes: [
+		{
+			kind: "machine",
+			id: "00000000-0000-4000-8000-000000000010",
+			buildingId: "Build_SmelterMk1_C",
+			recipeId: "Recipe_IronIngot_C",
+			displayName: "Smelter · Iron Ingot",
+			position: { x: 40, y: 80 },
+			clockPercent: "100.0000",
+			powerShardCount: 0,
+			somersloopCount: 0,
+			standby: false,
+			ports: [
+				{
+					id: "00000000-0000-4000-8000-000000000011",
+					key: "output-0",
+					direction: "output",
+					materialForm: "solid",
+					materialId: "Desc_IronIngot_C",
+				},
+			],
+		},
+	],
+	edges: [],
+	viewport: { x: 0, y: 0, zoom: 1 },
+	userMetadata: {},
+};
+
+describe("graph adapter", () => {
+	it("projects immutable domain graph state without becoming the source of truth", () => {
+		const projection = projectFactoryPlan(plan, new Set([plan.nodes[0]?.id as string]));
+		expect(projection.nodes).toHaveLength(1);
+		expect(projection.nodes[0]).toMatchObject({
+			id: plan.nodes[0]?.id,
+			type: "machine",
+			position: { x: 40, y: 80 },
+			selected: true,
+		});
+		expect(projection.nodes[0]?.data.outputs[0]?.materialId).toBe("Desc_IronIngot_C");
 	});
 });

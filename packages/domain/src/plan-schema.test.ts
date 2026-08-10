@@ -5,13 +5,13 @@ import {
 	parseFactoryPlan,
 	PlanMigrationRegistry,
 	serializeFactoryPlan,
-	type FactoryPlanV1,
+	type FactoryPlanV2,
 	type JsonObject,
 	validateFactoryPlan,
 } from "./plan-schema";
 
 const fixtureJson = readFileSync(
-	new URL("./fixtures/factory-plan-v1.json", import.meta.url),
+	new URL("./fixtures/factory-plan-v2.json", import.meta.url),
 	"utf8",
 );
 
@@ -25,14 +25,14 @@ function firstNode(fixture: Record<string, unknown>): Record<string, unknown> {
 	return node;
 }
 
-describe("FactoryPlan v1 schema", () => {
+describe("FactoryPlan v2 schema", () => {
 	it("ships a versioned JSON Schema artifact", () => {
 		const schema = JSON.parse(
-			readFileSync(new URL("../schema/factory-plan-v1.schema.json", import.meta.url), "utf8"),
+			readFileSync(new URL("../schema/factory-plan-v2.schema.json", import.meta.url), "utf8"),
 		) as Record<string, unknown>;
 		expect(schema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
-		expect(schema.$id).toBe("https://satisplanner.dev/schema/factory-plan-v1.schema.json");
-		expect(FACTORY_PLAN_SCHEMA_VERSION).toBe(1);
+		expect(schema.$id).toBe("https://satisplanner.dev/schema/factory-plan-v2.schema.json");
+		expect(FACTORY_PLAN_SCHEMA_VERSION).toBe(2);
 	});
 
 	it("round-trips to byte-stable canonical JSON and preserves unknown fields", () => {
@@ -111,7 +111,7 @@ describe("FactoryPlan v1 schema", () => {
 		});
 		for (const [version, code] of [
 			[0, "MISSING_MIGRATION"],
-			[2, "UNSUPPORTED_SCHEMA_VERSION"],
+			[3, "UNSUPPORTED_SCHEMA_VERSION"],
 		] as const) {
 			const fixture = validFixture();
 			fixture.schemaVersion = version;
@@ -119,6 +119,19 @@ describe("FactoryPlan v1 schema", () => {
 			expect(result.ok).toBe(false);
 			if (!result.ok) expect(result.issues[0]?.code).toBe(code);
 		}
+	});
+
+	it("migrates the canonical v1 fixture with deterministic graph defaults", () => {
+		const legacy = readFileSync(
+			new URL("./fixtures/factory-plan-v1.json", import.meta.url),
+			"utf8",
+		);
+		const result = parseFactoryPlan(legacy);
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		expect(result.value.schemaVersion).toBe(2);
+		expect(result.value.nodes[0]?.position).toEqual({ x: 80, y: 80 });
+		expect(result.value.nodes[0]?.ports[0]?.materialId).toBe("unresolved:input-0");
 	});
 
 	it("provides a sequential migration registry with fixture-friendly registration", () => {
@@ -129,13 +142,15 @@ describe("FactoryPlan v1 schema", () => {
 				return { ...plan, schemaVersion: 2, migratedByTest: true } as JsonObject;
 			},
 		});
-		const migrated = registry.migrate(validFixture() as JsonObject);
+		const legacy = validFixture();
+		legacy.schemaVersion = 1;
+		const migrated = registry.migrate(legacy as JsonObject);
 		expect(migrated.schemaVersion).toBe(2);
 		expect(migrated.migratedByTest).toBe(true);
 	});
 
 	it("rejects serialization of invalid typed input", () => {
-		const fixture = validFixture() as unknown as FactoryPlanV1;
+		const fixture = validFixture() as unknown as FactoryPlanV2;
 		(fixture as unknown as Record<string, unknown>).name = "";
 		expect(() => serializeFactoryPlan(fixture)).toThrowError(
 			expect.objectContaining({ code: "INVALID_PLAN", path: "$.name" }),

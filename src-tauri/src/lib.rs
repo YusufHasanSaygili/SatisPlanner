@@ -135,7 +135,7 @@ mod tests {
         assert_eq!(response_json["requestId"], "request-1");
         assert_eq!(response_json["ok"], true);
         assert_eq!(response_json["data"]["applicationName"], "SatisPlanner");
-        assert_eq!(response_json["data"]["applicationVersion"], "0.5.0");
+        assert_eq!(response_json["data"]["applicationVersion"], "0.6.0");
         assert_eq!(response_json["data"]["runtime"], "desktop-native");
         assert!(response_json.get("error").is_none());
     }

@@ -78,6 +78,9 @@ importers:
 
   packages/graph-adapter:
     dependencies:
+      '@satisplanner/domain':
+        specifier: workspace:*
+        version: link:../domain
       '@xyflow/react':
         specifier: 12.11.2
         version: 12.11.2(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)

@@ -13,6 +13,7 @@ export * from "./discovery";
 export * from "./docs-parser";
 export * from "./encoding";
 export * from "./errors";
+export * from "./fallback-graph-catalog";
 export * from "./icon-cache";
 export * from "./icon-image";
 export * from "./icon-resolver";
