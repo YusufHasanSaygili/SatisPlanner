@@ -36,12 +36,12 @@ Patch correction: Kullanıcı incelemesinde kök README'nin upstream ürün adı
 taşımaya devam ettiği saptandı. Slice 00 yeniden açıldı; SatisPlanner ürün
 kimliği README ve release workflow'unda düzeltilecek ve `v0.1.1` yayımlanacak.
 
-- Branch:
-- Closing SHA:
-- Remote SHA:
-- Tag:
-- GitHub Release URL:
-- CI:
-- Codex notification:
-- User approval:
-- Tarih:
+- Branch: `slice/00-upstream-baseline`
+- Closing SHA: `ef4f7d57388e8b9a9e584fc3d74fe91baa9165cf`
+- Remote SHA: `ef4f7d57388e8b9a9e584fc3d74fe91baa9165cf`
+- Tag: `v0.1.1` (`v0.1.0` README product-identity correction ile superseded)
+- GitHub Release URL: https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v0.1.1
+- CI: PASS — https://github.com/YusufHasanSaygili/SatisPlanner/actions/runs/31346575310
+- Codex notification: Gönderildi; `v0.1.1` düzeltmesi ve onay kapısı bildirildi.
+- User approval: `Slice 2 ye geç`
+- Tarih: 2026-08-10
