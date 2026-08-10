@@ -1,0 +1,53 @@
+{
+	"schemaVersion": 1,
+	"planId": "00000000-0000-4000-8000-000000000001",
+	"name": "Slice 02 canonical fixture",
+	"createdAt": "2026-08-10T00:00:00.000Z",
+	"updatedAt": "2026-08-10T00:00:00.000Z",
+	"gameDataSnapshotId": "satisfactory-1.2-fixture",
+	"gameProfile": {
+		"id": "satisfactory",
+		"version": "1.2"
+	},
+	"nodes": [
+		{
+			"kind": "machine",
+			"id": "00000000-0000-4000-8000-000000000002",
+			"buildingId": "Build_ConstructorMk1_C",
+			"recipeId": "Recipe_IronPlate_C",
+			"clockPercent": "100.0000",
+			"powerShardCount": 0,
+			"somersloopCount": 0,
+			"standby": false,
+			"ports": [
+				{
+					"id": "00000000-0000-4000-8000-000000000003",
+					"key": "input-0",
+					"direction": "input",
+					"materialForm": "solid"
+				},
+				{
+					"id": "00000000-0000-4000-8000-000000000004",
+					"key": "output-0",
+					"direction": "output",
+					"materialForm": "solid"
+				}
+			],
+			"futureNodeField": {
+				"preserved": true
+			}
+		}
+	],
+	"edges": [],
+	"viewport": {
+		"x": 0,
+		"y": 0,
+		"zoom": 1
+	},
+	"userMetadata": {
+		"fixture": true
+	},
+	"futureTopLevelField": {
+		"preserved": true
+	}
+}

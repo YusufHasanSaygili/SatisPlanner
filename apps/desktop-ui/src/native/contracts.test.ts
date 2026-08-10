@@ -9,7 +9,7 @@ describe("native/frontend contract", () => {
 			ok: true,
 			data: {
 				applicationName: "SatisPlanner",
-				applicationVersion: "0.2.1",
+				applicationVersion: "0.3.0",
 				runtime: "browser-mock",
 			},
 		});
