@@ -22,7 +22,7 @@ export function createMockNativeAdapter(options: MockNativeOptions = {}): Native
 				ok: true,
 				data: {
 					applicationName: "SatisPlanner",
-					applicationVersion: "0.5.0",
+					applicationVersion: "0.6.0",
 					runtime: "browser-mock",
 				},
 			};

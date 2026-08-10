@@ -3,7 +3,7 @@ import { parseUuid } from "./machine";
 import { Rational, type RationalJson } from "./rational";
 import { ClockPercent } from "./units";
 
-export const FACTORY_PLAN_SCHEMA_VERSION = 1 as const;
+export const FACTORY_PLAN_SCHEMA_VERSION = 2 as const;
 
 export type JsonPrimitive = boolean | number | string | null;
 export type JsonValue = JsonPrimitive | JsonObject | readonly JsonValue[];
@@ -16,26 +16,29 @@ export interface GameProfileV1 {
 	readonly version: string;
 }
 
-export interface MachinePlanPortV1 {
+export interface MachinePlanPortV2 {
 	readonly id: string;
 	readonly key: string;
 	readonly direction: "input" | "output";
 	readonly materialForm: "solid" | "fluid";
+	readonly materialId: string;
 }
 
-export interface MachinePlanNodeV1 {
+export interface MachinePlanNodeV2 {
 	readonly kind: "machine";
 	readonly id: string;
 	readonly buildingId: string;
 	readonly recipeId: string;
+	readonly displayName: string;
+	readonly position: { readonly x: number; readonly y: number };
 	readonly clockPercent: string;
 	readonly powerShardCount: number;
 	readonly somersloopCount: number;
 	readonly standby: boolean;
-	readonly ports: readonly MachinePlanPortV1[];
+	readonly ports: readonly MachinePlanPortV2[];
 }
 
-export interface TransportEdgeV1 {
+export interface TransportEdgeV2 {
 	readonly id: string;
 	readonly fromPortId: string;
 	readonly toPortId: string;
@@ -45,7 +48,7 @@ export interface TransportEdgeV1 {
 	readonly actualRate: RationalJson;
 }
 
-export interface FactoryPlanV1 {
+export interface FactoryPlanV2 {
 	readonly schemaVersion: typeof FACTORY_PLAN_SCHEMA_VERSION;
 	readonly planId: string;
 	readonly name: string;
@@ -53,8 +56,8 @@ export interface FactoryPlanV1 {
 	readonly updatedAt: string;
 	readonly gameDataSnapshotId: string;
 	readonly gameProfile: GameProfileV1;
-	readonly nodes: readonly MachinePlanNodeV1[];
-	readonly edges: readonly TransportEdgeV1[];
+	readonly nodes: readonly MachinePlanNodeV2[];
+	readonly edges: readonly TransportEdgeV2[];
 	readonly viewport: {
 		readonly x: number;
 		readonly y: number;
@@ -70,7 +73,7 @@ export interface PlanValidationIssue {
 }
 
 export type ParseFactoryPlanResult =
-	| { readonly ok: true; readonly value: FactoryPlanV1 }
+	| { readonly ok: true; readonly value: FactoryPlanV2 }
 	| { readonly ok: false; readonly issues: readonly PlanValidationIssue[] };
 
 export interface PlanMigration {
@@ -257,6 +260,12 @@ function validateMachineNode(
 	}
 	requireString(node.buildingId, `${path}.buildingId`, issues);
 	requireString(node.recipeId, `${path}.recipeId`, issues);
+	requireString(node.displayName, `${path}.displayName`, issues);
+	const position = requireRecord(node.position, `${path}.position`, issues);
+	if (position) {
+		requireFiniteNumber(position.x, `${path}.position.x`, issues);
+		requireFiniteNumber(position.y, `${path}.position.y`, issues);
+	}
 
 	let clock: ClockPercent | undefined;
 	if (typeof node.clockPercent !== "string") {
@@ -314,6 +323,7 @@ function validateMachineNode(
 		if (port.materialForm !== "solid" && port.materialForm !== "fluid") {
 			issue(issues, "INVALID_PLAN", `${portPath}.materialForm`, "Expected solid or fluid.");
 		}
+		requireString(port.materialId, `${portPath}.materialId`, issues);
 	}
 }
 
@@ -483,7 +493,41 @@ export class PlanMigrationRegistry {
 	}
 }
 
-export const planMigrationRegistry = new PlanMigrationRegistry();
+export const planMigrationRegistry = new PlanMigrationRegistry().register({
+	fromVersion: 1,
+	toVersion: 2,
+	migrate(plan) {
+		const nodes = Array.isArray(plan.nodes)
+			? plan.nodes.map((rawNode, index) => {
+					if (!isRecord(rawNode)) return rawNode;
+					const ports = Array.isArray(rawNode.ports)
+						? rawNode.ports.map((rawPort) => {
+								if (!isRecord(rawPort)) return rawPort;
+								return {
+									...rawPort,
+									materialId:
+										typeof rawPort.materialId === "string"
+											? rawPort.materialId
+											: `unresolved:${String(rawPort.key ?? "port")}`,
+								};
+							})
+						: rawNode.ports;
+					return {
+						...rawNode,
+						displayName:
+							typeof rawNode.displayName === "string"
+								? rawNode.displayName
+								: String(rawNode.buildingId ?? "Unresolved machine"),
+						position: isRecord(rawNode.position)
+							? rawNode.position
+							: { x: 80 + index * 280, y: 80 },
+						ports,
+					};
+				})
+			: plan.nodes;
+		return { ...plan, schemaVersion: 2, nodes } as JsonObject;
+	},
+});
 
 export function parseFactoryPlan(
 	input: string | unknown,
@@ -521,10 +565,10 @@ export function parseFactoryPlan(
 	}
 	const issues = validateFactoryPlan(migrated);
 	if (issues.length > 0) return { ok: false, issues };
-	return { ok: true, value: cloneJson(migrated) as unknown as FactoryPlanV1 };
+	return { ok: true, value: cloneJson(migrated) as unknown as FactoryPlanV2 };
 }
 
-export function serializeFactoryPlan(plan: FactoryPlanV1): string {
+export function serializeFactoryPlan(plan: FactoryPlanV2): string {
 	const result = parseFactoryPlan(plan);
 	if (!result.ok) {
 		const first = result.issues[0];

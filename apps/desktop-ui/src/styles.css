@@ -12,13 +12,17 @@
 
 body {
 	margin: 0;
-	min-width: 980px;
-	min-height: 640px;
+	min-width: 1080px;
+	min-height: 680px;
 }
 
 button,
 input {
 	font: inherit;
+}
+
+button {
+	color: inherit;
 }
 
 .app-shell {
@@ -78,7 +82,7 @@ input {
 
 .workspace {
 	display: grid;
-	grid-template-columns: 260px minmax(0, 1fr) 280px;
+	grid-template-columns: 292px minmax(0, 1fr) 320px;
 	min-height: 0;
 }
 
@@ -120,8 +124,14 @@ input {
 	padding: 10px 11px;
 	border: 1px solid #314256;
 	border-radius: 7px;
-	color: #8fa3b8;
+	color: #e9eef4;
 	background: #101820;
+}
+
+input:focus-visible,
+button:focus-visible {
+	outline: 2px solid #6db6e8;
+	outline-offset: 2px;
 }
 
 .empty-state {
@@ -161,21 +171,173 @@ input {
 	height: 32px;
 }
 
+.catalog-meta {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin: 18px 2px 8px;
+	color: #b9c8d5;
+	font-size: 12px;
+	font-weight: 700;
+}
+
+.catalog-meta small,
+.catalog-policy {
+	color: #71879a;
+	font-size: 10px;
+	font-weight: 500;
+}
+
+.catalog-list {
+	display: grid;
+	gap: 7px;
+}
+
+.catalog-entry {
+	display: grid;
+	grid-template-columns: 34px minmax(0, 1fr);
+	gap: 10px;
+	align-items: center;
+	width: 100%;
+	padding: 9px;
+	border: 1px solid #2d3e4f;
+	border-radius: 8px;
+	background: #111922;
+	text-align: left;
+	cursor: grab;
+}
+
+.catalog-entry:hover {
+	border-color: #4f7593;
+	background: #182430;
+}
+
+.catalog-entry:active {
+	cursor: grabbing;
+}
+
+.catalog-entry img {
+	width: 34px;
+	height: 34px;
+}
+
+.catalog-entry span,
+.catalog-entry strong,
+.catalog-entry small {
+	display: block;
+	min-width: 0;
+}
+
+.catalog-entry strong {
+	font-size: 12px;
+}
+
+.catalog-entry small {
+	overflow: hidden;
+	margin-top: 4px;
+	color: #71879a;
+	font-size: 9px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.catalog-policy {
+	margin: 12px 2px 0;
+	line-height: 1.45;
+}
+
 .canvas-panel {
+	position: relative;
 	min-width: 0;
 	min-height: 0;
 }
 
 .react-flow__node {
-	width: 220px;
+	width: 240px;
+	border: 0;
+	border-radius: 10px;
+	background: transparent;
+	box-shadow: none;
+}
+
+.machine-node {
+	min-height: 118px;
 	padding: 14px;
 	border: 1px solid #46627b;
-	border-radius: 9px;
+	border-radius: 10px;
 	color: #e9eef4;
 	background: #1b2936;
 	box-shadow: 0 12px 30px rgb(0 0 0 / 22%);
-	font-size: 12px;
-	font-weight: 700;
+}
+
+.machine-node.selected {
+	border-color: #6db6e8;
+	box-shadow:
+		0 0 0 2px rgb(109 182 232 / 22%),
+		0 12px 30px rgb(0 0 0 / 25%);
+}
+
+.machine-node-title {
+	font-size: 13px;
+	font-weight: 800;
+}
+
+.machine-node-id {
+	overflow: hidden;
+	margin-top: 4px;
+	color: #71879a;
+	font-size: 9px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.port-list {
+	display: grid;
+	gap: 6px;
+	margin-top: 13px;
+}
+
+.output-ports {
+	margin-top: 8px;
+}
+
+.port-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	color: #bccbd7;
+	font-size: 10px;
+}
+
+.port-row.output {
+	justify-content: flex-end;
+}
+
+.port-row small {
+	color: #71879a;
+	font-size: 9px;
+}
+
+.react-flow__handle {
+	width: 11px;
+	height: 11px;
+	border: 2px solid #dce8f1;
+	background: #4a91bf;
+}
+
+.react-flow__handle.connectingto {
+	background: #e0a24b;
+}
+
+.react-flow__edge-path {
+	stroke: #6db6e8;
+	stroke-width: 2;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+	stroke: #f1bd65;
+	stroke-width: 3;
 }
 
 .react-flow__controls {
@@ -189,6 +351,37 @@ input {
 	border-bottom-color: #34475a;
 	color: #d8e1e9;
 	background: #1a2530;
+}
+
+.react-flow__minimap {
+	border: 1px solid #34475a;
+	border-radius: 7px;
+	background: #111922;
+}
+
+.canvas-diagnostics {
+	position: absolute;
+	right: 14px;
+	bottom: 14px;
+	left: 14px;
+	z-index: 5;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 9px 12px;
+	border: 1px solid #34475a;
+	border-radius: 8px;
+	color: #cbd7e1;
+	background: rgb(17 25 34 / 92%);
+	box-shadow: 0 8px 24px rgb(0 0 0 / 24%);
+	font-size: 11px;
+	pointer-events: none;
+}
+
+.canvas-diagnostics small {
+	color: #6f879a;
+	white-space: nowrap;
 }
 
 .foundation-checks {
@@ -213,4 +406,76 @@ input {
 	margin: 0;
 	color: #cbd5de;
 	font-weight: 700;
+}
+
+.foundation-signal {
+	padding: 3px 7px;
+	border: 1px solid #34475a;
+	border-radius: 999px;
+	color: #7f94a7;
+	font-size: 9px;
+	text-transform: uppercase;
+}
+
+.inspector-card {
+	padding: 14px;
+	border: 1px solid #34475a;
+	border-radius: 9px;
+	background: #121b24;
+}
+
+.inspector-card h2 {
+	margin: 4px 0 12px;
+	font-size: 16px;
+}
+
+.inspector-card > p:not(.eyebrow) {
+	color: #8498ac;
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+.inspector-card dl {
+	display: grid;
+	gap: 8px;
+	margin: 0 0 14px;
+}
+
+.inspector-card dl div {
+	display: grid;
+	gap: 3px;
+	padding-bottom: 7px;
+	border-bottom: 1px solid #273442;
+}
+
+.inspector-card dt {
+	color: #71879a;
+	font-size: 9px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.inspector-card dd {
+	overflow-wrap: anywhere;
+	margin: 0;
+	color: #cbd7e1;
+	font-size: 10px;
+}
+
+.inspector-card button,
+.danger-button {
+	width: 100%;
+	padding: 9px 11px;
+	border: 1px solid #46627b;
+	border-radius: 7px;
+	background: #1b2936;
+	cursor: pointer;
+}
+
+.danger-button {
+	margin-top: 10px;
+	border-color: #714852;
+	color: #f0bcc5;
+	background: #2a1b20;
 }

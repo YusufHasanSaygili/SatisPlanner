@@ -1,0 +1,44 @@
+{
+	"schemaVersion": 2,
+	"planId": "00000000-0000-4000-8000-000000000001",
+	"name": "Slice 05 canonical fixture",
+	"createdAt": "2026-08-11T00:00:00.000Z",
+	"updatedAt": "2026-08-11T00:00:00.000Z",
+	"gameDataSnapshotId": "satisfactory-1.2-fixture",
+	"gameProfile": { "id": "satisfactory", "version": "1.2" },
+	"nodes": [
+		{
+			"kind": "machine",
+			"id": "00000000-0000-4000-8000-000000000002",
+			"buildingId": "Build_ConstructorMk1_C",
+			"recipeId": "Recipe_IronPlate_C",
+			"displayName": "Constructor · Iron Plate",
+			"position": { "x": 80, "y": 80 },
+			"clockPercent": "100.0000",
+			"powerShardCount": 0,
+			"somersloopCount": 0,
+			"standby": false,
+			"ports": [
+				{
+					"id": "00000000-0000-4000-8000-000000000003",
+					"key": "input-0",
+					"direction": "input",
+					"materialForm": "solid",
+					"materialId": "Desc_IronIngot_C"
+				},
+				{
+					"id": "00000000-0000-4000-8000-000000000004",
+					"key": "output-0",
+					"direction": "output",
+					"materialForm": "solid",
+					"materialId": "Desc_IronPlate_C"
+				}
+			],
+			"futureNodeField": { "preserved": true }
+		}
+	],
+	"edges": [],
+	"viewport": { "x": 0, "y": 0, "zoom": 1 },
+	"userMetadata": { "fixture": true },
+	"futureTopLevelField": { "preserved": true }
+}

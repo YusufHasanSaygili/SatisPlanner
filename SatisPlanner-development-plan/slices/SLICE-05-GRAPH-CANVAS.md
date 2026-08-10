@@ -8,9 +8,9 @@ Domain planın görsel projeksiyonu olan drag/drop canvas, typed port connection
 
 ## Task'lar
 
-- [S05-T01 — Library ve drag/drop canvas](../tasks/S05-T01-LIBRARY-CANVAS.md)
-- [S05-T02 — Typed connection validation](../tasks/S05-T02-CONNECTION-VALIDATION.md)
-- [S05-T03 — Selection ve inspector shell](../tasks/S05-T03-INSPECTOR-SHELL.md)
+- [x] [S05-T01 — Library ve drag/drop canvas](../tasks/S05-T01-LIBRARY-CANVAS.md)
+- [x] [S05-T02 — Typed connection validation](../tasks/S05-T02-CONNECTION-VALIDATION.md)
+- [x] [S05-T03 — Selection ve inspector shell](../tasks/S05-T03-INSPECTOR-SHELL.md)
 
 ## Slice acceptance
 

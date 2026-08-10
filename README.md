@@ -2,9 +2,10 @@
 
 Offline-first, graph-based desktop factory planner for Satisfactory 1.2.
 
-> **Development status:** Slice 04 local icon resolution is implemented on the
-> `slice/04-local-icons` branch. Generic fallbacks, read-only extracted sources
-> and an app-owned verified cache form the `v0.5.0` milestone.
+> **Development status:** Slice 05 domain-backed graph UX is implemented on the
+> `slice/05-core-graph-ux` branch. Searchable library drag/drop, typed
+> connections, persisted canvas state and UUID-driven inspectors form the
+> `v0.6.0` milestone.
 
 [![SatisPlanner Quality](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml/badge.svg)](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml)
 
@@ -26,24 +27,21 @@ SatisPlanner will let players model the factory they will actually build:
 The full scope and the 16-slice delivery roadmap are in the
 [development plan](SatisPlanner-development-plan/00-MASTER-PLAN.md).
 
-## Current milestone: v0.5.0
+## Current milestone: v0.6.0
 
-Slice 04 adds a redistribution-safe local icon boundary on top of the Slice 03
-catalog importer:
+Slice 05 turns the application shell into a domain-backed planning canvas:
 
-- allowlisted `/Game` icon-key normalization without arbitrary URL/path output;
-- original generic solid, fluid, building, recipe and unknown SVG fallbacks;
-- platform-neutral folder-picker/read-only source and app-owned cache ports;
-- max-128 WebP processing, atomic manifest writes and source/cache SHA-256
-  provenance;
-- deterministic missing, duplicate, renamed and invalid-image fallback behavior;
-- per-entry invalidation and manifest-only cache clearing;
-- an explicit NO-GO decision for bundled automatic `.pak` extraction;
-- a CI policy gate preventing quarantined game artwork from entering app or
-  release inputs.
+- versioned fallback catalog search by name, aliases, recipe and class id;
+- drag/drop commands that create stable machine and port UUIDs;
+- immutable domain commands for move, viewport, connect, duplicate and delete;
+- FactoryPlan v2 positions/material identities with deterministic v1 migration;
+- output-to-input, item, solid/fluid, medium, self and duplicate edge validation;
+- React Flow node/edge projection with pan, zoom, minimap and typed handles;
+- UUID-driven node, edge, empty and multi-selection inspector states;
+- local round-trip persistence with stale-selection safety.
 
-Local-icon evidence is collected under [docs/local-icons](docs/local-icons).
-Game-data, domain, foundation and baseline evidence remain under their
+Graph UX evidence is collected under [docs/graph-ux](docs/graph-ux). Local
+icons, game-data, domain, foundation and baseline evidence remain under their
 respective documentation directories.
 
 ## Repository layout
@@ -61,6 +59,7 @@ docs/foundation/                  Slice 01 architecture and verification evidenc
 docs/domain/                      Slice 02 domain/schema verification evidence
 docs/game-data/                   Slice 03 import and snapshot verification evidence
 docs/local-icons/                 Slice 04 cache, artwork and extractor evidence
+docs/graph-ux/                    Slice 05 graph UX and persistence evidence
 docs/baseline/                   Audits, measurements and verification records
 tests/upstream-characterization/ Executable upstream behavior fixtures
 spikes/rewrite/                  Disposable React/Tauri decision spike
