@@ -26,7 +26,7 @@ Bir slice'ın kapanış sırası değiştirilemez:
 5. Aktif branch'i remote'a push et.
 6. Remote branch'in local `HEAD` commit SHA'sını içerdiğini doğrula.
 7. Slice için [sürüm eşleme tablosundaki](14-VERSION-RELEASE-APPROVAL-WORKFLOW.md) annotated tag'i oluştur ve GitHub'a push et.
-8. GitHub Release'i yayımla; v0.x sürümlerini pre-release, v1.0.0'ı stable olarak işaretle. Release notes; slice özeti, testler, closing SHA, artifact ve bilinen sorunları içersin.
+8. GitHub Release'i draft/pre-release olmadan yayımla ve en yeni sürümü `Latest` yap. `v0.x` SemVer sürümleri geliştirme/kararsızlık durumunu release notes içinde açıkça belirtir; `v1.0.0` stable'dır. Bu sınıflandırma GitHub ana sayfasındaki Releases kartının sürüm geçmişini görünür tutması için zorunludur. Release notes; slice özeti, testler, closing SHA, artifact ve bilinen sorunları içersin.
 9. Release/CI başarısını ve GitHub URL'sini doğrula.
 10. Aynı Codex görevinde kullanıcıya şu formatta soru gönder: `SatisPlanner vX.Y.Z yayımlandı. Slice N/16 tamamlandı. Sonraki slice'a devam edilsin mi?`
 11. Görevi `WAITING_FOR_USER_APPROVAL` durumunda durdur. Kullanıcı açıkça `evet`, `devam`, `onaylıyorum` veya eşdeğer onay vermeden sonraki slice'a ait hiçbir iş yapma.

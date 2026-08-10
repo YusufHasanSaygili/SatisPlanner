@@ -1,6 +1,6 @@
 # Slice 04 — Yerel Icon Resolver ve Cache
 
-**SatisPlanner milestone:** 5/16 · **Release:** `v0.5.0` (display `0.5`, pre-release)
+**SatisPlanner milestone:** 5/16 · **Release:** `v0.5.0` (display `0.5`, published development)
 
 ## Amaç
 

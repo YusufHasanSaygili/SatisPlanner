@@ -2,9 +2,14 @@
 
 Date: 2026-08-10  
 Branch: `slice/01-foundation`  
-Target release: `v0.2.0`
+Target release: `v0.2.1` (`v0.2.0` preserved as the preceding release)
 
 ## Acceptance results
+
+The `v0.2.1` patch changes GitHub delivery classification from hidden
+pre-release metadata to a published development release marked `Latest`. The
+application foundation is otherwise unchanged; version metadata and the
+release workflow were updated and all gates are rerun.
 
 | Requirement | Result | Evidence |
 |---|---|---|

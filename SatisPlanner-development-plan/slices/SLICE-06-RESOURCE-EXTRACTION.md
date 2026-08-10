@@ -1,6 +1,6 @@
 # Slice 06 — Resource Node ve Extraction
 
-**SatisPlanner milestone:** 7/16 · **Release:** `v0.7.0` (display `0.7`, pre-release)
+**SatisPlanner milestone:** 7/16 · **Release:** `v0.7.0` (display `0.7`, published development)
 
 ## Amaç
 

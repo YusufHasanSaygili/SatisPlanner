@@ -1,6 +1,6 @@
 # Slice 11 — 1.2 Game Profiles ve Localization
 
-**SatisPlanner milestone:** 12/16 · **Release:** `v0.12.0` (display `0.12`, pre-release)
+**SatisPlanner milestone:** 12/16 · **Release:** `v0.12.0` (display `0.12`, published development)
 
 ## Amaç
 

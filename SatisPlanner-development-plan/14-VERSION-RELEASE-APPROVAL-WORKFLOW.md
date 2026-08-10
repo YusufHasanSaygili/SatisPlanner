@@ -8,22 +8,29 @@ Repository açıklaması, uygulama adı, pencere başlığı, package metadata, 
 
 | Milestone | Teknik slice | Display version | SemVer tag | Release türü |
 |---:|---:|---:|---|---|
-| 1/16 | 00 | 0.1 | `v0.1.0` | Pre-release |
-| 2/16 | 01 | 0.2 | `v0.2.0` | Pre-release |
-| 3/16 | 02 | 0.3 | `v0.3.0` | Pre-release |
-| 4/16 | 03 | 0.4 | `v0.4.0` | Pre-release |
-| 5/16 | 04 | 0.5 | `v0.5.0` | Pre-release |
-| 6/16 | 05 | 0.6 | `v0.6.0` | Pre-release |
-| 7/16 | 06 | 0.7 | `v0.7.0` | Pre-release |
-| 8/16 | 07 | 0.8 | `v0.8.0` | Pre-release |
-| 9/16 | 08 | 0.9 | `v0.9.0` | Pre-release |
-| 10/16 | 09 | 0.10 | `v0.10.0` | Pre-release |
-| 11/16 | 10 | 0.11 | `v0.11.0` | Pre-release |
-| 12/16 | 11 | 0.12 | `v0.12.0` | Pre-release |
-| 13/16 | 12 | 0.13 | `v0.13.0` | Pre-release |
-| 14/16 | 13 | 0.14 | `v0.14.0` | Pre-release |
-| 15/16 | 14 | 0.15 | `v0.15.0` | Pre-release |
+| 1/16 | 00 | 0.1 | `v0.1.0` | Published development |
+| 2/16 | 01 | 0.2 | `v0.2.0` | Published development |
+| 3/16 | 02 | 0.3 | `v0.3.0` | Published development |
+| 4/16 | 03 | 0.4 | `v0.4.0` | Published development |
+| 5/16 | 04 | 0.5 | `v0.5.0` | Published development |
+| 6/16 | 05 | 0.6 | `v0.6.0` | Published development |
+| 7/16 | 06 | 0.7 | `v0.7.0` | Published development |
+| 8/16 | 07 | 0.8 | `v0.8.0` | Published development |
+| 9/16 | 08 | 0.9 | `v0.9.0` | Published development |
+| 10/16 | 09 | 0.10 | `v0.10.0` | Published development |
+| 11/16 | 10 | 0.11 | `v0.11.0` | Published development |
+| 12/16 | 11 | 0.12 | `v0.12.0` | Published development |
+| 13/16 | 12 | 0.13 | `v0.13.0` | Published development |
+| 14/16 | 13 | 0.14 | `v0.14.0` | Published development |
+| 15/16 | 14 | 0.15 | `v0.15.0` | Published development |
 | 16/16 | 15 | 1.0 | `v1.0.0` | Stable |
+
+GitHub `pre-release` bayrağı `v0.x` için kullanılmaz. GitHub'ın ana repository
+sayfası pre-release sürümleri Latest/Releases kartında göstermediği için her
+doğrulanmış slice release'i normal published release olarak yayımlanır ve en
+yenisi `Latest` yapılır. `v0.x` sürümlerin geliştirme aşamasında ve kararsız
+olduğu; SemVer majörünün `0` olması, release başlığı ve bilinen sınırlamalarla
+açıkça belirtilir.
 
 ## Slice kapanış state machine'i
 

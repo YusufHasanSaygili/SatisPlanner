@@ -1,6 +1,6 @@
 # Slice 10 — Save, Autosave ve Upstream Migration
 
-**SatisPlanner milestone:** 11/16 · **Release:** `v0.11.0` (display `0.11`, pre-release)
+**SatisPlanner milestone:** 11/16 · **Release:** `v0.11.0` (display `0.11`, published development)
 
 ## Amaç
 

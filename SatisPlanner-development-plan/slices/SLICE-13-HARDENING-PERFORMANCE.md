@@ -1,6 +1,6 @@
 # Slice 13 — Test Sertleştirme ve Performans
 
-**SatisPlanner milestone:** 14/16 · **Release:** `v0.14.0` (display `0.14`, pre-release)
+**SatisPlanner milestone:** 14/16 · **Release:** `v0.14.0` (display `0.14`, published development)
 
 ## Amaç
 

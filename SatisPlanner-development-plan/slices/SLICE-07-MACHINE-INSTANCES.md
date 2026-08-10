@@ -1,6 +1,6 @@
 # Slice 07 — Bağımsız Production Machine Instance'ları
 
-**SatisPlanner milestone:** 8/16 · **Release:** `v0.8.0` (display `0.8`, pre-release)
+**SatisPlanner milestone:** 8/16 · **Release:** `v0.8.0` (display `0.8`, published development)
 
 ## Amaç
 

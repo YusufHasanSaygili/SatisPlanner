@@ -6,7 +6,7 @@ Her büyük slice ayrı acceptance gate, kapanış commit'i, verified GitHub pus
 
 ## Branch modeli
 
-- `main`: daima release edilebilir veya açıkça pre-release etiketli
+- `main`: daima release edilebilir; `v0.x` kararsızlık durumu SemVer ve release notes ile açıkça belirtilir
 - `slice/XX-short-name`: tek büyük slice kapsamı
 - Task commit'leri slice branch'inde olabilir
 - Slice kapanışı PR veya doğrudan yetkili merge politikasıyla `main`e gelir

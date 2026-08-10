@@ -1,6 +1,6 @@
 # Slice 05 — Graph Canvas ve Inspector İskeleti
 
-**SatisPlanner milestone:** 6/16 · **Release:** `v0.6.0` (display `0.6`, pre-release)
+**SatisPlanner milestone:** 6/16 · **Release:** `v0.6.0` (display `0.6`, published development)
 
 ## Amaç
 

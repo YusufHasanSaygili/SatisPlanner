@@ -1,6 +1,6 @@
 # Slice 02 — Domain, Units ve Save Schema
 
-**SatisPlanner milestone:** 3/16 · **Release:** `v0.3.0` (display `0.3`, pre-release)
+**SatisPlanner milestone:** 3/16 · **Release:** `v0.3.0` (display `0.3`, published development)
 
 ## Amaç
 

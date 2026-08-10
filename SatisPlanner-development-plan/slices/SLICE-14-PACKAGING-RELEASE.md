@@ -1,6 +1,6 @@
 # Slice 14 — Desktop Packaging ve Release Pipeline
 
-**SatisPlanner milestone:** 15/16 · **Release:** `v0.15.0` (display `0.15`, pre-release)
+**SatisPlanner milestone:** 15/16 · **Release:** `v0.15.0` (display `0.15`, published development)
 
 ## Amaç
 

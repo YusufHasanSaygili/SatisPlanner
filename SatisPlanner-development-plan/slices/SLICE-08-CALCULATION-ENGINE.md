@@ -1,6 +1,6 @@
 # Slice 08 — Material Flow ve Power Engine
 
-**SatisPlanner milestone:** 9/16 · **Release:** `v0.9.0` (display `0.9`, pre-release)
+**SatisPlanner milestone:** 9/16 · **Release:** `v0.9.0` (display `0.9`, published development)
 
 ## Amaç
 

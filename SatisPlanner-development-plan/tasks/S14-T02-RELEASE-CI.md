@@ -6,6 +6,6 @@
 
 **Kabul:** Build clean runner'da; lockfile zorunlu; artifact checksum yayımlanır; tag, release ve pushed SHA birbiriyle eşleşir; signing yoksa açıkça unsigned; secrets least-privilege; license scan bloklayıcı policy'ye bağlı.
 
-**Test/Kanıt:** Dry-run pre-release ve checksum verification.
+**Test/Kanıt:** Dry-run published development release, Latest görünürlüğü ve checksum verification.
 
 **Bağımlılık:** S14-T01. **Boyut:** M.

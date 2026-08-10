@@ -1,6 +1,6 @@
 # Slice 00 — Upstream Baseline ve Karar Kapısı
 
-**SatisPlanner milestone:** 1/16 · **Release:** `v0.1.0` (display `0.1`, pre-release)
+**SatisPlanner milestone:** 1/16 · **Release:** `v0.1.0` (display `0.1`, published development)
 
 ## Amaç
 

@@ -1,6 +1,6 @@
 # Slice 09 — Logistics Tier ve Bottleneck Diagnostics
 
-**SatisPlanner milestone:** 10/16 · **Release:** `v0.10.0` (display `0.10`, pre-release)
+**SatisPlanner milestone:** 10/16 · **Release:** `v0.10.0` (display `0.10`, published development)
 
 ## Amaç
 

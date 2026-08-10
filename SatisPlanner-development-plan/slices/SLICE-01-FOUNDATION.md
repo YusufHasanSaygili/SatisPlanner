@@ -1,6 +1,6 @@
 # Slice 01 — Repo ve Uygulama Temeli
 
-**SatisPlanner milestone:** 2/16 · **Release:** `v0.2.0` (display `0.2`, pre-release)
+**SatisPlanner milestone:** 2/16 · **Release:** `v0.2.0` (display `0.2`, published development)
 
 ## Amaç
 
@@ -30,6 +30,11 @@ Clean checkout build, shell smoke, contract round-trip.
 `chore(slice-01): establish workspace and quality gates`. Verified push sonrası `v0.2.0` GitHub Release yayımlanır. Codex `SatisPlanner v0.2.0 yayımlandı. Slice 2/16 tamamlandı. Slice 02'ye devam edilsin mi?` sorusunu gönderir ve açık onaya kadar bekler.
 
 ## Delivery Record
+
+Patch correction: GitHub `pre-release` sınıflandırmasının repository ana
+sayfasındaki Releases/Latest kartını gizlediği kullanıcı incelemesinde saptandı.
+`v0.2.0` geçmiş kaydı korunarak release politikası düzeltilecek ve `v0.2.1`
+normal published `Latest` release olarak yayımlanacak.
 
 - Branch:
 - Closing SHA:

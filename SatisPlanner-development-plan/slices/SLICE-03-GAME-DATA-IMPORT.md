@@ -1,6 +1,6 @@
 # Slice 03 — Satisfactory 1.2 Game Data Import
 
-**SatisPlanner milestone:** 4/16 · **Release:** `v0.4.0` (display `0.4`, pre-release)
+**SatisPlanner milestone:** 4/16 · **Release:** `v0.4.0` (display `0.4`, published development)
 
 ## Amaç
 

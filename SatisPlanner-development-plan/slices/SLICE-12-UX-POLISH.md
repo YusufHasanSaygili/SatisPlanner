@@ -1,6 +1,6 @@
 # Slice 12 — Üretkenlik, Accessibility ve Graph Polish
 
-**SatisPlanner milestone:** 13/16 · **Release:** `v0.13.0` (display `0.13`, pre-release)
+**SatisPlanner milestone:** 13/16 · **Release:** `v0.13.0` (display `0.13`, published development)
 
 ## Amaç
 
