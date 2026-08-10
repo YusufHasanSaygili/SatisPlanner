@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" role="img" aria-label="Generic building">
+  <rect width="48" height="48" rx="11" fill="#1b2936"/>
+  <path d="M8 39V20l11 6v-8l11 6V10h8v29H8Z" fill="#566c7c" stroke="#d5e0e8" stroke-linejoin="round" stroke-width="2"/>
+  <path d="M14 32h5m5 0h5m5 0h4" stroke="#f0b65d" stroke-linecap="round" stroke-width="3"/>
+</svg>

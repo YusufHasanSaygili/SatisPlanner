@@ -144,6 +144,23 @@ input {
 	line-height: 1.5;
 }
 
+.fallback-preview {
+	display: grid;
+	grid-template-columns: repeat(5, 32px);
+	gap: 7px;
+	margin-top: 14px;
+	padding: 10px;
+	border: 1px solid #273442;
+	border-radius: 8px;
+	background: #111922;
+}
+
+.fallback-preview img {
+	display: block;
+	width: 32px;
+	height: 32px;
+}
+
 .canvas-panel {
 	min-width: 0;
 	min-height: 0;

@@ -16,3 +16,8 @@ src-tauri/gen/
 /.satisplanner/
 *.sav
 *.autosave
+*.pak
+*.utoc
+*.ucas
+*.uasset
+*.uexp

@@ -1,6 +1,6 @@
 import { getCalculationFoundationStatus } from "@satisplanner/calculation";
 import { getDomainFoundationStatus } from "@satisplanner/domain";
-import { getGameDataFoundationStatus } from "@satisplanner/game-data";
+import { FALLBACK_ICON_PATHS, getGameDataFoundationStatus } from "@satisplanner/game-data";
 import { createFoundationCanvasNodes } from "@satisplanner/graph-adapter";
 import { Background, Controls, ReactFlow } from "@xyflow/react";
 import { useEffect, useMemo, useState } from "react";
@@ -24,6 +24,7 @@ export default function App() {
 	const domain = getDomainFoundationStatus();
 	const gameData = getGameDataFoundationStatus();
 	const calculation = getCalculationFoundationStatus();
+	const fallbackIcons = Object.entries(FALLBACK_ICON_PATHS);
 
 	return (
 		<div className="app-shell">
@@ -54,8 +55,13 @@ export default function App() {
 					/>
 					<div className="empty-state">
 						<strong>Catalog not imported</strong>
-						<p>Game-data import is intentionally disabled in this foundation slice.</p>
+						<p>Local catalogs and icon caches remain user-controlled and optional.</p>
 					</div>
+					<section className="fallback-preview" aria-label="Generic icon fallbacks">
+						{fallbackIcons.map(([category, relativePath]) => (
+							<img key={category} src={`/${relativePath}`} alt={`Generic ${category} fallback`} />
+						))}
+					</section>
 				</aside>
 
 				<main className="canvas-panel" aria-label="Factory canvas">

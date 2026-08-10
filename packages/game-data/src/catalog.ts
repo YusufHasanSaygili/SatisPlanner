@@ -1,8 +1,8 @@
 import type { RationalJson } from "@satisplanner/domain";
 import type { DocsEncoding } from "./encoding";
 
-export const CATALOG_SCHEMA_VERSION = 1 as const;
-export const GAME_DATA_IMPORTER_VERSION = "1.0.0" as const;
+export const CATALOG_SCHEMA_VERSION = 2 as const;
+export const GAME_DATA_IMPORTER_VERSION = "1.1.0" as const;
 
 export type CatalogItemForm = "solid" | "liquid" | "gas";
 export type CatalogMaterialForm = "solid" | "fluid";
@@ -11,6 +11,7 @@ export interface CatalogItem {
 	readonly id: string;
 	readonly displayName: string;
 	readonly description: string;
+	readonly iconAssetPath: string | null;
 	readonly form: CatalogItemForm;
 	readonly materialForm: CatalogMaterialForm;
 }
