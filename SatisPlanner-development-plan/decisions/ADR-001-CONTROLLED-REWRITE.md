@@ -1,6 +1,6 @@
 # ADR-001 — Kontrollü Yeniden Yazım
 
-- Durum: Önerildi; Slice 00 kanıtından sonra kabul/reddedilecek
+- Durum: Kabul edildi
 - Tarih: 2026-08-10
 
 ## Bağlam
@@ -20,9 +20,15 @@ Varsayılan yön, upstream geçmişini/tag'ini koruyarak yeni uygulamayı Tauri 
 
 ## Kabul kanıtı
 
-- Upstream baseline build ve iki characterization senaryosu
-- 200-node React Flow + calculation spike performansı
-- Local Docs discovery/import spike
-- Save migration fizibilite raporu
+- Upstream desktop build/runtime smoke geçti.
+- Basit craft chain, Somersloop ve splitter/merger characterization testleri
+  geçti; v7 save round-trip golden fixture ile byte/semantic eşitliği sağlandı.
+- 200 node / 199 edge React Flow spike'ında tek-node güncellemesi 10,8 ms; 20
+  pan/zoom frame'i toplam 111,1 ms ölçüldü.
+- Typed domain command 200 instance içinde yalnız hedef instance'ı immutable
+  biçimde güncelledi; Vitest 2/2 geçti.
+- Tauri dialog + Rust read-only JSON probe derlendi; Rust testi 1/1 geçti,
+  release executable üretildi ve runtime smoke geçti.
+- Ayrıntılı kanıt: `docs/baseline/REWRITE-SPIKE-REPORT.md`.
 
 Kanıt eşiği aşılmazsa C++ çekirdeğini refactor edip yeni UI katmanı geliştirme alternatifi yeniden değerlendirilir.

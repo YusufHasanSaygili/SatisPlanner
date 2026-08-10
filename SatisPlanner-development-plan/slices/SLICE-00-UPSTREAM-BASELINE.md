@@ -10,7 +10,7 @@ Audited upstream commit'i yeniden üretilebilir baseline olarak sabitlemek ve re
 
 - [x] [S00-T01 — Baseline ve lisans envanteri](../tasks/S00-T01-BASELINE-INVENTORY.md)
 - [x] [S00-T02 — Characterization ve save davranışı](../tasks/S00-T02-CHARACTERIZATION.md)
-- [ ] [S00-T03 — Rewrite spike ve ADR kararı](../tasks/S00-T03-REWRITE-DECISION.md)
+- [x] [S00-T03 — Rewrite spike ve ADR kararı](../tasks/S00-T03-REWRITE-DECISION.md)
 
 ## Slice acceptance
 
