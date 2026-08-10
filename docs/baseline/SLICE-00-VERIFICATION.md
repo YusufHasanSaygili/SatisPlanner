@@ -1,6 +1,7 @@
 # Slice 00 verification kaydı
 
-Tarih: 2026-08-10  
+Tarih: 2026-08-10
+
 Branch: `slice/00-upstream-baseline`
 
 ## Acceptance
