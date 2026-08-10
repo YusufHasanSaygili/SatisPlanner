@@ -1,0 +1,22 @@
+{
+	"name": "@satisplanner/desktop-ui",
+	"version": "0.2.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "tsc --noEmit && vite build",
+		"dev": "vite",
+		"test": "vitest run",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@satisplanner/calculation": "workspace:*",
+		"@satisplanner/domain": "workspace:*",
+		"@satisplanner/game-data": "workspace:*",
+		"@satisplanner/graph-adapter": "workspace:*",
+		"@tauri-apps/api": "2.11.1",
+		"@xyflow/react": "12.11.2",
+		"react": "19.2.8",
+		"react-dom": "19.2.8"
+	}
+}

@@ -1,0 +1,199 @@
+:root {
+	font-family:
+		Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+	color: #e9eef4;
+	background: #10161d;
+	font-synthesis: none;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	min-width: 980px;
+	min-height: 640px;
+}
+
+button,
+input {
+	font: inherit;
+}
+
+.app-shell {
+	display: grid;
+	grid-template-rows: 72px minmax(0, 1fr);
+	height: 100vh;
+	background: #10161d;
+}
+
+.title-bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0 20px;
+	border-bottom: 1px solid #273442;
+	background: #151e27;
+}
+
+.title-bar h1,
+.title-bar p {
+	margin: 0;
+}
+
+.title-bar h1 {
+	font-size: 22px;
+	letter-spacing: -0.03em;
+}
+
+.eyebrow {
+	color: #8fa3b8;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.09em;
+	text-transform: uppercase;
+}
+
+.runtime-status {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: #aebdca;
+	font-size: 12px;
+}
+
+.status-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 999px;
+	background: #e0a24b;
+	box-shadow: 0 0 0 3px rgb(224 162 75 / 12%);
+}
+
+.status-dot.ready {
+	background: #55c78a;
+	box-shadow: 0 0 0 3px rgb(85 199 138 / 12%);
+}
+
+.workspace {
+	display: grid;
+	grid-template-columns: 260px minmax(0, 1fr) 280px;
+	min-height: 0;
+}
+
+.panel {
+	position: relative;
+	z-index: 2;
+	padding: 16px;
+	background: #151e27;
+}
+
+.library-panel {
+	border-right: 1px solid #273442;
+}
+
+.inspector-panel {
+	border-left: 1px solid #273442;
+}
+
+.panel-heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 14px;
+	font-size: 13px;
+	font-weight: 700;
+}
+
+kbd {
+	padding: 3px 6px;
+	border: 1px solid #34475a;
+	border-radius: 5px;
+	color: #8fa3b8;
+	background: #111922;
+	font-size: 10px;
+}
+
+input {
+	width: 100%;
+	padding: 10px 11px;
+	border: 1px solid #314256;
+	border-radius: 7px;
+	color: #8fa3b8;
+	background: #101820;
+}
+
+.empty-state {
+	margin-top: 18px;
+	padding: 14px;
+	border: 1px dashed #34475a;
+	border-radius: 8px;
+	color: #c5d0da;
+	background: #121b24;
+}
+
+.empty-state strong {
+	font-size: 13px;
+}
+
+.empty-state p {
+	margin: 7px 0 0;
+	color: #8498ac;
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+.canvas-panel {
+	min-width: 0;
+	min-height: 0;
+}
+
+.react-flow__node {
+	width: 220px;
+	padding: 14px;
+	border: 1px solid #46627b;
+	border-radius: 9px;
+	color: #e9eef4;
+	background: #1b2936;
+	box-shadow: 0 12px 30px rgb(0 0 0 / 22%);
+	font-size: 12px;
+	font-weight: 700;
+}
+
+.react-flow__controls {
+	overflow: hidden;
+	border: 1px solid #34475a;
+	border-radius: 7px;
+	box-shadow: none;
+}
+
+.react-flow__controls-button {
+	border-bottom-color: #34475a;
+	color: #d8e1e9;
+	background: #1a2530;
+}
+
+.foundation-checks {
+	display: grid;
+	gap: 8px;
+	margin-top: 20px;
+}
+
+.foundation-checks div {
+	display: flex;
+	justify-content: space-between;
+	padding: 9px 0;
+	border-bottom: 1px solid #273442;
+	font-size: 12px;
+}
+
+.foundation-checks dt {
+	color: #8fa3b8;
+}
+
+.foundation-checks dd {
+	margin: 0;
+	color: #cbd5de;
+	font-weight: 700;
+}

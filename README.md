@@ -2,11 +2,11 @@
 
 Offline-first, graph-based desktop factory planner for Satisfactory 1.2.
 
-> **Development status:** Slice 00 (upstream baseline and architecture decision)
-> is complete. The SatisPlanner product workspace has not been scaffolded yet;
-> that work belongs to Slice 01 and requires explicit user approval.
+> **Development status:** Slice 01 foundation is implemented on the
+> `slice/01-foundation` branch. The React/Tauri shell, workspace packages,
+> native contract and quality gates are ready for `v0.2.0` verification.
 
-[![Slice 00 verification](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/slice-00-verify.yaml/badge.svg)](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/slice-00-verify.yaml)
+[![SatisPlanner Quality](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml/badge.svg)](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml)
 
 [Releases](https://github.com/YusufHasanSaygili/SatisPlanner/releases)
 
@@ -26,27 +26,34 @@ SatisPlanner will let players model the factory they will actually build:
 The full scope and the 16-slice delivery roadmap are in the
 [development plan](SatisPlanner-development-plan/00-MASTER-PLAN.md).
 
-## Current milestone: v0.1.x
+## Current milestone: v0.2.0
 
-Slice 00 established the evidence needed to choose the implementation path:
+Slice 01 turns the accepted rewrite decision into a production workspace:
 
-- immutable upstream baseline: `d5c449adebe335cf326b6cb2d49c106888fc06c8`;
-- Windows desktop build/runtime smoke;
-- executable `.fcs` v7 save and graph-propagation characterization tests;
-- 200-node React Flow performance spike;
-- framework-independent typed domain-command spike;
-- Tauri 2 read-only local JSON selection probe;
-- accepted controlled-rewrite decision in
-  [ADR-001](SatisPlanner-development-plan/decisions/ADR-001-CONTROLLED-REWRITE.md).
+- pnpm monorepo with `domain`, `game-data`, `calculation` and `graph-adapter`
+  package boundaries;
+- a Tauri 2 + React desktop shell with library, canvas and inspector regions;
+- a versioned native request/response/error contract and Tauri-free mock adapter;
+- default-deny native capabilities with no filesystem, shell, dialog or network
+  plugin permission;
+- format, lint, boundary, typecheck, unit, E2E, Rust and desktop build gates.
 
-Evidence is collected under [docs/baseline](docs/baseline). The React/Tauri
-decision spike lives under [spikes/rewrite](spikes/rewrite); it is not the
-production application workspace.
+Foundation evidence is collected under [docs/foundation](docs/foundation).
+Slice 00 evidence remains under [docs/baseline](docs/baseline), and its
+disposable decision spike remains under [spikes/rewrite](spikes/rewrite).
 
 ## Repository layout
 
 ```text
 SatisPlanner-development-plan/   Product, architecture and slice/task plans
+apps/desktop-ui/                  React + React Flow application shell
+packages/domain/                 Framework-independent domain boundary
+packages/game-data/              Normalized game-data boundary
+packages/calculation/            Deterministic calculation boundary
+packages/graph-adapter/           Domain-to-React-Flow projection boundary
+src-tauri/                        Narrow native runtime and capability policy
+tests/e2e/                        Browser shell smoke tests
+docs/foundation/                  Slice 01 architecture and verification evidence
 docs/baseline/                   Audits, measurements and verification records
 tests/upstream-characterization/ Executable upstream behavior fixtures
 spikes/rewrite/                  Disposable React/Tauri decision spike
@@ -59,36 +66,40 @@ to preserve the audited upstream baseline until parity and migration gates are
 passed. They are not the SatisPlanner product source or a game-data source of
 truth.
 
-## Verify Slice 00 locally
+## Develop and verify
 
-### Upstream characterization
+Requirements: Node.js 24, pnpm 11.16.0 and the stable Rust toolchain. From the
+repository root:
 
-Configure `tests/upstream-characterization` with CMake, build it, then run:
+```powershell
+pnpm install --frozen-lockfile
+pnpm dev
+```
+
+The full frontend/package quality gate is one command:
+
+```powershell
+pnpm quality
+pnpm test:e2e
+```
+
+Desktop-native checks and the release-mode shell build are:
+
+```powershell
+cargo fmt --manifest-path src-tauri/Cargo.toml --check
+cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+cargo test --manifest-path src-tauri/Cargo.toml
+pnpm desktop:build
+```
+
+`pnpm quality` also runs controlled negative probes proving that lint,
+typecheck and unit-test failures return non-zero status. The package boundary
+gate prevents React, React Flow and Tauri imports from entering core packages.
+
+Slice 00 upstream characterization remains reproducible with:
 
 ```powershell
 ctest --test-dir build/upstream-characterization --output-on-failure
-```
-
-### Rewrite spike
-
-```powershell
-cd spikes/rewrite
-pnpm install --frozen-lockfile
-pnpm format:check
-pnpm lint
-pnpm test
-pnpm build
-pnpm benchmark
-```
-
-The Tauri probe additionally requires the Rust stable MSVC toolchain:
-
-```powershell
-cd spikes/rewrite/src-tauri
-cargo fmt --check
-cargo clippy --all-targets -- -D warnings
-cargo test
-cargo check
 ```
 
 ## Game data and artwork policy
