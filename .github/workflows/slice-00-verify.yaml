@@ -1,0 +1,8 @@
+name: SatisPlanner Slice 00 Verification
+
+on:
+  workflow_dispatch:
+
+jobs:
+  upstream-build-matrix:
+    uses: ./.github/workflows/build.yaml
