@@ -8,20 +8,22 @@ Karar verilen stack ile güvenli, test edilebilir workspace ve CI iskeleti kurma
 
 ## Task'lar
 
-- [S01-T01 — Workspace scaffold](../tasks/S01-T01-WORKSPACE-SCAFFOLD.md)
-- [S01-T02 — Quality ve CI kapıları](../tasks/S01-T02-QUALITY-CI.md)
-- [S01-T03 — Native/frontend contract sınırı](../tasks/S01-T03-CONTRACT-BOUNDARY.md)
+- [x] [S01-T01 — Workspace scaffold](../tasks/S01-T01-WORKSPACE-SCAFFOLD.md)
+- [x] [S01-T02 — Quality ve CI kapıları](../tasks/S01-T02-QUALITY-CI.md)
+- [x] [S01-T03 — Native/frontend contract sınırı](../tasks/S01-T03-CONTRACT-BOUNDARY.md)
 
 ## Slice acceptance
 
-- Desktop shell açılıyor; boş ana layout render oluyor.
-- Domain paketi framework bağımsız test çalıştırıyor.
-- Rust/native komutu typed contract üzerinden çağrılıyor.
-- PR CI format/lint/typecheck/test/build koşuyor.
+- [x] Desktop shell açılıyor; boş ana layout render oluyor.
+- [x] Domain paketi framework bağımsız test çalıştırıyor.
+- [x] Rust/native komutu typed contract üzerinden çağrılıyor.
+- [x] PR CI format/lint/typecheck/test/build koşuyor.
 
 ## Test kapısı
 
 Clean checkout build, shell smoke, contract round-trip.
+
+**Sonuç:** PASS — Ayrıntılı kanıt: `docs/foundation/SLICE-01-VERIFICATION.md`.
 
 ## Zorunlu release + bildirim + kullanıcı onayı
 

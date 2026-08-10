@@ -10,7 +10,7 @@
   "formatter": {
     "enabled": true,
     "indentStyle": "tab",
-    "lineEnding": "auto",
+    "lineEnding": "lf",
     "lineWidth": 100
   },
   "linter": {
