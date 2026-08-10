@@ -1,0 +1,37 @@
+[
+	{
+		"NativeClass": "/Script/CoreUObject.Class'/Script/FactoryGame.FGItemDescriptor'",
+		"Classes": [
+			{
+				"ClassName": "Desc_SP_Input_C",
+				"mDisplayName": "Synthetic Input",
+				"mDescription": "Missing reference fixture",
+				"mForm": "RF_SOLID"
+			}
+		]
+	},
+	{
+		"NativeClass": "/Script/CoreUObject.Class'/Script/FactoryGame.FGBuildableManufacturer'",
+		"Classes": [
+			{
+				"ClassName": "Build_SP_Maker_C",
+				"mDisplayName": "Synthetic Maker",
+				"mPowerConsumption": "4.000000",
+				"mProductionShardSlotSize": "1"
+			}
+		]
+	},
+	{
+		"NativeClass": "/Script/CoreUObject.Class'/Script/FactoryGame.FGRecipe'",
+		"Classes": [
+			{
+				"ClassName": "Recipe_SP_Broken_C",
+				"mDisplayName": "Broken Synthetic Recipe",
+				"mManufactoringDuration": "6.000000",
+				"mIngredients": "((ItemClass=\"/Game/Synthetic/Desc_SP_Input.Desc_SP_Input_C'\",Amount=1.000000))",
+				"mProduct": "((ItemClass=\"/Game/Synthetic/Desc_SP_Missing.Desc_SP_Missing_C'\",Amount=1.000000))",
+				"mProducedIn": "(\"/Game/Synthetic/Build_SP_Maker.Build_SP_Maker_C\",\"/Game/Synthetic/Build_SP_Missing.Build_SP_Missing_C\")"
+			}
+		]
+	}
+]

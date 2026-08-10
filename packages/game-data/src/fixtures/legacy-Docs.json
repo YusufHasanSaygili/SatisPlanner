@@ -1,0 +1,47 @@
+{
+	"NativeClasses": [
+		{
+			"NativeClass": "/Script/CoreUObject.Class'/Script/FactoryGame.FGItemDescriptor'",
+			"Classes": [
+				{
+					"ClassName": "Desc_SP_LegacyInput_C",
+					"mDisplayName": "Legacy Synthetic Input",
+					"mDescription": "Legacy adapter fixture",
+					"mForm": "RF_SOLID"
+				},
+				{
+					"ClassName": "Desc_SP_LegacyOutput_C",
+					"mDisplayName": "Legacy Synthetic Output",
+					"mDescription": "Legacy adapter fixture",
+					"mForm": "RF_SOLID"
+				}
+			]
+		},
+		{
+			"NativeClass": "/Script/CoreUObject.Class'/Script/FactoryGame.FGBuildableManufacturer'",
+			"Classes": [
+				{
+					"ClassName": "Build_SP_LegacyMaker_C",
+					"mDisplayName": "Legacy Synthetic Maker",
+					"mPowerConsumption": "5.000000",
+					"mOverridePotentialShardSlots": "False",
+					"mPotentialShardSlots": "0",
+					"mProductionShardSlotSize": "2"
+				}
+			]
+		},
+		{
+			"NativeClass": "/Script/CoreUObject.Class'/Script/FactoryGame.FGRecipe'",
+			"Classes": [
+				{
+					"ClassName": "Recipe_SP_Legacy_C",
+					"mDisplayName": "Legacy Synthetic Recipe",
+					"mManufactoringDuration": "4.000000",
+					"mIngredients": "((ItemClass=\"/Game/Synthetic/Desc_SP_LegacyInput.Desc_SP_LegacyInput_C'\",Amount=1.000000))",
+					"mProduct": "((ItemClass=\"/Game/Synthetic/Desc_SP_LegacyOutput.Desc_SP_LegacyOutput_C'\",Amount=1.000000))",
+					"mProducedIn": "(\"/Game/Synthetic/Build_SP_LegacyMaker.Build_SP_LegacyMaker_C\")"
+				}
+			]
+		}
+	]
+}

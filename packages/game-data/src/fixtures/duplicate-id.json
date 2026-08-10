@@ -1,0 +1,19 @@
+[
+	{
+		"NativeClass": "/Script/CoreUObject.Class'/Script/FactoryGame.FGItemDescriptor'",
+		"Classes": [
+			{
+				"ClassName": "Desc_SP_Duplicate_C",
+				"mDisplayName": "First Synthetic Duplicate",
+				"mDescription": "Duplicate fixture",
+				"mForm": "RF_SOLID"
+			},
+			{
+				"ClassName": "Desc_SP_Duplicate_C",
+				"mDisplayName": "Second Synthetic Duplicate",
+				"mDescription": "Duplicate fixture",
+				"mForm": "RF_SOLID"
+			}
+		]
+	}
+]

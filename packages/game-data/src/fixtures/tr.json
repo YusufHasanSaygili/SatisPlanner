@@ -1,0 +1,51 @@
+[
+	{
+		"NativeClass": "/Script/CoreUObject.Class'/Script/FactoryGame.FGItemDescriptor'",
+		"Classes": [
+			{
+				"ClassName": "Desc_SP_Ore_C",
+				"mDisplayName": "Sentetik Cevher",
+				"mDescription": "Sentetik test girdisi",
+				"mForm": "RF_SOLID"
+			},
+			{
+				"ClassName": "Desc_SP_Water_C",
+				"mDisplayName": "Sentetik Su",
+				"mDescription": "Sentetik test sıvısı",
+				"mForm": "RF_LIQUID"
+			},
+			{
+				"ClassName": "Desc_SP_Plate_C",
+				"mDisplayName": "Sentetik Plaka",
+				"mDescription": "Sentetik test çıktısı",
+				"mForm": "RF_SOLID"
+			}
+		]
+	},
+	{
+		"NativeClass": "/Script/CoreUObject.Class'/Script/FactoryGame.FGBuildableManufacturer'",
+		"Classes": [
+			{
+				"ClassName": "Build_SP_Maker_C",
+				"mDisplayName": "Sentetik Üretici",
+				"mPowerConsumption": "4.000000",
+				"mOverridePotentialShardSlots": "False",
+				"mPotentialShardSlots": "0",
+				"mProductionShardSlotSize": "1"
+			}
+		]
+	},
+	{
+		"NativeClass": "/Script/CoreUObject.Class'/Script/FactoryGame.FGRecipe'",
+		"Classes": [
+			{
+				"ClassName": "Recipe_SP_Plate_C",
+				"mDisplayName": "Sentetik Plaka Tarifi",
+				"mManufactoringDuration": "6.000000",
+				"mIngredients": "((ItemClass=\"/Script/Engine.BlueprintGeneratedClass'/Game/Synthetic/Desc_SP_Ore.Desc_SP_Ore_C'\",Amount=3.000000),(ItemClass=\"/Script/Engine.BlueprintGeneratedClass'/Game/Synthetic/Desc_SP_Water.Desc_SP_Water_C'\",Amount=1000.000000))",
+				"mProduct": "((ItemClass=\"/Script/Engine.BlueprintGeneratedClass'/Game/Synthetic/Desc_SP_Plate.Desc_SP_Plate_C'\",Amount=2.000000))",
+				"mProducedIn": "(\"/Game/Synthetic/Build_SP_Maker.Build_SP_Maker_C\")"
+			}
+		]
+	}
+]
