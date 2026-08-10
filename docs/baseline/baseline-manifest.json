@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-08-10T03:30:18+03:00",
+  "product": "SatisPlanner",
+  "upstream": {
+    "repository": "https://github.com/adepierre/ficsit-companion.git",
+    "commit": "d5c449adebe335cf326b6cb2d49c106888fc06c8",
+    "commitDate": "2026-06-14T11:35:55+01:00",
+    "immutableTag": "upstream-d5c449a",
+    "matchingUpstreamTag": "v1.2.2",
+    "license": "MIT",
+    "copyright": "Copyright (c) 2024 adepierre"
+  },
+  "gameData": {
+    "path": "assets/satisfactory.json",
+    "declaredVersion": "1.2",
+    "buildings": 15,
+    "items": 152,
+    "recipes": 293,
+    "workingTreeBytes": 208959,
+    "workingTreeSha256": "013901f8fcc041d6e91aac36d3c1a679a777088286834b632d3f8c9a4576201e",
+    "gitBlob": "121c98695c6866e46bd7b095d49b5c4d84057944"
+  },
+  "artwork": {
+    "gameIconFiles": 153,
+    "gameIconBytes": 1836852,
+    "redistributeInSatisPlannerRelease": false,
+    "applicationIconStatus": "quarantined-pending-provenance"
+  },
+  "source": {
+    "files": 25,
+    "linesIncludingBundledHeaders": 16407,
+    "productFilesExcludingBundledJsonAndStb": 21,
+    "productLinesExcludingBundledJsonAndStb": 6963,
+    "productionAppLines": 3920
+  }
+}
