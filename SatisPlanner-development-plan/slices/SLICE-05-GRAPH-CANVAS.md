@@ -29,12 +29,12 @@ Drag/drop, connect/reject, selection ve reload E2E.
 
 ## Delivery Record
 
-- Branch:
-- Closing SHA:
-- Remote SHA:
-- Tag:
-- GitHub Release URL:
-- CI:
-- Codex notification:
-- User approval:
-- Tarih:
+- Branch: `slice/05-core-graph-ux`
+- Closing SHA: `5698ba46245374740566209dd0911769d7ef8b5c`
+- Remote SHA: branch ve `main` kapanışta `5698ba46245374740566209dd0911769d7ef8b5c`
+- Tag: annotated `v0.6.0` → `5698ba46245374740566209dd0911769d7ef8b5c`
+- GitHub Release URL: https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v0.6.0
+- CI: push run `31436526324` 5/5; main run `31436528575` 5/5; release run `31437442979` 6/6 başarılı
+- Codex notification: aynı görevde `WAITING_FOR_USER_APPROVAL` onay kapısı hazırlanmıştır
+- User approval: bekleniyor; açık onay olmadan Slice 06 başlamaz
+- Tarih: 2026-08-11
