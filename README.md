@@ -2,9 +2,9 @@
 
 Offline-first, graph-based desktop factory planner for Satisfactory 1.2.
 
-> **Development status:** Slice 01 foundation is implemented on the
-> `slice/01-foundation` branch. The React/Tauri shell, workspace packages,
-> native contract and quality gates are available in the `v0.2.1` release.
+> **Development status:** Slice 02 domain schema is implemented on the
+> `slice/02-domain-schema` branch. Exact units, physical machine invariants and
+> the versioned FactoryPlan contract form the `v0.3.0` milestone.
 
 [![SatisPlanner Quality](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml/badge.svg)](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml)
 
@@ -26,21 +26,22 @@ SatisPlanner will let players model the factory they will actually build:
 The full scope and the 16-slice delivery roadmap are in the
 [development plan](SatisPlanner-development-plan/00-MASTER-PLAN.md).
 
-## Current milestone: v0.2.1
+## Current milestone: v0.3.0
 
-Slice 01 turns the accepted rewrite decision into a production workspace:
+Slice 02 adds the framework-independent domain contract on top of the Slice 01
+workspace:
 
-- pnpm monorepo with `domain`, `game-data`, `calculation` and `graph-adapter`
-  package boundaries;
-- a Tauri 2 + React desktop shell with library, canvas and inspector regions;
-- a versioned native request/response/error contract and Tauri-free mock adapter;
-- default-deny native capabilities with no filesystem, shell, dialog or network
-  plugin permission;
-- format, lint, boundary, typecheck, unit, E2E, Rust and desktop build gates.
+- normalized exact rational arithmetic with nominal item/fluid rate types;
+- four-decimal clock values and explicit division/size error handling;
+- immutable physical `MachineInstance` objects with stable UUIDs and validated
+  shard, clock, Somersloop, recipe and typed-port state;
+- FactoryPlan v1 JSON Schema, field-specific validation, canonical export,
+  unknown-field preservation and a sequential migration registry;
+- property, boundary, invalid-state and serialization round-trip tests.
 
-Foundation evidence is collected under [docs/foundation](docs/foundation).
-Slice 00 evidence remains under [docs/baseline](docs/baseline), and its
-disposable decision spike remains under [spikes/rewrite](spikes/rewrite).
+Domain evidence is collected under [docs/domain](docs/domain). Foundation
+evidence remains under [docs/foundation](docs/foundation), while Slice 00
+evidence remains under [docs/baseline](docs/baseline).
 
 ## Repository layout
 
@@ -54,6 +55,7 @@ packages/graph-adapter/           Domain-to-React-Flow projection boundary
 src-tauri/                        Narrow native runtime and capability policy
 tests/e2e/                        Browser shell smoke tests
 docs/foundation/                  Slice 01 architecture and verification evidence
+docs/domain/                      Slice 02 domain/schema verification evidence
 docs/baseline/                   Audits, measurements and verification records
 tests/upstream-characterization/ Executable upstream behavior fixtures
 spikes/rewrite/                  Disposable React/Tauri decision spike

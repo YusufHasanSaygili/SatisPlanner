@@ -8,5 +8,5 @@ test("renders the SatisPlanner foundation shell and mock contract", async ({ pag
 	await expect(page.getByLabel("Building library")).toBeVisible();
 	await expect(page.getByLabel("Factory canvas")).toBeVisible();
 	await expect(page.getByLabel("Inspector")).toBeVisible();
-	await expect(page.getByRole("status")).toContainText("Contract v1 · browser-mock · v0.2.1");
+	await expect(page.getByRole("status")).toContainText("Contract v1 · browser-mock · v0.3.0");
 });
