@@ -1,3 +1,18 @@
 build*/
-scripts/*
-!scripts/*.py
+node_modules/
+dist/
+target/
+.turbo/
+.vite/
+coverage/
+playwright-report/
+test-results/
+src-tauri/gen/
+
+# User-owned Satisfactory data and locally generated caches must never be committed.
+/CommunityResources/Docs/
+/game-data-cache/
+/local-assets/
+/.satisplanner/
+*.sav
+*.autosave

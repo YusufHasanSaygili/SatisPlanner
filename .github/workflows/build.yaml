@@ -1,105 +1,97 @@
-name: Build
+name: SatisPlanner Quality
 
 on:
   push:
-    tags-ignore:
-      - "**"
     branches:
       - "**"
-    paths-ignore:
-      - "scripts/*"
-      - ".gitignore"
-      - "LICENSE"
-      - "README.md"
+    tags-ignore:
+      - "**"
   pull_request:
-    paths-ignore:
-      - "scripts/*"
-      - ".gitignore"
-      - "LICENSE"
-      - "README.md"
   workflow_call:
+  workflow_dispatch:
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-desktop:
+  web-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.16.0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm quality
+      - run: pnpm test:e2e
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: SatisPlanner-web
+          path: apps/desktop-ui/dist
+          retention-days: 7
+
+  rust-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Tauri system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy,rustfmt
+
+      - run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
+      - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+      - run: cargo test --manifest-path src-tauri/Cargo.toml
+
+  desktop-smoke:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install Linux deps
+      - name: Install Tauri system dependencies
         if: runner.os == 'Linux'
         run: |
-          sudo apt update
-          sudo apt install -y xorg-dev
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
-      - name: Cache SDL/ImGui deps
-        uses: actions/cache@v5
+      - uses: pnpm/action-setup@v4
         with:
-          path: ${{ github.workspace }}/build/_deps
-          key: ${{ runner.os }}-deps
+          version: 11.16.0
 
-      - name: Set universal build for macOS (as an env variable because of the ;)
-        if: runner.os == 'macOS'
-        run: echo "CMAKE_OSX_ARCHITECTURES=arm64;x86_64" >> $GITHUB_ENV
-
-      - name: Configure cmake
-        run: >
-          cmake
-          -DCMAKE_BUILD_TYPE=Release
-          -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
-          -S ${{ github.workspace }}
-          -B ${{ github.workspace }}/build
-
-      - name: Build
-        run: cmake --build ${{ github.workspace }}/build --config Release --parallel 2
-
-      - name: Install
-        run: cmake --install ${{ github.workspace }}/build --config Release --prefix ${{ github.workspace }}/build/install/${{ github.event.repository.name }}
-
-      - name: Create artifact archive
-        working-directory: ${{ github.workspace }}/build/install
-        run: cmake -E tar "cf" "${{ github.event.repository.name }}.zip" --format=zip ${{ github.event.repository.name }}/
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v6
+      - uses: actions/setup-node@v6
         with:
-          name: ${{ github.event.repository.name }}-${{ runner.os }}
-          path: ${{ github.workspace }}/build/install/${{ github.event.repository.name }}.zip
-          retention-days: 1
+          node-version: 24
+          cache: pnpm
 
-  build-web:
-    runs-on: ubuntu-latest
+      - uses: dtolnay/rust-toolchain@stable
 
-    steps:
-      - uses: actions/checkout@v6
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm desktop:build
 
-      - name: Install Emscripten
-        run: |
-          wget -q https://github.com/emscripten-core/emsdk/archive/master.tar.gz
-          tar -xvf master.tar.gz
-          emsdk-master/emsdk update
-          emsdk-master/emsdk install 4.0.5
-          emsdk-master/emsdk activate 4.0.5
-
-      - name: Configure cmake
-        run: |
-          source ${{ github.workspace }}/emsdk-master/emsdk_env.sh
-          emcmake cmake -DCMAKE_BUILD_TYPE=Release -S ${{ github.workspace }} -B ${{ github.workspace }}/build
-
-      - name: Build
-        run: cmake --build ${{ github.workspace }}/build --config Release --parallel 2
-
-      - name: Create artifact archive
-        working-directory: ${{ github.workspace }}/build
-        run: cmake -E tar "cf" "${{ github.event.repository.name }}.zip" --format=zip web/
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v6
         with:
-          name: ${{ github.event.repository.name }}-web
-          path: ${{ github.workspace }}/build/${{ github.event.repository.name }}.zip
-          retention-days: 1
+          name: SatisPlanner-${{ runner.os }}
+          path: |
+            src-tauri/target/release/satisplanner
+            src-tauri/target/release/satisplanner.exe
+          if-no-files-found: error
+          retention-days: 7

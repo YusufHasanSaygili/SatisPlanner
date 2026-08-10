@@ -1,107 +1,73 @@
-name: Manual Release
+name: SatisPlanner Manual Release
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version for the release"
+        description: "Existing annotated version tag without the v prefix"
         required: true
-        default: "0.0.0"
+        default: "0.2.0"
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 jobs:
   build:
-    name: Build project
     uses: ./.github/workflows/build.yaml
 
   release:
     runs-on: ubuntu-latest
-
-    needs:
-      - build
-
+    needs: build
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0 # Fetch depth 0 to get all tags and commits to generate release note changelog
+          fetch-depth: 0
 
-      - name: Download Windows artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: ${{ github.event.repository.name }}-Windows
-          path: windows
-
-      - name: Download Linux artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: ${{ github.event.repository.name }}-Linux
-          path: linux
-
-      - name: Download macOS artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: ${{ github.event.repository.name }}-macOS
-          path: macos
-
-      - name: Rename artifacts
+      - name: Verify annotated tag
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          mv linux/${{ github.event.repository.name }}.zip ${{ github.event.repository.name }}-linux-${{ inputs.version }}.zip
-          mv windows/${{ github.event.repository.name }}.zip ${{ github.event.repository.name }}-windows-${{ inputs.version }}.zip
-          mv macos/${{ github.event.repository.name }}.zip ${{ github.event.repository.name }}-macos-${{ inputs.version }}.zip
+          git cat-file -e "v${VERSION}^{tag}"
+          test "$(git rev-list -n 1 "v${VERSION}")" = "${GITHUB_SHA}"
 
-      - name: Get previous release
+      - uses: actions/download-artifact@v8
+        with:
+          name: SatisPlanner-Windows
+          path: artifacts/windows
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: SatisPlanner-Linux
+          path: artifacts/linux
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: SatisPlanner-macOS
+          path: artifacts/macos
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: SatisPlanner-web
+          path: artifacts/web
+
+      - name: Package and checksum smoke artifacts
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          PREVIOUS_RELEASE=$(gh release list --repo ${{ github.repository }} --json tagName --jq '.[].tagName' | head -n 1)
-          echo "PREVIOUS_RELEASE=$PREVIOUS_RELEASE" >> $GITHUB_ENV
+          zip -j "SatisPlanner-windows-v${VERSION}.zip" artifacts/windows/*
+          zip -j "SatisPlanner-linux-v${VERSION}.zip" artifacts/linux/*
+          zip -j "SatisPlanner-macos-v${VERSION}.zip" artifacts/macos/*
+          (cd artifacts/web && zip -r "../../SatisPlanner-web-v${VERSION}.zip" .)
+          sha256sum SatisPlanner-*.zip > SHA256SUMS.txt
+
+      - name: Publish verified pre-release
         env:
           GH_TOKEN: ${{ github.token }}
-
-      - name: Create changelog
-        run: git log $PREVIOUS_RELEASE..HEAD --oneline --no-merges >> release_note.txt
-
-      - name: Create new release
-        run: >
-          gh release create v${{ inputs.version }}
-          ${{ github.event.repository.name }}-linux-${{ inputs.version }}.zip
-          ${{ github.event.repository.name }}-windows-${{ inputs.version }}.zip
-          ${{ github.event.repository.name }}-macos-${{ inputs.version }}.zip
-          --repo ${{ github.repository }}
-          -F release_note.txt
-          -t "SatisPlanner v${{ inputs.version }}"
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    runs-on: ubuntu-latest
-
-    needs:
-      - build
-      - release # Only deploy if a release was successfully created
-
-    steps:
-      - name: Download web artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: ${{ github.event.repository.name }}-web
-
-      - name: Unzip web
-        run: cmake -E tar "xzf" "${{ github.event.repository.name }}.zip"
-
-      - name: Upload raw files for pages
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: web
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        # Will automatically fetch the artifact "github-pages" uploaded using actions/upload-pages-artifact
-        uses: actions/deploy-pages@v4
+          VERSION: ${{ inputs.version }}
+        run: |
+          gh release create "v${VERSION}" SatisPlanner-*.zip SHA256SUMS.txt \
+            --repo "${GITHUB_REPOSITORY}" \
+            --verify-tag \
+            --prerelease \
+            --title "SatisPlanner v${VERSION}" \
+            --notes "Verified SatisPlanner smoke artifacts from commit ${GITHUB_SHA}. See the slice Delivery Record for acceptance results and known limitations."
