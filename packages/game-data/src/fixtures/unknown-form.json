@@ -1,0 +1,13 @@
+[
+	{
+		"NativeClass": "/Script/CoreUObject.Class'/Script/FactoryGame.FGItemDescriptor'",
+		"Classes": [
+			{
+				"ClassName": "Desc_SP_Unknown_C",
+				"mDisplayName": "Unknown Synthetic Form",
+				"mDescription": "Unknown form fixture",
+				"mForm": "RF_PLASMA"
+			}
+		]
+	}
+]

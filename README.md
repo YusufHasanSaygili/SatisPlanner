@@ -2,9 +2,10 @@
 
 Offline-first, graph-based desktop factory planner for Satisfactory 1.2.
 
-> **Development status:** Slice 02 domain schema is implemented on the
-> `slice/02-domain-schema` branch. Exact units, physical machine invariants and
-> the versioned FactoryPlan contract form the `v0.3.0` milestone.
+> **Development status:** Slice 03 game-data import is implemented on the
+> `slice/03-game-data-import` branch. Read-only source discovery, localized
+> Docs normalization and immutable catalog snapshots form the `v0.4.0`
+> milestone.
 
 [![SatisPlanner Quality](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml/badge.svg)](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml)
 
@@ -26,22 +27,25 @@ SatisPlanner will let players model the factory they will actually build:
 The full scope and the 16-slice delivery roadmap are in the
 [development plan](SatisPlanner-development-plan/00-MASTER-PLAN.md).
 
-## Current milestone: v0.3.0
+## Current milestone: v0.4.0
 
-Slice 02 adds the framework-independent domain contract on top of the Slice 01
-workspace:
+Slice 03 adds the versioned Satisfactory 1.2 catalog boundary on top of the
+Slice 02 domain contract:
 
-- normalized exact rational arithmetic with nominal item/fluid rate types;
-- four-decimal clock values and explicit division/size error handling;
-- immutable physical `MachineInstance` objects with stable UUIDs and validated
-  shard, clock, Somersloop, recipe and typed-port state;
-- FactoryPlan v1 JSON Schema, field-specific validation, canonical export,
-  unknown-field preservation and a sequential migration registry;
-- property, boundary, invalid-state and serialization round-trip tests.
+- read-only Steam, Epic and custom-path source discovery with canonical path
+  authorization and explicit multi-install selection;
+- UTF-8/UTF-16 locale decoding plus the legacy single-file Docs adapter;
+- stable item, building and recipe IDs with exact solid/fluid rate conversion;
+- immutable catalog snapshots carrying importer, source, game build, locale and
+  SHA-256 provenance;
+- deterministic serialization, integrity verification, catalog diff, guarded
+  activation and rollback;
+- malformed, duplicate, unknown-form, missing-reference, large-fixture and
+  real-install read-only verification.
 
-Domain evidence is collected under [docs/domain](docs/domain). Foundation
-evidence remains under [docs/foundation](docs/foundation), while Slice 00
-evidence remains under [docs/baseline](docs/baseline).
+Game-data evidence is collected under [docs/game-data](docs/game-data). Domain,
+foundation and baseline evidence remain under their respective documentation
+directories.
 
 ## Repository layout
 
@@ -56,6 +60,7 @@ src-tauri/                        Narrow native runtime and capability policy
 tests/e2e/                        Browser shell smoke tests
 docs/foundation/                  Slice 01 architecture and verification evidence
 docs/domain/                      Slice 02 domain/schema verification evidence
+docs/game-data/                   Slice 03 import and snapshot verification evidence
 docs/baseline/                   Audits, measurements and verification records
 tests/upstream-characterization/ Executable upstream behavior fixtures
 spikes/rewrite/                  Disposable React/Tauri decision spike
@@ -107,10 +112,11 @@ ctest --test-dir build/upstream-characterization --output-on-failure
 ## Game data and artwork policy
 
 SatisPlanner releases do not redistribute Coffee Stain Studios game artwork or
-raw `CommunityResources/Docs` dumps. Future versions will read localized game
-data from the user's own installation and keep imported icons in a user-local
-cache. Original generic fallback visuals remain available when local assets are
-missing.
+raw `CommunityResources/Docs` dumps. The importer reads localized game data
+from the user's own installation without modifying it and stores only a
+normalized, provenance-bearing catalog snapshot. A later slice will keep
+imported icons in a user-local cache; original generic fallback visuals remain
+available when local assets are missing.
 
 The upstream runtime build artifacts produced during Slice 00 CI are retained
 only as short-lived private build evidence and are not attached to SatisPlanner

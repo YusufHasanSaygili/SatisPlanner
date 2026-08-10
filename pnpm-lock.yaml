@@ -70,7 +70,11 @@ importers:
 
   packages/domain: {}
 
-  packages/game-data: {}
+  packages/game-data:
+    dependencies:
+      '@satisplanner/domain':
+        specifier: workspace:*
+        version: link:../domain
 
   packages/graph-adapter:
     dependencies:
