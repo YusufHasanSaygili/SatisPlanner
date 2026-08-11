@@ -207,7 +207,7 @@ const MINER_TIERS: readonly ExtractorTierDescriptor[] = [
 		displayName: "Miner Mk.1",
 		baseRatePerMinute: { numerator: "60", denominator: "1" },
 		basePowerMW: 5,
-		powerExponent: 1.321929,
+		powerExponent: 1.321928,
 	},
 	{
 		id: "miner-mk2",
@@ -215,7 +215,7 @@ const MINER_TIERS: readonly ExtractorTierDescriptor[] = [
 		displayName: "Miner Mk.2",
 		baseRatePerMinute: { numerator: "120", denominator: "1" },
 		basePowerMW: 15,
-		powerExponent: 1.321929,
+		powerExponent: 1.321928,
 	},
 	{
 		id: "miner-mk3",
@@ -223,7 +223,7 @@ const MINER_TIERS: readonly ExtractorTierDescriptor[] = [
 		displayName: "Miner Mk.3",
 		baseRatePerMinute: { numerator: "240", denominator: "1" },
 		basePowerMW: 45,
-		powerExponent: 1.321929,
+		powerExponent: 1.321928,
 	},
 ];
 
@@ -260,7 +260,7 @@ export const OIL_EXTRACTION_STRATEGY = createLinearExtractionStrategy({
 			displayName: "Oil Extractor",
 			baseRatePerMinute: { numerator: "120", denominator: "1" },
 			basePowerMW: 40,
-			powerExponent: 1.321929,
+			powerExponent: 1.321928,
 		},
 	],
 });
@@ -278,7 +278,7 @@ export const WATER_EXTRACTION_STRATEGY = createLinearExtractionStrategy({
 			displayName: "Water Extractor",
 			baseRatePerMinute: { numerator: "120", denominator: "1" },
 			basePowerMW: 20,
-			powerExponent: 1.321929,
+			powerExponent: 1.321928,
 		},
 	],
 });
@@ -296,7 +296,7 @@ export const RESOURCE_WELL_EXTRACTION_STRATEGY = createContextRequiredExtraction
 			displayName: "Resource Well Extractor",
 			baseRatePerMinute: { numerator: "0", denominator: "1" },
 			basePowerMW: 0,
-			powerExponent: 1.321929,
+			powerExponent: 1.321928,
 		},
 	],
 });

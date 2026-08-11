@@ -55,7 +55,7 @@ describe("resource extraction strategies", () => {
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
 		expect(result.ratePerMinute).toEqual({ numerator: "1200", denominator: "1" });
-		expect(result.powerMW).toBeCloseTo(45 * 2.5 ** 1.321929, 8);
+		expect(result.powerMW).toBeCloseTo(45 * 2.5 ** 1.321928, 8);
 		expect(result.provenance).toMatchObject({
 			strategyId: "miner",
 			tierId: "miner-mk3",
