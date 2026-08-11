@@ -2,9 +2,9 @@
 
 Offline-first, graph-based desktop factory planner for Satisfactory 1.2.
 
-> **Development status:** Slice 09 logistics capacity and bottleneck diagnostics
-> are implemented on the `slice/09-logistics-bottlenecks` branch. Versioned transport
-> tiers, capacity-aware flow and accessible upgrade guidance form the `v0.10.0` milestone.
+> **Development status:** Slice 10 resilient persistence and upstream migration
+> are implemented on the `slice/10-persistence-migration` branch. Atomic saves,
+> recovery, schema migration and `.fcs` conversion form the `v0.11.0` milestone.
 
 [![SatisPlanner Quality](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml/badge.svg)](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml)
 
@@ -26,22 +26,22 @@ SatisPlanner will let players model the factory they will actually build:
 The full scope and the 16-slice delivery roadmap are in the
 [development plan](SatisPlanner-development-plan/00-MASTER-PLAN.md).
 
-## Current milestone: v0.10.0
+## Current milestone: v0.11.0
 
-Slice 09 turns graph connections into capacity-constrained transport equipment:
+Slice 10 makes local plans durable and older plans safely portable:
 
-- Conveyor Mk.1–Mk.6 capacities of 60/120/270/480/780/1200 items per minute;
-- Pipeline Mk.1–Mk.2 capacities of 300/600 cubic metres per minute;
-- medium-safe tier selection persisted through the FactoryPlan v4 schema;
-- requested, required, capacity, actual and lost rates in the connection inspector;
-- ranked, text-and-icon bottleneck diagnostics with navigation to the source edge;
-- minimum sufficient tier recommendations and incremental edge-tier recompute;
-- Coal Pure Miner Mk.3 250% acceptance coverage for Mk.5 and Mk.6.
+- atomic native saves with a last-known-good copy and interrupted-write detection;
+- debounced autosave plus an immediate browser-session safety copy;
+- explicit recovery inspection and user-controlled last-good restoration;
+- canonical plan export and preview-first import through every schema migration;
+- game-data snapshot mismatch and unresolved-recipe reporting before import;
+- upstream `.fcs` v1–v7 conversion with selectable expansion strategy;
+- conversion reports that keep unknown nodes, dropped links and the original file visible.
 
-Calculation evidence is collected under
-[docs/calculation-engine](docs/calculation-engine). Machine instances, resource
-extraction, graph UX, local icons, game-data, domain, foundation and baseline
-evidence remain under their respective documentation directories.
+Persistence and migration evidence is collected under
+[docs/persistence-migration](docs/persistence-migration). Logistics, calculation,
+machine instances, resource extraction, graph UX, local icons, game-data, domain,
+foundation and baseline evidence remain under their respective documentation directories.
 
 ## Repository layout
 
@@ -63,6 +63,7 @@ docs/resource-extraction/        Slice 06 extraction model and inspector evidenc
 docs/machine-instances/          Slice 07 machine binding and isolation evidence
 docs/calculation-engine/         Slice 08 formula, flow and diagnostics evidence
 docs/logistics-bottlenecks/      Slice 09 transport capacity and UX evidence
+docs/persistence-migration/      Slice 10 save, recovery and import evidence
 docs/baseline/                   Audits, measurements and verification records
 tests/upstream-characterization/ Executable upstream behavior fixtures
 spikes/rewrite/                  Disposable React/Tauri decision spike
