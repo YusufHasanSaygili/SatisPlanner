@@ -6,6 +6,7 @@ describe("calculation package foundation", () => {
 		expect(getCalculationFoundationStatus()).toMatchObject({
 			engineEnabled: true,
 			resourceExtractionEnabled: true,
+			materialFlowEnabled: true,
 		});
 	});
 });

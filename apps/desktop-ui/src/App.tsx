@@ -1,4 +1,5 @@
 import {
+	calculateFactoryPlan,
 	calculateResourceExtraction,
 	calculateSomersloopMultiplier,
 	extractionStrategyRegistry,
@@ -11,18 +12,18 @@ import {
 	deletePlanEntities,
 	duplicateMachineNode,
 	duplicateMachineNodes,
+	type FactoryPlanV3,
+	type MachineSettingsPatch,
 	movePlanNode,
 	parseFactoryPlan,
 	Rational,
+	type ResourceSettingsPatch,
 	rebindMachineRecipe,
 	serializeFactoryPlan,
 	setPlanViewport,
 	updateMachineNodeSettings,
 	updateResourceNodeSettings,
 	validateConnection,
-	type FactoryPlanV3,
-	type MachineSettingsPatch,
-	type ResourceSettingsPatch,
 } from "@satisplanner/domain";
 import {
 	FALLBACK_GRAPH_CATALOG,
@@ -33,23 +34,23 @@ import {
 	getGameDataFoundationStatus,
 } from "@satisplanner/game-data";
 import {
-	projectFactoryPlan,
 	type GraphCanvasNode,
 	type MachineCanvasNode,
+	projectFactoryPlan,
 	type ResourceCanvasNode,
 } from "@satisplanner/graph-adapter";
 import {
 	Background,
+	type Connection,
 	Controls,
+	type Edge,
 	Handle,
 	MiniMap,
+	type NodeProps,
 	Position,
 	ReactFlow,
 	ReactFlowProvider,
 	useReactFlow,
-	type Connection,
-	type Edge,
-	type NodeProps,
 	type Viewport,
 } from "@xyflow/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -94,6 +95,22 @@ function restorePlan(): FactoryPlanV3 {
 
 function formatMaterialId(materialId: string): string {
 	return materialId.replace(/^Desc_|_C$/g, "");
+}
+
+function formatFlowRate(rate: {
+	readonly numerator: string;
+	readonly denominator: string;
+}): string {
+	return new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 }).format(
+		Number(Rational.parse(rate).toDecimal(4)),
+	);
+}
+
+function formatEfficiency(
+	rate: { readonly numerator: string; readonly denominator: string } | null,
+): string {
+	if (!rate) return "Unresolved";
+	return `${Rational.parse(rate).multiply(Rational.parse("100")).toDecimal(2)}%`;
 }
 
 function MachineNodeCard({ data, selected }: NodeProps<MachineCanvasNode>) {
@@ -323,6 +340,27 @@ function GraphWorkspace() {
 				powerShardCount: selectedResource.powerShardCount,
 			})
 		: undefined;
+	const flowResult = useMemo(() => calculateFactoryPlan(plan), [plan]);
+	const selectedNodeFlow = selectedNode
+		? flowResult.nodes.find((entry) => entry.nodeId === selectedNode.id)
+		: undefined;
+	const selectedEdgeFlow = selectedEdge
+		? flowResult.edges.find((entry) => entry.edgeId === selectedEdge.id)
+		: undefined;
+	const selectedFlowDiagnostics = selectedNode
+		? flowResult.diagnostics.filter((entry) => entry.nodeIds.includes(selectedNode.id))
+		: selectedEdge
+			? flowResult.diagnostics.filter((entry) => entry.edgeId === selectedEdge.id)
+			: [];
+	const selectedOutputPortIds = new Set(
+		selectedNode?.ports.filter((port) => port.direction === "output").map((port) => port.id) ?? [],
+	);
+	const selectedTransportedRate = flowResult.edges
+		.filter((entry) => {
+			const edge = plan.edges.find((candidate) => candidate.id === entry.edgeId);
+			return edge !== undefined && selectedOutputPortIds.has(edge.fromPortId);
+		})
+		.reduce((total, entry) => total.add(Rational.parse(entry.actualRate)), Rational.parse("0"));
 	const selectedStrategy = selectedResource
 		? extractionStrategyRegistry.get(selectedResource.extractorStrategyId)
 		: undefined;
@@ -566,7 +604,14 @@ function GraphWorkspace() {
 					<MiniMap pannable zoomable ariaLabel="Factory minimap" />
 				</ReactFlow>
 				<div className="canvas-diagnostics" role="status" aria-live="polite">
-					<span>{diagnostic}</span>
+					<div>
+						<span>{diagnostic}</span>
+						<small data-testid="flow-engine-status">
+							{flowResult.resolved
+								? `Flow solved · ${flowResult.nodes.length} nodes · ${flowResult.totalPowerMW.toFixed(2)} MW`
+								: `Flow unresolved · ${flowResult.diagnostics.filter((entry) => entry.severity === "error").length} errors`}
+						</small>
+					</div>
 					<small data-testid="plan-persistence">{saveStatus}</small>
 				</div>
 			</main>
@@ -751,6 +796,60 @@ function GraphWorkspace() {
 								)}
 							</div>
 						)}
+						{selectedNodeFlow && (
+							<section className="calculation-results" aria-label="Machine calculation results">
+								<header>
+									<span>Steady-state calculation</span>
+									<strong>{formatEfficiency(selectedNodeFlow.efficiency)} efficient</strong>
+								</header>
+								<div className="calculation-result-grid">
+									<div>
+										<span>Power</span>
+										<strong>{selectedNodeFlow.powerMW.toFixed(2)} MW</strong>
+									</div>
+									<div>
+										<span>Transported</span>
+										<strong>{selectedTransportedRate.toDecimal(4)}/min</strong>
+									</div>
+								</div>
+								{selectedNodeFlow.requiredInputs.map((required) => {
+									const actual = selectedNodeFlow.actualInputs.find(
+										(entry) => entry.portId === required.portId,
+									);
+									return (
+										<div className="port-calculation" key={required.portId}>
+											<span>{formatMaterialId(required.materialId)} input</span>
+											<strong>
+												{formatFlowRate(actual?.ratePerMinute ?? Rational.parse("0").toJSON())}{" "}
+												actual / {formatFlowRate(required.ratePerMinute)} required
+											</strong>
+										</div>
+									);
+								})}
+								{selectedNodeFlow.potentialOutputs.map((potential) => {
+									const actual = selectedNodeFlow.actualOutputs.find(
+										(entry) => entry.portId === potential.portId,
+									);
+									return (
+										<div className="port-calculation" key={potential.portId}>
+											<span>{formatMaterialId(potential.materialId)} output</span>
+											<strong>
+												{formatFlowRate(actual?.ratePerMinute ?? Rational.parse("0").toJSON())}{" "}
+												actual / {formatFlowRate(potential.ratePerMinute)} potential
+											</strong>
+										</div>
+									);
+								})}
+								{selectedFlowDiagnostics.map((entry) => (
+									<p
+										className={entry.severity === "error" ? "inline-error" : "calculation-note"}
+										key={`${entry.code}:${entry.message}`}
+									>
+										{entry.message}
+									</p>
+								))}
+							</section>
+						)}
 						<div className="instance-actions">
 							<button
 								type="button"
@@ -883,8 +982,8 @@ function GraphWorkspace() {
 								</div>
 								<div>
 									<span>Transportable output</span>
-									<strong>{rateDisplay}</strong>
-									<small>No configured edge cap</small>
+									<strong>{selectedTransportedRate.toDecimal(4)}/min</strong>
+									<small>Actual connected flow</small>
 								</div>
 								<div>
 									<span>Power</span>
@@ -907,7 +1006,24 @@ function GraphWorkspace() {
 								<dt>Medium</dt>
 								<dd>{selectedEdge.medium}</dd>
 							</div>
+							{selectedEdgeFlow && (
+								<>
+									<div>
+										<dt>Actual rate</dt>
+										<dd>{formatFlowRate(selectedEdgeFlow.actualRate)}/min</dd>
+									</div>
+									<div>
+										<dt>Required rate</dt>
+										<dd>{formatFlowRate(selectedEdgeFlow.requiredRate)}/min</dd>
+									</div>
+								</>
+							)}
 						</dl>
+						{selectedFlowDiagnostics.map((entry) => (
+							<p className="inline-error" key={`${entry.code}:${entry.message}`}>
+								{entry.message}
+							</p>
+						))}
 					</section>
 				)}
 				{selectionCount > 0 && (

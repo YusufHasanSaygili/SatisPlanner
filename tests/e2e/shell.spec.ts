@@ -1,14 +1,14 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 
-async function dropCatalogEntry(
-	page: Page,
-	entry: Locator,
-	position: { x: number; y: number },
-) {
+async function dropCatalogEntry(page: Page, entry: Locator, position: { x: number; y: number }) {
 	const dataTransfer = await page.evaluateHandle(() => new DataTransfer());
 	await entry.dispatchEvent("dragstart", { dataTransfer });
 	const canvas = page.getByLabel("Factory canvas");
-	await canvas.dispatchEvent("dragover", { dataTransfer, clientX: position.x, clientY: position.y });
+	await canvas.dispatchEvent("dragover", {
+		dataTransfer,
+		clientX: position.x,
+		clientY: position.y,
+	});
 	await canvas.dispatchEvent("drop", { dataTransfer, clientX: position.x, clientY: position.y });
 }
 
@@ -48,7 +48,9 @@ test("renders the SatisPlanner graph shell and searchable fallback library", asy
 	await expect(matches).toHaveCount(2);
 	await expect(matches.nth(0)).toContainText("Build_ConstructorMk1_C::Recipe_IronPlate_C");
 	await expect(matches.nth(1)).toContainText("Build_ConstructorMk1_C::Recipe_IronRod_C");
-	await expect(page.getByRole("status").first()).toContainText("Contract v1 · browser-mock · v0.8.0");
+	await expect(page.getByRole("status").first()).toContainText(
+		"Contract v1 · browser-mock · v0.9.0",
+	);
 });
 
 test("drag/drop, connect validation, inspector commands and reload remain domain-backed", async ({
@@ -99,9 +101,9 @@ test("drag/drop, connect validation, inspector commands and reload remain domain
 	await expect(page.getByLabel("Machine inspector")).toContainText("UUID");
 
 	const initialSavedPosition = await page.evaluate(() => {
-		const plan = JSON.parse(
-			localStorage.getItem("satisplanner.slice-07.factory-plan") ?? "{}",
-		) as { nodes?: Array<{ recipeId: string; position: { x: number; y: number } }> };
+		const plan = JSON.parse(localStorage.getItem("satisplanner.slice-07.factory-plan") ?? "{}") as {
+			nodes?: Array<{ recipeId: string; position: { x: number; y: number } }>;
+		};
 		return plan.nodes?.find((node) => node.recipeId === "Recipe_IronPlate_C")?.position;
 	});
 	const before = await constructorNode.boundingBox();
@@ -111,9 +113,9 @@ test("drag/drop, connect validation, inspector commands and reload remain domain
 	await page.mouse.move(before.x + 160, before.y + 80, { steps: 8 });
 	await page.mouse.up();
 	const savedPosition = await page.evaluate(() => {
-		const plan = JSON.parse(
-			localStorage.getItem("satisplanner.slice-07.factory-plan") ?? "{}",
-		) as { nodes?: Array<{ recipeId: string; position: { x: number; y: number } }> };
+		const plan = JSON.parse(localStorage.getItem("satisplanner.slice-07.factory-plan") ?? "{}") as {
+			nodes?: Array<{ recipeId: string; position: { x: number; y: number } }>;
+		};
 		return plan.nodes?.find((node) => node.recipeId === "Recipe_IronPlate_C")?.position;
 	});
 	expect(savedPosition?.x).toBeGreaterThan(initialSavedPosition?.x ?? Number.POSITIVE_INFINITY);
@@ -127,7 +129,9 @@ test("drag/drop, connect validation, inspector commands and reload remain domain
 	await page.reload();
 	await expect(page.locator(".react-flow__node")).toHaveCount(3);
 	await expect(page.locator(".react-flow__edge")).toHaveCount(0);
-	await expect(page.getByTestId("plan-persistence")).toContainText("Saved · 3 nodes · 0 connections");
+	await expect(page.getByTestId("plan-persistence")).toContainText(
+		"Saved · 3 nodes · 0 connections",
+	);
 });
 
 test("resource drag/drop keeps purity, tier, shards and golden output instance-local", async ({
@@ -161,10 +165,55 @@ test("resource drag/drop keeps purity, tier, shards and golden output instance-l
 
 	await page.reload();
 	await expect(page.locator(".react-flow__node-resource")).toHaveCount(2);
-	await page.locator(".react-flow__node-resource").nth(0).getByText("Iron Ore", { exact: true }).click();
+	await page
+		.locator(".react-flow__node-resource")
+		.nth(0)
+		.getByText("Iron Ore", { exact: true })
+		.click();
 	await expect(page.getByLabel("Set purity pure")).toHaveAttribute("aria-pressed", "true");
 	await expect(page.getByLabel("Extractor tier")).toHaveValue("miner-mk3");
 	await expect(page.getByLabel("Extraction results")).toContainText("1,200 items/min");
+});
+
+test("steady-state engine exposes actual, required, efficiency and edge rates", async ({
+	page,
+}) => {
+	await dropCatalogEntry(page, page.getByLabel("Drag resource Iron Ore"), {
+		x: 300,
+		y: 240,
+	});
+	await dropCatalogEntry(page, page.getByLabel("Drag Smelter · Iron Ingot"), {
+		x: 570,
+		y: 240,
+	});
+	await dropCatalogEntry(page, page.getByLabel("Drag Constructor · Iron Plate"), {
+		x: 850,
+		y: 240,
+	});
+	await connectHandles(page, "Output Desc_OreIron_C", "Input Desc_OreIron_C");
+	await connectHandles(page, "Output Desc_IronIngot_C", "Input Desc_IronIngot_C");
+	await expect(page.locator(".react-flow__edge")).toHaveCount(2);
+	await expect(page.getByTestId("flow-engine-status")).toContainText("Flow solved · 3 nodes");
+
+	await page
+		.locator(".react-flow__node-machine")
+		.filter({ hasText: "Constructor · Iron Plate" })
+		.getByText("Constructor · Iron Plate", { exact: true })
+		.click();
+	const calculation = page.getByLabel("Machine calculation results");
+	await expect(calculation).toContainText("100% efficient");
+	await expect(calculation).toContainText("30 actual / 30 required");
+	await expect(calculation).toContainText("20 actual / 20 potential");
+	await expect(calculation).toContainText("4.00 MW");
+
+	await page
+		.locator(".react-flow__edge")
+		.nth(1)
+		.click({ position: { x: 40, y: 4 } });
+	const edgeInspector = page.getByLabel("Connection inspector");
+	await expect(edgeInspector).toContainText("Actual rate");
+	await expect(edgeInspector).toContainText("30/min");
+	await expect(edgeInspector).toContainText("Required rate");
 });
 
 test("machine inspector exposes the exact Constructor, Assembler and Manufacturer sloop matrices", async ({
@@ -246,7 +295,10 @@ test("three Assembler instances keep recipe, clock, shard and sloop state isolat
 	await page.getByLabel("Set 1 Somersloops, 1.5 times multiplier").click();
 	await page.getByLabel("Search compatible recipes").fill("rotor");
 	await expect(page.getByLabel("Compatible recipes").getByRole("button")).toHaveCount(1);
-	await page.getByLabel("Compatible recipes").getByRole("button", { name: /Assembler · Rotor/ }).click();
+	await page
+		.getByLabel("Compatible recipes")
+		.getByRole("button", { name: /Assembler · Rotor/ })
+		.click();
 
 	await assemblers
 		.nth(2)
@@ -257,10 +309,7 @@ test("three Assembler instances keep recipe, clock, shard and sloop state isolat
 	await page.getByLabel("Machine clock percent").blur();
 	await page.getByLabel("Set 2 Somersloops, 2 times multiplier").click();
 
-	await assemblers
-		.nth(0)
-		.getByText("Assembler · Reinforced Iron Plate", { exact: true })
-		.click();
+	await assemblers.nth(0).getByText("Assembler · Reinforced Iron Plate", { exact: true }).click();
 	await expect(page.getByLabel("Set machine to 0 Power Shards")).toHaveAttribute(
 		"aria-pressed",
 		"true",
@@ -278,9 +327,7 @@ test("three Assembler instances keep recipe, clock, shard and sloop state isolat
 
 	await expect(page.getByTestId("plan-persistence")).toContainText("3 nodes");
 	const saved = await page.evaluate(() => {
-		const plan = JSON.parse(
-			localStorage.getItem("satisplanner.slice-07.factory-plan") ?? "{}",
-		) as {
+		const plan = JSON.parse(localStorage.getItem("satisplanner.slice-07.factory-plan") ?? "{}") as {
 			nodes?: Array<{
 				recipeId: string;
 				clockPercent: string;
@@ -329,7 +376,9 @@ test("three Assembler instances keep recipe, clock, shard and sloop state isolat
 	);
 });
 
-test("removed catalog entries remain unresolved without losing saved machine state", async ({ page }) => {
+test("removed catalog entries remain unresolved without losing saved machine state", async ({
+	page,
+}) => {
 	await page.evaluate(() => {
 		localStorage.setItem(
 			"satisplanner.slice-07.factory-plan",
@@ -375,9 +424,9 @@ test("removed catalog entries remain unresolved without losing saved machine sta
 	await expect(page.getByLabel("Machine inspector")).toContainText("Recipe_Removed_C");
 	await expect(page.getByRole("alert")).toContainText("Unresolved catalog binding");
 	const persistedRecipe = await page.evaluate(() => {
-		const plan = JSON.parse(
-			localStorage.getItem("satisplanner.slice-07.factory-plan") ?? "{}",
-		) as { nodes?: Array<{ recipeId: string; clockPercent: string }> };
+		const plan = JSON.parse(localStorage.getItem("satisplanner.slice-07.factory-plan") ?? "{}") as {
+			nodes?: Array<{ recipeId: string; clockPercent: string }>;
+		};
 		return plan.nodes?.[0];
 	});
 	expect(persistedRecipe).toMatchObject({ recipeId: "Recipe_Removed_C", clockPercent: "150.0000" });

@@ -2,9 +2,10 @@
 
 Offline-first, graph-based desktop factory planner for Satisfactory 1.2.
 
-> **Development status:** Slice 07 independent machine instances are implemented
-> on the `slice/07-machine-instances` branch. Recipe binding, per-instance
-> clock, Power Shard, Somersloop and standby controls form the `v0.8.0` milestone.
+> **Development status:** Slice 08 deterministic material and power calculation
+> is implemented on the `slice/08-calculation-engine` branch. Formula strategies,
+> steady-state flow propagation, loop diagnostics and incremental recompute form
+> the `v0.9.0` milestone.
 
 [![SatisPlanner Quality](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml/badge.svg)](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml)
 
@@ -26,23 +27,23 @@ SatisPlanner will let players model the factory they will actually build:
 The full scope and the 16-slice delivery roadmap are in the
 [development plan](SatisPlanner-development-plan/00-MASTER-PLAN.md).
 
-## Current milestone: v0.8.0
+## Current milestone: v0.9.0
 
-Slice 07 makes every production machine an independently editable instance:
+Slice 08 calculates deterministic steady-state material flow and power:
 
-- data-driven building-to-recipe compatibility and recipe search;
-- typed recipe port rebinding that preserves and reports affected edges;
-- unresolved catalog entries that remain safely serialized;
-- atomic clock and Power Shard controls through 250%;
-- exact Constructor, Assembler and Manufacturer Somersloop multipliers;
-- standby editing plus accessible inline validation and fix actions;
-- batch duplication with independent node and port UUIDs;
-- three-machine isolation and reload coverage.
+- versioned production formula registry with explicit unsupported-formula errors;
+- exact clock-only input and clock × Somersloop-amplified output rules;
+- production power exponent `1.321928` and squared Somersloop power multiplier;
+- deterministic equal, manual and ratio splitting with merger conservation;
+- bounded SCC/fixed-point recycle-loop solving and non-convergence diagnostics;
+- connected-component incremental recompute instrumentation;
+- actual/required/efficiency/power results in machine and connection inspectors;
+- golden, randomized conservation, determinism, loop, benchmark and E2E evidence.
 
-Machine instance evidence is collected under
-[docs/machine-instances](docs/machine-instances). Resource extraction, graph
-UX, local icons, game-data, domain, foundation and baseline evidence remain
-under their respective documentation directories.
+Calculation evidence is collected under
+[docs/calculation-engine](docs/calculation-engine). Machine instances, resource
+extraction, graph UX, local icons, game-data, domain, foundation and baseline
+evidence remain under their respective documentation directories.
 
 ## Repository layout
 
@@ -62,6 +63,7 @@ docs/local-icons/                 Slice 04 cache, artwork and extractor evidence
 docs/graph-ux/                    Slice 05 graph UX and persistence evidence
 docs/resource-extraction/        Slice 06 extraction model and inspector evidence
 docs/machine-instances/          Slice 07 machine binding and isolation evidence
+docs/calculation-engine/         Slice 08 formula, flow and diagnostics evidence
 docs/baseline/                   Audits, measurements and verification records
 tests/upstream-characterization/ Executable upstream behavior fixtures
 spikes/rewrite/                  Disposable React/Tauri decision spike

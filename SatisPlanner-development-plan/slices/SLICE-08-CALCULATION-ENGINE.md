@@ -8,9 +8,9 @@ Resource, machine ve organization node'ları boyunca exact steady-state rate, de
 
 ## Task'lar
 
-- [S08-T01 — Machine/extractor formula strategies](../tasks/S08-T01-FORMULA-STRATEGIES.md)
-- [S08-T02 — Flow propagation ve split/merge](../tasks/S08-T02-FLOW-PROPAGATION.md)
-- [S08-T03 — Loops, diagnostics ve incremental compute](../tasks/S08-T03-LOOPS-DIAGNOSTICS.md)
+- [x] [S08-T01 — Machine/extractor formula strategies](../tasks/S08-T01-FORMULA-STRATEGIES.md)
+- [x] [S08-T02 — Flow propagation ve split/merge](../tasks/S08-T02-FLOW-PROPAGATION.md)
+- [x] [S08-T03 — Loops, diagnostics ve incremental compute](../tasks/S08-T03-LOOPS-DIAGNOSTICS.md)
 
 ## Slice acceptance
 
