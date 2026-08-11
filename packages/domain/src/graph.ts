@@ -31,6 +31,14 @@ export interface MachineNodeTemplate {
 	readonly ports: readonly NodePortTemplate[];
 }
 
+export interface MachineBuildingDefinition {
+	readonly buildingId: string;
+	readonly displayName: string;
+	readonly compatibleRecipeIds: readonly string[];
+	readonly powerShardSlots: number;
+	readonly somersloopSlots: number;
+}
+
 export interface ResourceNodeTemplate {
 	readonly classId: string;
 	readonly displayName: string;
@@ -322,6 +330,248 @@ export function duplicateMachineNode(
 		})),
 	};
 	return { ...withUpdatedAt(plan), nodes: [...plan.nodes, duplicate] };
+}
+
+export interface BatchMachineIdentitySet extends NodeIdentitySet {
+	readonly labelSuffix?: string;
+}
+
+export function duplicateMachineNodes(
+	plan: FactoryPlanV3,
+	nodeId: string,
+	identitySets: readonly BatchMachineIdentitySet[],
+): FactoryPlanV3 {
+	const source = plan.nodes.find((node) => node.id === nodeId);
+	if (source?.kind !== "machine") return plan;
+	const duplicates = identitySets.map((identities, index): MachinePlanNodeV3 => {
+		if (identities.portIds.length !== source.ports.length) {
+			throw new Error("Every duplicated graph port requires a stable UUID.");
+		}
+		return {
+			...source,
+			id: identities.nodeId,
+			displayName: identities.labelSuffix
+				? `${source.displayName} ${identities.labelSuffix}`
+				: source.displayName,
+			position: {
+				x: source.position.x + 280 * (index + 1),
+				y: source.position.y + 36 * (index + 1),
+			},
+			ports: source.ports.map((port, portIndex) => ({
+				...port,
+				id: identities.portIds[portIndex] as string,
+			})),
+		};
+	});
+	return { ...withUpdatedAt(plan), nodes: [...plan.nodes, ...duplicates] };
+}
+
+export interface MachineSettingsPatch {
+	readonly clockPercent?: string;
+	readonly powerShardCount?: number;
+	readonly somersloopCount?: number;
+	readonly standby?: boolean;
+}
+
+function assertMachineDefinition(
+	source: MachinePlanNodeV3,
+	definition: MachineBuildingDefinition,
+	requireCurrentRecipe = true,
+): void {
+	if (definition.buildingId !== source.buildingId) {
+		throw new DomainValidationError(
+			"INVALID_IDENTIFIER",
+			"Machine definition does not match the selected instance.",
+		);
+	}
+	if (requireCurrentRecipe && !definition.compatibleRecipeIds.includes(source.recipeId)) {
+		throw new DomainValidationError(
+			"INCOMPATIBLE_RECIPE",
+			`Recipe ${source.recipeId} is unresolved for ${definition.displayName}.`,
+		);
+	}
+	if (
+		!Number.isInteger(definition.powerShardSlots) ||
+		definition.powerShardSlots < 0 ||
+		definition.powerShardSlots > 3
+	) {
+		throw new DomainValidationError(
+			"INVALID_POWER_SHARD_COUNT",
+			"Machine power shard slots must be between 0 and 3.",
+		);
+	}
+	if (
+		!Number.isInteger(definition.somersloopSlots) ||
+		definition.somersloopSlots < 0 ||
+		definition.somersloopSlots > 4
+	) {
+		throw new DomainValidationError(
+			"INVALID_SOMERSLOOP_COUNT",
+			"Machine Somersloop slots must be between 0 and 4.",
+		);
+	}
+}
+
+export function updateMachineNodeSettings(
+	plan: FactoryPlanV3,
+	nodeId: string,
+	definition: MachineBuildingDefinition,
+	patch: MachineSettingsPatch,
+): FactoryPlanV3 {
+	const source = plan.nodes.find((node) => node.id === nodeId);
+	if (source?.kind !== "machine") {
+		throw new DomainValidationError(
+			"INVALID_IDENTIFIER",
+			"Selected machine instance is no longer available.",
+		);
+	}
+	assertMachineDefinition(source, definition);
+	const powerShardCount = patch.powerShardCount ?? source.powerShardCount;
+	if (
+		!Number.isInteger(powerShardCount) ||
+		powerShardCount < 0 ||
+		powerShardCount > definition.powerShardSlots
+	) {
+		throw new DomainValidationError(
+			"INVALID_POWER_SHARD_COUNT",
+			`Power shard count must be between 0 and ${definition.powerShardSlots}.`,
+		);
+	}
+	const somersloopCount = patch.somersloopCount ?? source.somersloopCount;
+	if (
+		!Number.isInteger(somersloopCount) ||
+		somersloopCount < 0 ||
+		somersloopCount > definition.somersloopSlots
+	) {
+		throw new DomainValidationError(
+			"INVALID_SOMERSLOOP_COUNT",
+			`Somersloop count must be between 0 and ${definition.somersloopSlots}.`,
+		);
+	}
+	const clock = ClockPercent.parse(patch.clockPercent ?? source.clockPercent);
+	if (clock.compare(ClockPercent.maximumForShardCount(powerShardCount)) > 0) {
+		throw new DomainValidationError(
+			"CLOCK_EXCEEDS_SHARD_CAPACITY",
+			`Clock ${clock} exceeds the capacity of ${powerShardCount} power shard(s).`,
+		);
+	}
+	if (patch.standby !== undefined && typeof patch.standby !== "boolean") {
+		throw new DomainValidationError("INVALID_PLAN", "Standby must be a boolean value.");
+	}
+	const updated: MachinePlanNodeV3 = {
+		...source,
+		clockPercent: clock.toJSON(),
+		powerShardCount,
+		somersloopCount,
+		standby: patch.standby ?? source.standby,
+	};
+	return {
+		...withUpdatedAt(plan),
+		nodes: plan.nodes.map((node) => (node.id === nodeId ? updated : node)),
+	};
+}
+
+export type RecipeRebindDiagnosticCode = "CONNECTED_PORT_REMOVAL" | "EDGE_REQUIRES_REVIEW";
+
+export interface RecipeRebindDiagnostic {
+	readonly code: RecipeRebindDiagnosticCode;
+	readonly message: string;
+	readonly edgeId: string;
+	readonly portId: string;
+}
+
+export interface RecipeRebindResult {
+	readonly plan: FactoryPlanV3;
+	readonly applied: boolean;
+	readonly diagnostics: readonly RecipeRebindDiagnostic[];
+}
+
+export function rebindMachineRecipe(
+	plan: FactoryPlanV3,
+	nodeId: string,
+	definition: MachineBuildingDefinition,
+	recipe: MachineNodeTemplate,
+	newPortIds: readonly string[],
+): RecipeRebindResult {
+	const source = plan.nodes.find((node) => node.id === nodeId);
+	if (source?.kind !== "machine") {
+		throw new DomainValidationError(
+			"INVALID_IDENTIFIER",
+			"Selected machine instance is no longer available.",
+		);
+	}
+	assertMachineDefinition(source, definition, false);
+	if (
+		recipe.buildingId !== definition.buildingId ||
+		!definition.compatibleRecipeIds.includes(recipe.recipeId)
+	) {
+		throw new DomainValidationError(
+			"INCOMPATIBLE_RECIPE",
+			`Recipe ${recipe.recipeId} cannot be produced in ${definition.displayName}.`,
+		);
+	}
+	const nextKeys = new Set(recipe.ports.map((port) => port.key));
+	const removedPorts = source.ports.filter((port) => !nextKeys.has(port.key));
+	const removalDiagnostics = removedPorts.flatMap((port) =>
+		plan.edges
+			.filter((edge) => edge.fromPortId === port.id || edge.toPortId === port.id)
+			.map(
+				(edge): RecipeRebindDiagnostic => ({
+					code: "CONNECTED_PORT_REMOVAL",
+					edgeId: edge.id,
+					portId: port.id,
+					message: `Recipe change would remove connected port ${port.key}; edge ${edge.id} was preserved.`,
+				}),
+			),
+	);
+	if (removalDiagnostics.length > 0) {
+		return { plan, applied: false, diagnostics: removalDiagnostics };
+	}
+	let identityIndex = 0;
+	const ports: PlanPortV3[] = recipe.ports.map((port) => {
+		const existing = source.ports.find((candidate) => candidate.key === port.key);
+		const id = existing?.id ?? newPortIds[identityIndex++];
+		if (!id) throw new Error("Every new recipe port requires a stable UUID.");
+		return { ...port, id };
+	});
+	if (identityIndex !== newPortIds.length) {
+		throw new Error("Unexpected recipe port UUID count.");
+	}
+	const reviewDiagnostics = ports.flatMap((port) => {
+		const existing = source.ports.find((candidate) => candidate.key === port.key);
+		if (
+			!existing ||
+			(existing.direction === port.direction &&
+				existing.materialForm === port.materialForm &&
+				existing.materialId === port.materialId)
+		) {
+			return [];
+		}
+		return plan.edges
+			.filter((edge) => edge.fromPortId === port.id || edge.toPortId === port.id)
+			.map(
+				(edge): RecipeRebindDiagnostic => ({
+					code: "EDGE_REQUIRES_REVIEW",
+					edgeId: edge.id,
+					portId: port.id,
+					message: `Edge ${edge.id} remains connected to changed ${port.key} and requires review.`,
+				}),
+			);
+	});
+	const updated: MachinePlanNodeV3 = {
+		...source,
+		recipeId: recipe.recipeId,
+		displayName: recipe.displayName,
+		ports,
+	};
+	return {
+		plan: {
+			...withUpdatedAt(plan),
+			nodes: plan.nodes.map((node) => (node.id === nodeId ? updated : node)),
+		},
+		applied: true,
+		diagnostics: reviewDiagnostics,
+	};
 }
 
 export interface ResourceSettingsPatch {

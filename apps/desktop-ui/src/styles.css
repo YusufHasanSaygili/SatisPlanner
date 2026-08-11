@@ -342,6 +342,21 @@ select:focus-visible {
 	white-space: nowrap;
 }
 
+.machine-node-settings {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: 8px;
+}
+
+.machine-node-settings span {
+	padding: 2px 5px;
+	border: 1px solid #344b60;
+	border-radius: 999px;
+	color: #9fb6c8;
+	font-size: 8px;
+}
+
 .port-list {
 	display: grid;
 	gap: 6px;
@@ -548,6 +563,10 @@ select:focus-visible {
 	grid-template-columns: repeat(4, 1fr);
 }
 
+.segmented-control.sloop-options {
+	grid-template-columns: repeat(auto-fit, minmax(46px, 1fr));
+}
+
 .segmented-control button {
 	padding: 7px 4px;
 	font-size: 10px;
@@ -572,6 +591,61 @@ select:focus-visible {
 	border-radius: 7px;
 	color: #e9eef4;
 	background: #101820;
+}
+
+.recipe-options {
+	display: grid;
+	gap: 5px;
+	max-height: 168px;
+	margin-top: 7px;
+	overflow-y: auto;
+}
+
+.recipe-options button {
+	display: grid;
+	gap: 3px;
+	text-align: left;
+}
+
+.recipe-options button[aria-pressed="true"] {
+	border-color: #69b481;
+	background: #234331;
+}
+
+.recipe-options small,
+.quick-setting > small {
+	color: #71879a;
+	font-size: 9px;
+}
+
+.standby-control {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 13px;
+	color: #aebdca;
+	font-size: 11px;
+}
+
+.standby-control input {
+	width: 15px;
+	height: 15px;
+}
+
+.instance-actions {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 7px;
+	margin-top: 13px;
+}
+
+.inline-error button {
+	margin-top: 8px;
+}
+
+.inspector-card button:disabled {
+	cursor: not-allowed;
+	opacity: 0.55;
 }
 
 .inline-error {

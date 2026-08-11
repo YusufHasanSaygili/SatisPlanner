@@ -6,6 +6,10 @@ export interface MachineCanvasNodeData extends Record<string, unknown> {
 	readonly label: string;
 	readonly buildingId: string;
 	readonly recipeId: string;
+	readonly clockPercent: string;
+	readonly powerShardCount: number;
+	readonly somersloopCount: number;
+	readonly standby: boolean;
 	readonly inputs: readonly PlanPortV3[];
 	readonly outputs: readonly PlanPortV3[];
 }
@@ -63,6 +67,10 @@ export function projectFactoryPlan(
 					label: node.displayName,
 					buildingId: node.buildingId,
 					recipeId: node.recipeId,
+					clockPercent: node.clockPercent,
+					powerShardCount: node.powerShardCount,
+					somersloopCount: node.somersloopCount,
+					standby: node.standby,
 					inputs: node.ports.filter((port) => port.direction === "input"),
 					outputs: node.ports.filter((port) => port.direction === "output"),
 				},

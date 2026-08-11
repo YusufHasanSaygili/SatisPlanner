@@ -1,5 +1,6 @@
 import {
 	calculateResourceExtraction,
+	calculateSomersloopMultiplier,
 	extractionStrategyRegistry,
 	getCalculationFoundationStatus,
 } from "@satisplanner/calculation";
@@ -9,20 +10,25 @@ import {
 	connectMachinePorts,
 	deletePlanEntities,
 	duplicateMachineNode,
+	duplicateMachineNodes,
 	movePlanNode,
 	parseFactoryPlan,
 	Rational,
+	rebindMachineRecipe,
 	serializeFactoryPlan,
 	setPlanViewport,
+	updateMachineNodeSettings,
 	updateResourceNodeSettings,
 	validateConnection,
 	type FactoryPlanV3,
+	type MachineSettingsPatch,
 	type ResourceSettingsPatch,
 } from "@satisplanner/domain";
 import {
 	FALLBACK_GRAPH_CATALOG,
 	FALLBACK_GRAPH_CATALOG_VERSION,
 	FALLBACK_ICON_PATHS,
+	FALLBACK_MACHINE_BUILDINGS,
 	FALLBACK_RESOURCE_CATALOG,
 	getGameDataFoundationStatus,
 } from "@satisplanner/game-data";
@@ -52,8 +58,8 @@ import { requestRuntimeInfo } from "./native/contracts";
 import { createMockNativeAdapter } from "./native/mock-adapter";
 import { createTauriNativeAdapter, isTauriRuntime } from "./native/tauri-adapter";
 
-const PLAN_STORAGE_KEY = "satisplanner.slice-06.factory-plan";
-const LEGACY_PLAN_STORAGE_KEY = "satisplanner.slice-05.factory-plan";
+const PLAN_STORAGE_KEY = "satisplanner.slice-07.factory-plan";
+const LEGACY_PLAN_STORAGE_KEY = "satisplanner.slice-06.factory-plan";
 const DRAG_MIME = "application/x-satisplanner-node-template";
 
 interface SelectionState {
@@ -95,6 +101,11 @@ function MachineNodeCard({ data, selected }: NodeProps<MachineCanvasNode>) {
 		<div className={selected ? "machine-node selected" : "machine-node"}>
 			<div className="machine-node-title">{data.label}</div>
 			<div className="machine-node-id">{data.buildingId}</div>
+			<div className="machine-node-settings">
+				<span>{data.clockPercent}%</span>
+				<span>{data.powerShardCount} shards</span>
+				<span>{data.somersloopCount} sloops</span>
+			</div>
 			<section className="port-list input-ports" aria-label={`${data.label} inputs`}>
 				{data.inputs.map((port, index) => (
 					<div className="port-row" key={port.id}>
@@ -102,7 +113,7 @@ function MachineNodeCard({ data, selected }: NodeProps<MachineCanvasNode>) {
 							id={port.id}
 							type="target"
 							position={Position.Left}
-							style={{ top: 66 + index * 24 }}
+							style={{ top: 94 + index * 24 }}
 							aria-label={`Input ${port.materialId}`}
 						/>
 						<span>{formatMaterialId(port.materialId)}</span>
@@ -119,7 +130,7 @@ function MachineNodeCard({ data, selected }: NodeProps<MachineCanvasNode>) {
 							id={port.id}
 							type="source"
 							position={Position.Right}
-							style={{ top: 66 + index * 24 }}
+							style={{ top: 94 + index * 24 }}
 							aria-label={`Output ${port.materialId}`}
 						/>
 					</div>
@@ -160,6 +171,8 @@ function GraphWorkspace() {
 	const [plan, setPlan] = useState<FactoryPlanV3>(restorePlan);
 	const [selection, setSelection] = useState<SelectionState>({ nodeIds: [], edgeIds: [] });
 	const [query, setQuery] = useState("");
+	const [machineRecipeQuery, setMachineRecipeQuery] = useState("");
+	const [machineError, setMachineError] = useState<string | null>(null);
 	const [diagnostic, setDiagnostic] = useState(
 		"Drag a library entry onto the canvas to create a domain instance.",
 	);
@@ -274,6 +287,31 @@ function GraphWorkspace() {
 	const selectionCount = selection.nodeIds.length + selection.edgeIds.length;
 	const selectedResource = selectedNode?.kind === "resource" ? selectedNode : undefined;
 	const selectedMachine = selectedNode?.kind === "machine" ? selectedNode : undefined;
+	const selectedMachineDefinition = selectedMachine
+		? FALLBACK_MACHINE_BUILDINGS.find((entry) => entry.buildingId === selectedMachine.buildingId)
+		: undefined;
+	const compatibleMachineRecipes = selectedMachineDefinition
+		? FALLBACK_GRAPH_CATALOG.filter(
+				(entry) =>
+					entry.buildingId === selectedMachineDefinition.buildingId &&
+					selectedMachineDefinition.compatibleRecipeIds.includes(entry.recipeId),
+			)
+		: [];
+	const selectedMachineResolved = selectedMachine
+		? compatibleMachineRecipes.some((entry) => entry.recipeId === selectedMachine.recipeId)
+		: false;
+	const filteredMachineRecipes = compatibleMachineRecipes.filter((entry) =>
+		[entry.displayName, entry.recipeId, ...entry.aliases]
+			.join(" ")
+			.toLocaleLowerCase()
+			.includes(machineRecipeQuery.trim().toLocaleLowerCase()),
+	);
+	const selectedMachineId = selectedMachine?.id;
+	useEffect(() => {
+		setMachineRecipeQuery("");
+		setMachineError(null);
+		if (selectedMachineId) setDiagnostic(`Selected machine ${selectedMachineId}.`);
+	}, [selectedMachineId]);
 	const selectedExtraction = selectedResource
 		? calculateResourceExtraction({
 				strategyId: selectedResource.extractorStrategyId,
@@ -318,6 +356,56 @@ function GraphWorkspace() {
 			setDiagnostic(`${updated.displayName} extraction settings updated.`);
 		} catch (error) {
 			setDiagnostic(error instanceof Error ? error.message : "Resource settings are invalid.");
+		}
+	}
+
+	function editSelectedMachine(patch: MachineSettingsPatch): boolean {
+		if (!selectedMachine || !selectedMachineDefinition) {
+			setMachineError("This machine is unresolved in the active catalog and cannot be edited.");
+			return false;
+		}
+		try {
+			const next = updateMachineNodeSettings(
+				plan,
+				selectedMachine.id,
+				selectedMachineDefinition,
+				patch,
+			);
+			setPlan(next);
+			setMachineError(null);
+			setDiagnostic(`${selectedMachineDefinition.displayName} instance settings updated.`);
+			return true;
+		} catch (error) {
+			setMachineError(error instanceof Error ? error.message : "Machine settings are invalid.");
+			return false;
+		}
+	}
+
+	function selectMachineRecipe(recipe: (typeof FALLBACK_GRAPH_CATALOG)[number]): void {
+		if (!selectedMachine || !selectedMachineDefinition) return;
+		try {
+			const missingPortCount = recipe.ports.filter(
+				(port) => !selectedMachine.ports.some((current) => current.key === port.key),
+			).length;
+			const result = rebindMachineRecipe(
+				plan,
+				selectedMachine.id,
+				selectedMachineDefinition,
+				recipe,
+				Array.from({ length: missingPortCount }, () => crypto.randomUUID()),
+			);
+			if (!result.applied) {
+				setMachineError(result.diagnostics.map((entry) => entry.message).join(" "));
+				return;
+			}
+			setPlan(result.plan);
+			const reviewMessage = result.diagnostics.map((entry) => entry.message).join(" ");
+			setMachineError(reviewMessage || null);
+			setDiagnostic(
+				reviewMessage || `${selectedMachineDefinition.displayName} recipe changed safely.`,
+			);
+		} catch (error) {
+			setMachineError(error instanceof Error ? error.message : "Recipe change is invalid.");
 		}
 	}
 
@@ -522,22 +610,186 @@ function GraphWorkspace() {
 								</dd>
 							</div>
 						</dl>
-						<button
-							type="button"
-							onClick={() => {
-								setPlan((current) =>
-									duplicateMachineNode(current, selectedMachine.id, {
-										nodeId: crypto.randomUUID(),
-										portIds: selectedMachine.ports.map(() => crypto.randomUUID()),
-									}),
-								);
-								setDiagnostic(
-									`${selectedMachine.displayName} duplicated as an independent instance.`,
-								);
-							}}
-						>
-							Duplicate instance
-						</button>
+						{(!selectedMachineDefinition || !selectedMachineResolved) && (
+							<p className="inline-error" role="alert">
+								Unresolved catalog binding. The saved machine and recipe remain intact until a
+								compatible catalog entry is selected.
+							</p>
+						)}
+						{selectedMachineDefinition && (
+							<>
+								<label className="setting-field">
+									<span>Search compatible recipes</span>
+									<input
+										aria-label="Search compatible recipes"
+										value={machineRecipeQuery}
+										onChange={(event) => setMachineRecipeQuery(event.currentTarget.value)}
+									/>
+								</label>
+								<section className="recipe-options" aria-label="Compatible recipes">
+									{filteredMachineRecipes.map((recipe) => (
+										<button
+											type="button"
+											key={recipe.recipeId}
+											aria-pressed={selectedMachine.recipeId === recipe.recipeId}
+											onClick={() => selectMachineRecipe(recipe)}
+										>
+											{recipe.displayName}
+											<small>{recipe.recipeId}</small>
+										</button>
+									))}
+									{filteredMachineRecipes.length === 0 && (
+										<small>No compatible recipe match.</small>
+									)}
+								</section>
+								<fieldset className="quick-setting">
+									<legend>Power Shards</legend>
+									<div className="segmented-control shards">
+										{Array.from(
+											{ length: selectedMachineDefinition.powerShardSlots + 1 },
+											(_, count) => count,
+										).map((count) => (
+											<button
+												type="button"
+												key={count}
+												aria-label={`Set machine to ${count} Power Shards`}
+												aria-pressed={selectedMachine.powerShardCount === count}
+												onClick={() => {
+													const maximumClock = 100 + count * 50;
+													editSelectedMachine({
+														powerShardCount: count,
+														clockPercent: String(
+															Math.min(Number(selectedMachine.clockPercent), maximumClock),
+														),
+													});
+												}}
+											>
+												{count}
+											</button>
+										))}
+									</div>
+								</fieldset>
+								<label className="setting-field">
+									<span>Machine clock percent</span>
+									<input
+										key={`${selectedMachine.id}:${selectedMachine.clockPercent}`}
+										aria-label="Machine clock percent"
+										type="number"
+										min="1"
+										max="250"
+										step="0.0001"
+										defaultValue={selectedMachine.clockPercent}
+										onBlur={(event) => {
+											if (!editSelectedMachine({ clockPercent: event.currentTarget.value })) {
+												event.currentTarget.value = selectedMachine.clockPercent;
+											}
+										}}
+									/>
+								</label>
+								<fieldset className="quick-setting">
+									<legend>Somersloops</legend>
+									{selectedMachineDefinition.somersloopSlots === 0 ? (
+										<>
+											<button type="button" disabled aria-label="Somersloops unavailable">
+												0 · 1×
+											</button>
+											<small>This building has no Somersloop slots.</small>
+										</>
+									) : (
+										<div className="segmented-control sloop-options">
+											{Array.from(
+												{ length: selectedMachineDefinition.somersloopSlots + 1 },
+												(_, count) => count,
+											).map((count) => {
+												const multiplier = Rational.parse(
+													calculateSomersloopMultiplier(
+														count,
+														selectedMachineDefinition.somersloopSlots,
+													),
+												).toDecimal(2);
+												return (
+													<button
+														type="button"
+														key={count}
+														aria-label={`Set ${count} Somersloops, ${multiplier} times multiplier`}
+														aria-pressed={selectedMachine.somersloopCount === count}
+														onClick={() => editSelectedMachine({ somersloopCount: count })}
+													>
+														{count} · {multiplier}×
+													</button>
+												);
+											})}
+										</div>
+									)}
+								</fieldset>
+								<label className="standby-control">
+									<input
+										type="checkbox"
+										checked={selectedMachine.standby}
+										onChange={(event) =>
+											editSelectedMachine({ standby: event.currentTarget.checked })
+										}
+									/>
+									Standby
+								</label>
+							</>
+						)}
+						{machineError && (
+							<div className="inline-error" role="alert">
+								{machineError}
+								{machineError.startsWith("Clock") && selectedMachineDefinition && (
+									<button
+										type="button"
+										onClick={() =>
+											editSelectedMachine({
+												clockPercent: String(100 + selectedMachine.powerShardCount * 50),
+											})
+										}
+									>
+										Use shard-safe clock
+									</button>
+								)}
+							</div>
+						)}
+						<div className="instance-actions">
+							<button
+								type="button"
+								onClick={() => {
+									setPlan((current) =>
+										duplicateMachineNode(current, selectedMachine.id, {
+											nodeId: crypto.randomUUID(),
+											portIds: selectedMachine.ports.map(() => crypto.randomUUID()),
+										}),
+									);
+									setDiagnostic(
+										`${selectedMachine.displayName} duplicated as an independent instance.`,
+									);
+								}}
+							>
+								Duplicate instance
+							</button>
+							<button
+								type="button"
+								onClick={() => {
+									setPlan((current) =>
+										duplicateMachineNodes(
+											current,
+											selectedMachine.id,
+											["#2", "#3"].map((labelSuffix) => ({
+												nodeId: crypto.randomUUID(),
+												portIds: selectedMachine.ports.map(() => crypto.randomUUID()),
+												labelSuffix,
+											})),
+										),
+									);
+									setDiagnostic(
+										`${selectedMachine.displayName} duplicated into two isolated instances.`,
+									);
+								}}
+							>
+								Duplicate twice
+							</button>
+						</div>
 					</section>
 				)}
 				{selectedResource && (

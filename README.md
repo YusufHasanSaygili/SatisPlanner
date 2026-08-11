@@ -2,9 +2,9 @@
 
 Offline-first, graph-based desktop factory planner for Satisfactory 1.2.
 
-> **Development status:** Slice 06 resource extraction is implemented on the
-> `slice/06-resource-extraction` branch. Per-instance purity, extractor tier,
-> clock and Power Shard settings form the `v0.7.0` milestone.
+> **Development status:** Slice 07 independent machine instances are implemented
+> on the `slice/07-machine-instances` branch. Recipe binding, per-instance
+> clock, Power Shard, Somersloop and standby controls form the `v0.8.0` milestone.
 
 [![SatisPlanner Quality](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml/badge.svg)](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml)
 
@@ -26,23 +26,23 @@ SatisPlanner will let players model the factory they will actually build:
 The full scope and the 16-slice delivery roadmap are in the
 [development plan](SatisPlanner-development-plan/00-MASTER-PLAN.md).
 
-## Current milestone: v0.7.0
+## Current milestone: v0.8.0
 
-Slice 06 adds real resource source instances to the planning canvas:
+Slice 07 makes every production machine an independently editable instance:
 
-- independent Impure, Normal and Pure resource node settings;
-- data-driven Miner Mk.1-Mk.3 rate and power descriptors;
-- exact rational extraction rates across purity, tier and clock settings;
-- Power Shard capacity validation through 250% clock;
-- separate Oil, Water and Resource Well strategy boundaries;
-- FactoryPlan v3 resource serialization with chained v1/v2 migration;
-- accessible resource inspector controls and live extraction results;
-- persisted resource drag/drop and selected-instance isolation.
+- data-driven building-to-recipe compatibility and recipe search;
+- typed recipe port rebinding that preserves and reports affected edges;
+- unresolved catalog entries that remain safely serialized;
+- atomic clock and Power Shard controls through 250%;
+- exact Constructor, Assembler and Manufacturer Somersloop multipliers;
+- standby editing plus accessible inline validation and fix actions;
+- batch duplication with independent node and port UUIDs;
+- three-machine isolation and reload coverage.
 
-Resource extraction evidence is collected under
-[docs/resource-extraction](docs/resource-extraction). Graph UX, local icons,
-game-data, domain, foundation and baseline evidence remain under their
-respective documentation directories.
+Machine instance evidence is collected under
+[docs/machine-instances](docs/machine-instances). Resource extraction, graph
+UX, local icons, game-data, domain, foundation and baseline evidence remain
+under their respective documentation directories.
 
 ## Repository layout
 
@@ -61,6 +61,7 @@ docs/game-data/                   Slice 03 import and snapshot verification evid
 docs/local-icons/                 Slice 04 cache, artwork and extractor evidence
 docs/graph-ux/                    Slice 05 graph UX and persistence evidence
 docs/resource-extraction/        Slice 06 extraction model and inspector evidence
+docs/machine-instances/          Slice 07 machine binding and isolation evidence
 docs/baseline/                   Audits, measurements and verification records
 tests/upstream-characterization/ Executable upstream behavior fixtures
 spikes/rewrite/                  Disposable React/Tauri decision spike

@@ -1,6 +1,10 @@
-import type { MachineNodeTemplate, ResourceNodeTemplate } from "@satisplanner/domain";
+import type {
+	MachineBuildingDefinition,
+	MachineNodeTemplate,
+	ResourceNodeTemplate,
+} from "@satisplanner/domain";
 
-export const FALLBACK_GRAPH_CATALOG_VERSION = "fallback-graph-catalog-v2" as const;
+export const FALLBACK_GRAPH_CATALOG_VERSION = "fallback-graph-catalog-v3" as const;
 
 /**
  * Versioned, redistribution-safe placeholders used until the user's normalized
@@ -75,11 +79,197 @@ export const FALLBACK_GRAPH_CATALOG: readonly MachineNodeTemplate[] = [
 		],
 	},
 	{
-		classId: "Build_OilRefinery_C::Recipe_Fuel_C",
+		classId: "Build_FoundryMk1_C::Recipe_IngotSteel_C",
+		displayName: "Foundry · Steel Ingot",
+		category: "Production",
+		buildingId: "Build_FoundryMk1_C",
+		recipeId: "Recipe_IngotSteel_C",
+		aliases: ["foundry", "steel", "alloy", "ingot"],
+		ports: [
+			{
+				key: "input-0",
+				direction: "input",
+				materialForm: "solid",
+				materialId: "Desc_OreIron_C",
+			},
+			{
+				key: "input-1",
+				direction: "input",
+				materialForm: "solid",
+				materialId: "Desc_Coal_C",
+			},
+			{
+				key: "output-0",
+				direction: "output",
+				materialForm: "solid",
+				materialId: "Desc_SteelIngot_C",
+			},
+		],
+	},
+	{
+		classId: "Build_FoundryMk1_C::Recipe_IngotAluminum_C",
+		displayName: "Foundry · Aluminum Ingot",
+		category: "Production",
+		buildingId: "Build_FoundryMk1_C",
+		recipeId: "Recipe_IngotAluminum_C",
+		aliases: ["foundry", "aluminum", "alloy", "ingot"],
+		ports: [
+			{
+				key: "input-0",
+				direction: "input",
+				materialForm: "solid",
+				materialId: "Desc_AluminumScrap_C",
+			},
+			{
+				key: "input-1",
+				direction: "input",
+				materialForm: "solid",
+				materialId: "Desc_Silica_C",
+			},
+			{
+				key: "output-0",
+				direction: "output",
+				materialForm: "solid",
+				materialId: "Desc_AluminumIngot_C",
+			},
+		],
+	},
+	{
+		classId: "Build_AssemblerMk1_C::Recipe_IronPlateReinforced_C",
+		displayName: "Assembler · Reinforced Iron Plate",
+		category: "Production",
+		buildingId: "Build_AssemblerMk1_C",
+		recipeId: "Recipe_IronPlateReinforced_C",
+		aliases: ["assembler", "reinforced", "iron", "plate"],
+		ports: [
+			{
+				key: "input-0",
+				direction: "input",
+				materialForm: "solid",
+				materialId: "Desc_IronPlate_C",
+			},
+			{
+				key: "input-1",
+				direction: "input",
+				materialForm: "solid",
+				materialId: "Desc_IronScrew_C",
+			},
+			{
+				key: "output-0",
+				direction: "output",
+				materialForm: "solid",
+				materialId: "Desc_IronPlateReinforced_C",
+			},
+		],
+	},
+	{
+		classId: "Build_AssemblerMk1_C::Recipe_Rotor_C",
+		displayName: "Assembler · Rotor",
+		category: "Production",
+		buildingId: "Build_AssemblerMk1_C",
+		recipeId: "Recipe_Rotor_C",
+		aliases: ["assembler", "rotor", "iron", "screw"],
+		ports: [
+			{
+				key: "input-0",
+				direction: "input",
+				materialForm: "solid",
+				materialId: "Desc_IronRod_C",
+			},
+			{
+				key: "input-1",
+				direction: "input",
+				materialForm: "solid",
+				materialId: "Desc_IronScrew_C",
+			},
+			{
+				key: "output-0",
+				direction: "output",
+				materialForm: "solid",
+				materialId: "Desc_Rotor_C",
+			},
+		],
+	},
+	{
+		classId: "Build_ManufacturerMk1_C::Recipe_Computer_C",
+		displayName: "Manufacturer · Computer",
+		category: "Production",
+		buildingId: "Build_ManufacturerMk1_C",
+		recipeId: "Recipe_Computer_C",
+		aliases: ["manufacturer", "computer", "circuit", "plastic"],
+		ports: [
+			{
+				key: "input-0",
+				direction: "input",
+				materialForm: "solid",
+				materialId: "Desc_CircuitBoard_C",
+			},
+			{
+				key: "input-1",
+				direction: "input",
+				materialForm: "solid",
+				materialId: "Desc_Cable_C",
+			},
+			{
+				key: "input-2",
+				direction: "input",
+				materialForm: "solid",
+				materialId: "Desc_Plastic_C",
+			},
+			{
+				key: "output-0",
+				direction: "output",
+				materialForm: "solid",
+				materialId: "Desc_Computer_C",
+			},
+		],
+	},
+	{
+		classId: "Build_ManufacturerMk1_C::Recipe_ModularFrameHeavy_C",
+		displayName: "Manufacturer · Heavy Modular Frame",
+		category: "Production",
+		buildingId: "Build_ManufacturerMk1_C",
+		recipeId: "Recipe_ModularFrameHeavy_C",
+		aliases: ["manufacturer", "heavy", "modular", "frame"],
+		ports: [
+			{
+				key: "input-0",
+				direction: "input",
+				materialForm: "solid",
+				materialId: "Desc_ModularFrame_C",
+			},
+			{
+				key: "input-1",
+				direction: "input",
+				materialForm: "solid",
+				materialId: "Desc_SteelPipe_C",
+			},
+			{
+				key: "input-2",
+				direction: "input",
+				materialForm: "solid",
+				materialId: "Desc_SteelPlateReinforced_C",
+			},
+			{
+				key: "input-3",
+				direction: "input",
+				materialForm: "solid",
+				materialId: "Desc_IronScrew_C",
+			},
+			{
+				key: "output-0",
+				direction: "output",
+				materialForm: "solid",
+				materialId: "Desc_ModularFrameHeavy_C",
+			},
+		],
+	},
+	{
+		classId: "Build_OilRefinery_C::Recipe_LiquidFuel_C",
 		displayName: "Refinery · Fuel",
 		category: "Production",
 		buildingId: "Build_OilRefinery_C",
-		recipeId: "Recipe_Fuel_C",
+		recipeId: "Recipe_LiquidFuel_C",
 		aliases: ["oil", "fuel", "fluid", "refinery"],
 		ports: [
 			{
@@ -94,7 +284,58 @@ export const FALLBACK_GRAPH_CATALOG: readonly MachineNodeTemplate[] = [
 				materialForm: "fluid",
 				materialId: "Desc_LiquidFuel_C",
 			},
+			{
+				key: "output-1",
+				direction: "output",
+				materialForm: "solid",
+				materialId: "Desc_PolymerResin_C",
+			},
 		],
+	},
+];
+
+export const FALLBACK_MACHINE_BUILDINGS: readonly MachineBuildingDefinition[] = [
+	{
+		buildingId: "Build_SmelterMk1_C",
+		displayName: "Smelter",
+		compatibleRecipeIds: ["Recipe_IronIngot_C"],
+		powerShardSlots: 3,
+		somersloopSlots: 0,
+	},
+	{
+		buildingId: "Build_ConstructorMk1_C",
+		displayName: "Constructor",
+		compatibleRecipeIds: ["Recipe_IronPlate_C", "Recipe_IronRod_C"],
+		powerShardSlots: 3,
+		somersloopSlots: 1,
+	},
+	{
+		buildingId: "Build_FoundryMk1_C",
+		displayName: "Foundry",
+		compatibleRecipeIds: ["Recipe_IngotSteel_C", "Recipe_IngotAluminum_C"],
+		powerShardSlots: 3,
+		somersloopSlots: 2,
+	},
+	{
+		buildingId: "Build_AssemblerMk1_C",
+		displayName: "Assembler",
+		compatibleRecipeIds: ["Recipe_IronPlateReinforced_C", "Recipe_Rotor_C"],
+		powerShardSlots: 3,
+		somersloopSlots: 2,
+	},
+	{
+		buildingId: "Build_ManufacturerMk1_C",
+		displayName: "Manufacturer",
+		compatibleRecipeIds: ["Recipe_Computer_C", "Recipe_ModularFrameHeavy_C"],
+		powerShardSlots: 3,
+		somersloopSlots: 4,
+	},
+	{
+		buildingId: "Build_OilRefinery_C",
+		displayName: "Refinery",
+		compatibleRecipeIds: ["Recipe_LiquidFuel_C"],
+		powerShardSlots: 3,
+		somersloopSlots: 2,
 	},
 ];
 

@@ -41,14 +41,14 @@ test("renders the SatisPlanner graph shell and searchable fallback library", asy
 	await expect(page.getByLabel("Building library")).toBeVisible();
 	await expect(page.getByLabel("Factory canvas")).toBeVisible();
 	await expect(page.getByLabel("Inspector")).toContainText("Nothing selected");
-	await expect(page.getByLabel("Production catalog").getByRole("button")).toHaveCount(4);
+	await expect(page.getByLabel("Production catalog").getByRole("button")).toHaveCount(10);
 
 	await page.getByLabel("Search catalog").fill("constructor");
 	const matches = page.getByLabel("Production catalog").getByRole("button");
 	await expect(matches).toHaveCount(2);
 	await expect(matches.nth(0)).toContainText("Build_ConstructorMk1_C::Recipe_IronPlate_C");
 	await expect(matches.nth(1)).toContainText("Build_ConstructorMk1_C::Recipe_IronRod_C");
-	await expect(page.getByRole("status").first()).toContainText("Contract v1 · browser-mock · v0.7.0");
+	await expect(page.getByRole("status").first()).toContainText("Contract v1 · browser-mock · v0.8.0");
 });
 
 test("drag/drop, connect validation, inspector commands and reload remain domain-backed", async ({
@@ -100,7 +100,7 @@ test("drag/drop, connect validation, inspector commands and reload remain domain
 
 	const initialSavedPosition = await page.evaluate(() => {
 		const plan = JSON.parse(
-			localStorage.getItem("satisplanner.slice-06.factory-plan") ?? "{}",
+			localStorage.getItem("satisplanner.slice-07.factory-plan") ?? "{}",
 		) as { nodes?: Array<{ recipeId: string; position: { x: number; y: number } }> };
 		return plan.nodes?.find((node) => node.recipeId === "Recipe_IronPlate_C")?.position;
 	});
@@ -112,7 +112,7 @@ test("drag/drop, connect validation, inspector commands and reload remain domain
 	await page.mouse.up();
 	const savedPosition = await page.evaluate(() => {
 		const plan = JSON.parse(
-			localStorage.getItem("satisplanner.slice-06.factory-plan") ?? "{}",
+			localStorage.getItem("satisplanner.slice-07.factory-plan") ?? "{}",
 		) as { nodes?: Array<{ recipeId: string; position: { x: number; y: number } }> };
 		return plan.nodes?.find((node) => node.recipeId === "Recipe_IronPlate_C")?.position;
 	});
@@ -165,4 +165,220 @@ test("resource drag/drop keeps purity, tier, shards and golden output instance-l
 	await expect(page.getByLabel("Set purity pure")).toHaveAttribute("aria-pressed", "true");
 	await expect(page.getByLabel("Extractor tier")).toHaveValue("miner-mk3");
 	await expect(page.getByLabel("Extraction results")).toContainText("1,200 items/min");
+});
+
+test("machine inspector exposes the exact Constructor, Assembler and Manufacturer sloop matrices", async ({
+	page,
+}) => {
+	await dropCatalogEntry(page, page.getByLabel("Drag Constructor · Iron Plate"), {
+		x: 380,
+		y: 220,
+	});
+	await dropCatalogEntry(page, page.getByLabel("Drag Assembler · Reinforced Iron Plate"), {
+		x: 650,
+		y: 350,
+	});
+	await dropCatalogEntry(page, page.getByLabel("Drag Manufacturer · Computer"), {
+		x: 910,
+		y: 480,
+	});
+	await dropCatalogEntry(page, page.getByLabel("Drag Smelter · Iron Ingot"), {
+		x: 520,
+		y: 560,
+	});
+
+	await page
+		.locator(".react-flow__node-machine")
+		.filter({ hasText: "Constructor · Iron Plate" })
+		.getByText("Constructor · Iron Plate", { exact: true })
+		.click();
+	await expect(page.getByLabel("Set 1 Somersloops, 2 times multiplier")).toBeVisible();
+
+	await page
+		.locator(".react-flow__node-machine")
+		.filter({ hasText: "Assembler · Reinforced Iron Plate" })
+		.getByText("Assembler · Reinforced Iron Plate", { exact: true })
+		.click();
+	await expect(page.getByLabel("Set 1 Somersloops, 1.5 times multiplier")).toBeVisible();
+	await expect(page.getByLabel("Set 2 Somersloops, 2 times multiplier")).toBeVisible();
+
+	await page
+		.locator(".react-flow__node-machine")
+		.filter({ hasText: "Manufacturer · Computer" })
+		.getByText("Manufacturer · Computer", { exact: true })
+		.click();
+	await expect(page.getByLabel("Set 1 Somersloops, 1.25 times multiplier")).toBeVisible();
+	await expect(page.getByLabel("Set 4 Somersloops, 2 times multiplier")).toBeVisible();
+
+	await page
+		.locator(".react-flow__node-machine")
+		.filter({ hasText: "Smelter · Iron Ingot" })
+		.getByText("Smelter · Iron Ingot", { exact: true })
+		.click();
+	await expect(page.getByLabel("Somersloops unavailable")).toBeDisabled();
+	await expect(page.getByLabel("Machine inspector")).toContainText(
+		"This building has no Somersloop slots",
+	);
+});
+
+test("three Assembler instances keep recipe, clock, shard and sloop state isolated through reload", async ({
+	page,
+}) => {
+	await dropCatalogEntry(page, page.getByLabel("Drag Assembler · Reinforced Iron Plate"), {
+		x: 420,
+		y: 260,
+	});
+	await page
+		.locator(".react-flow__node-machine")
+		.getByText("Assembler · Reinforced Iron Plate", { exact: true })
+		.click();
+	await page.getByRole("button", { name: "Duplicate twice" }).click();
+	const assemblers = page.locator(".react-flow__node-machine");
+	await expect(assemblers).toHaveCount(3);
+
+	await assemblers
+		.nth(1)
+		.getByText("Assembler · Reinforced Iron Plate #2", { exact: true })
+		.click();
+	await page.getByLabel("Set machine to 1 Power Shards").click();
+	await page.getByLabel("Machine clock percent").fill("150");
+	await page.getByLabel("Machine clock percent").blur();
+	await page.getByLabel("Set 1 Somersloops, 1.5 times multiplier").click();
+	await page.getByLabel("Search compatible recipes").fill("rotor");
+	await expect(page.getByLabel("Compatible recipes").getByRole("button")).toHaveCount(1);
+	await page.getByLabel("Compatible recipes").getByRole("button", { name: /Assembler · Rotor/ }).click();
+
+	await assemblers
+		.nth(2)
+		.getByText("Assembler · Reinforced Iron Plate #3", { exact: true })
+		.click();
+	await page.getByLabel("Set machine to 2 Power Shards").click();
+	await page.getByLabel("Machine clock percent").fill("200");
+	await page.getByLabel("Machine clock percent").blur();
+	await page.getByLabel("Set 2 Somersloops, 2 times multiplier").click();
+
+	await assemblers
+		.nth(0)
+		.getByText("Assembler · Reinforced Iron Plate", { exact: true })
+		.click();
+	await expect(page.getByLabel("Set machine to 0 Power Shards")).toHaveAttribute(
+		"aria-pressed",
+		"true",
+	);
+	await expect(page.getByLabel("Machine clock percent")).toHaveValue("100.0000");
+	await expect(page.getByLabel("Set 0 Somersloops, 1 times multiplier")).toHaveAttribute(
+		"aria-pressed",
+		"true",
+	);
+	await page.getByLabel("Machine clock percent").fill("150");
+	await page.getByLabel("Machine clock percent").blur();
+	await expect(page.getByRole("alert")).toContainText("Clock");
+	await expect(page.getByLabel("Machine clock percent")).toHaveValue("100.0000");
+	await page.getByRole("button", { name: "Use shard-safe clock" }).click();
+
+	await expect(page.getByTestId("plan-persistence")).toContainText("3 nodes");
+	const saved = await page.evaluate(() => {
+		const plan = JSON.parse(
+			localStorage.getItem("satisplanner.slice-07.factory-plan") ?? "{}",
+		) as {
+			nodes?: Array<{
+				recipeId: string;
+				clockPercent: string;
+				powerShardCount: number;
+				somersloopCount: number;
+			}>;
+		};
+		return plan.nodes;
+	});
+	expect(saved).toEqual([
+		expect.objectContaining({
+			recipeId: "Recipe_IronPlateReinforced_C",
+			clockPercent: "100.0000",
+			powerShardCount: 0,
+			somersloopCount: 0,
+		}),
+		expect.objectContaining({
+			recipeId: "Recipe_Rotor_C",
+			clockPercent: "150.0000",
+			powerShardCount: 1,
+			somersloopCount: 1,
+		}),
+		expect.objectContaining({
+			recipeId: "Recipe_IronPlateReinforced_C",
+			clockPercent: "200.0000",
+			powerShardCount: 2,
+			somersloopCount: 2,
+		}),
+	]);
+
+	await page.reload();
+	await expect(page.locator(".react-flow__node-machine")).toHaveCount(3);
+	await page
+		.locator(".react-flow__node-machine")
+		.filter({ hasText: "Assembler · Rotor" })
+		.getByText("Assembler · Rotor", { exact: true })
+		.click();
+	await expect(page.getByLabel("Set machine to 1 Power Shards")).toHaveAttribute(
+		"aria-pressed",
+		"true",
+	);
+	await expect(page.getByLabel("Machine clock percent")).toHaveValue("150.0000");
+	await expect(page.getByLabel("Set 1 Somersloops, 1.5 times multiplier")).toHaveAttribute(
+		"aria-pressed",
+		"true",
+	);
+});
+
+test("removed catalog entries remain unresolved without losing saved machine state", async ({ page }) => {
+	await page.evaluate(() => {
+		localStorage.setItem(
+			"satisplanner.slice-07.factory-plan",
+			JSON.stringify({
+				schemaVersion: 3,
+				planId: "00000000-0000-4000-8000-000000000001",
+				name: "Unresolved catalog fixture",
+				createdAt: "2026-08-11T00:00:00.000Z",
+				updatedAt: "2026-08-11T00:00:00.000Z",
+				gameDataSnapshotId: "removed-catalog-snapshot",
+				gameProfile: { id: "satisfactory", version: "1.2" },
+				nodes: [
+					{
+						kind: "machine",
+						id: "00000000-0000-4000-8000-000000000002",
+						buildingId: "Build_RemovedMachine_C",
+						recipeId: "Recipe_Removed_C",
+						displayName: "Removed Catalog Machine",
+						position: { x: 220, y: 180 },
+						clockPercent: "150.0000",
+						powerShardCount: 1,
+						somersloopCount: 0,
+						standby: false,
+						ports: [
+							{
+								id: "00000000-0000-4000-8000-000000000003",
+								key: "output-0",
+								direction: "output",
+								materialForm: "solid",
+								materialId: "Desc_Removed_C",
+							},
+						],
+					},
+				],
+				edges: [],
+				viewport: { x: 0, y: 0, zoom: 1 },
+				userMetadata: {},
+			}),
+		);
+	});
+	await page.reload();
+	await page.getByText("Removed Catalog Machine", { exact: true }).click();
+	await expect(page.getByLabel("Machine inspector")).toContainText("Recipe_Removed_C");
+	await expect(page.getByRole("alert")).toContainText("Unresolved catalog binding");
+	const persistedRecipe = await page.evaluate(() => {
+		const plan = JSON.parse(
+			localStorage.getItem("satisplanner.slice-07.factory-plan") ?? "{}",
+		) as { nodes?: Array<{ recipeId: string; clockPercent: string }> };
+		return plan.nodes?.[0];
+	});
+	expect(persistedRecipe).toMatchObject({ recipeId: "Recipe_Removed_C", clockPercent: "150.0000" });
 });
