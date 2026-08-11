@@ -21,6 +21,8 @@ import {
 	rebindMachineRecipe,
 	serializeFactoryPlan,
 	setPlanViewport,
+	transportTiersForMedium,
+	updateTransportEdgeTier,
 	updateMachineNodeSettings,
 	updateResourceNodeSettings,
 	validateConnection,
@@ -71,7 +73,7 @@ interface SelectionState {
 function createEmptyPlan(): FactoryPlanV3 {
 	const now = new Date().toISOString();
 	return {
-		schemaVersion: 3,
+		schemaVersion: 4,
 		planId: crypto.randomUUID(),
 		name: "My factory plan",
 		createdAt: now,
@@ -194,13 +196,28 @@ function GraphWorkspace() {
 		"Drag a library entry onto the canvas to create a domain instance.",
 	);
 	const [saveStatus, setSaveStatus] = useState("Plan loaded");
+	const flowResult = useMemo(() => calculateFactoryPlan(plan), [plan]);
 
 	const projection = useMemo(
 		() => projectFactoryPlan(plan, new Set(selection.nodeIds), new Set(selection.edgeIds)),
 		[plan, selection],
 	);
 	const flowNodes = useMemo(() => [...projection.nodes], [projection.nodes]);
-	const flowEdges = useMemo(() => [...projection.edges], [projection.edges]);
+	const flowEdges = useMemo(
+		() =>
+			projection.edges.map((edge) => {
+				const result = flowResult.edges.find((candidate) => candidate.edgeId === edge.id);
+				const bottleneck = result?.deficitReasons.includes("transport-capacity") ?? false;
+				return {
+					...edge,
+					className: bottleneck ? "transport-bottleneck" : undefined,
+					ariaLabel: bottleneck
+						? `${edge.ariaLabel}. Warning: transport capacity bottleneck.`
+						: edge.ariaLabel,
+				};
+			}),
+		[flowResult.edges, projection.edges],
+	);
 	const normalizedQuery = query.trim().toLocaleLowerCase();
 	const filteredCatalog = useMemo(
 		() =>
@@ -340,13 +357,15 @@ function GraphWorkspace() {
 				powerShardCount: selectedResource.powerShardCount,
 			})
 		: undefined;
-	const flowResult = useMemo(() => calculateFactoryPlan(plan), [plan]);
 	const selectedNodeFlow = selectedNode
 		? flowResult.nodes.find((entry) => entry.nodeId === selectedNode.id)
 		: undefined;
 	const selectedEdgeFlow = selectedEdge
 		? flowResult.edges.find((entry) => entry.edgeId === selectedEdge.id)
 		: undefined;
+	const bottlenecks = flowResult.edges
+		.filter((entry) => entry.bottleneckRank !== null)
+		.sort((left, right) => (left.bottleneckRank ?? 0) - (right.bottleneckRank ?? 0));
 	const selectedFlowDiagnostics = selectedNode
 		? flowResult.diagnostics.filter((entry) => entry.nodeIds.includes(selectedNode.id))
 		: selectedEdge
@@ -394,6 +413,16 @@ function GraphWorkspace() {
 			setDiagnostic(`${updated.displayName} extraction settings updated.`);
 		} catch (error) {
 			setDiagnostic(error instanceof Error ? error.message : "Resource settings are invalid.");
+		}
+	}
+
+	function selectTransportTier(tierId: string): void {
+		if (!selectedEdge) return;
+		try {
+			setPlan((current) => updateTransportEdgeTier(current, selectedEdge.id, tierId));
+			setDiagnostic(`Connection upgraded to ${tierId}. Flow recomputed.`);
+		} catch (error) {
+			setDiagnostic(error instanceof Error ? error.message : "Transport tier update failed.");
 		}
 	}
 
@@ -618,6 +647,35 @@ function GraphWorkspace() {
 
 			<aside className="panel inspector-panel" aria-label="Inspector">
 				<div className="panel-heading">Inspector</div>
+				<section className="bottleneck-panel" aria-label="Transport bottlenecks">
+					<div className="bottleneck-heading">
+						<strong>Transport bottlenecks</strong>
+						<span>{bottlenecks.length}</span>
+					</div>
+					{bottlenecks.length === 0 ? (
+						<p className="bottleneck-clear">✓ No capacity bottlenecks</p>
+					) : (
+						<ol className="bottleneck-list">
+							{bottlenecks.map((entry) => (
+								<li key={entry.edgeId}>
+									<button
+										type="button"
+										onClick={() => {
+											setSelection({ nodeIds: [], edgeIds: [entry.edgeId] });
+											setDiagnostic(`Navigated to bottleneck ${entry.edgeId}.`);
+										}}
+									>
+										<span aria-hidden="true">⚠</span>
+										<strong>
+											#{entry.bottleneckRank} {formatMaterialId(entry.materialId)}
+										</strong>
+										<small>{formatFlowRate(entry.lostRate)}/min lost · inspect connection</small>
+									</button>
+								</li>
+							))}
+						</ol>
+					)}
+				</section>
 				{selectionCount === 0 && (
 					<div className="empty-state">
 						<strong>Nothing selected</strong>
@@ -997,6 +1055,27 @@ function GraphWorkspace() {
 					<section className="inspector-card" aria-label="Connection inspector">
 						<p className="eyebrow">Connection instance</p>
 						<h2>{selectedEdge.itemOrFluidId}</h2>
+						<label className="setting-field">
+							<span>Transport tier</span>
+							<select
+								aria-label="Transport tier"
+								value={selectedEdge.transportTierId}
+								onChange={(event) => selectTransportTier(event.currentTarget.value)}
+							>
+								{transportTiersForMedium(selectedEdge.medium).map((tier) => (
+									<option value={tier.id} key={tier.id}>
+										{tier.label} ·{" "}
+										{tier.capacityPerMinute ? formatFlowRate(tier.capacityPerMinute) : "∞"}{" "}
+										{tier.capacityUnit}
+									</option>
+								))}
+							</select>
+						</label>
+						{selectedEdgeFlow?.deficitReasons.includes("transport-capacity") && (
+							<p className="bottleneck-badge" role="alert">
+								<span aria-hidden="true">⚠</span> Capacity bottleneck
+							</p>
+						)}
 						<dl>
 							<div>
 								<dt>UUID</dt>
@@ -1009,13 +1088,35 @@ function GraphWorkspace() {
 							{selectedEdgeFlow && (
 								<>
 									<div>
-										<dt>Actual rate</dt>
-										<dd>{formatFlowRate(selectedEdgeFlow.actualRate)}/min</dd>
+										<dt>Requested rate</dt>
+										<dd>{formatFlowRate(selectedEdgeFlow.requestedRate)}/min</dd>
 									</div>
 									<div>
 										<dt>Required rate</dt>
 										<dd>{formatFlowRate(selectedEdgeFlow.requiredRate)}/min</dd>
 									</div>
+									<div>
+										<dt>Capacity</dt>
+										<dd>
+											{selectedEdgeFlow.capacityRate
+												? `${formatFlowRate(selectedEdgeFlow.capacityRate)}/min`
+												: "Unlimited"}
+										</dd>
+									</div>
+									<div>
+										<dt>Actual rate</dt>
+										<dd>{formatFlowRate(selectedEdgeFlow.actualRate)}/min</dd>
+									</div>
+									<div>
+										<dt>Lost rate</dt>
+										<dd>{formatFlowRate(selectedEdgeFlow.lostRate)}/min</dd>
+									</div>
+									{selectedEdgeFlow.recommendedTierId && (
+										<div>
+											<dt>Minimum recommended tier</dt>
+											<dd>{selectedEdgeFlow.recommendedTierId}</dd>
+										</div>
+									)}
 								</>
 							)}
 						</dl>

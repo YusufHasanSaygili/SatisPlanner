@@ -374,6 +374,17 @@ export const FALLBACK_RESOURCE_CATALOG: readonly ResourceNodeTemplate[] = [
 		aliases: ["stone", "limestone", "miner"],
 	},
 	{
+		classId: "Desc_Coal_C::miner",
+		displayName: "Coal",
+		category: "Resources",
+		resourceId: "Desc_Coal_C",
+		materialForm: "solid",
+		extractorStrategyId: "miner",
+		defaultTierId: "miner-mk1",
+		availableTierIds: ["miner-mk1", "miner-mk2", "miner-mk3"],
+		aliases: ["coal", "miner", "fuel"],
+	},
+	{
 		classId: "Desc_LiquidOil_C::oil-extractor",
 		displayName: "Crude Oil",
 		category: "Resources",

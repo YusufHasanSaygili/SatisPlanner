@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { projectFactoryPlan } from "./index";
 
 const plan: FactoryPlanV3 = {
-	schemaVersion: 3,
+	schemaVersion: 4,
 	planId: "00000000-0000-4000-8000-000000000001",
 	name: "Projection test",
 	createdAt: "2026-08-11T00:00:00.000Z",
