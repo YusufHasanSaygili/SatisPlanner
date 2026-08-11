@@ -1,8 +1,15 @@
 export interface CalculationFoundationStatus {
 	readonly kind: "calculation-foundation";
-	readonly engineEnabled: false;
+	readonly engineEnabled: true;
+	readonly resourceExtractionEnabled: true;
 }
 
 export function getCalculationFoundationStatus(): CalculationFoundationStatus {
-	return { kind: "calculation-foundation", engineEnabled: false };
+	return {
+		kind: "calculation-foundation",
+		engineEnabled: true,
+		resourceExtractionEnabled: true,
+	};
 }
+
+export * from "./resource-extraction";

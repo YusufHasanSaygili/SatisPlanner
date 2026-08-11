@@ -1,8 +1,12 @@
+import { DomainValidationError } from "./errors";
+import { ClockPercent } from "./units";
 import type {
-	FactoryPlanV2,
-	MachinePlanNodeV2,
-	MachinePlanPortV2,
-	TransportEdgeV2,
+	FactoryPlanV3,
+	MachinePlanNodeV3,
+	PlanNodeV3,
+	PlanPortV3,
+	ResourcePlanNodeV3,
+	TransportEdgeV3,
 } from "./plan-schema";
 
 export interface CanvasPosition {
@@ -25,6 +29,18 @@ export interface MachineNodeTemplate {
 	readonly recipeId: string;
 	readonly aliases: readonly string[];
 	readonly ports: readonly NodePortTemplate[];
+}
+
+export interface ResourceNodeTemplate {
+	readonly classId: string;
+	readonly displayName: string;
+	readonly category: "Resources";
+	readonly resourceId: string;
+	readonly materialForm: "solid" | "fluid";
+	readonly extractorStrategyId: string;
+	readonly defaultTierId: string;
+	readonly availableTierIds: readonly string[];
+	readonly aliases: readonly string[];
 }
 
 export interface NodeIdentitySet {
@@ -66,16 +82,16 @@ export type ConnectionValidation =
 	  }
 	| { readonly ok: false; readonly diagnostic: GraphDiagnostic };
 
-function withUpdatedAt(plan: FactoryPlanV2): Omit<FactoryPlanV2, "updatedAt"> & {
+function withUpdatedAt(plan: FactoryPlanV3): Omit<FactoryPlanV3, "updatedAt"> & {
 	readonly updatedAt: string;
 } {
 	return { ...plan, updatedAt: new Date().toISOString() };
 }
 
 function findPort(
-	plan: FactoryPlanV2,
+	plan: FactoryPlanV3,
 	portId: string,
-): { readonly node: MachinePlanNodeV2; readonly port: MachinePlanPortV2 } | undefined {
+): { readonly node: PlanNodeV3; readonly port: PlanPortV3 } | undefined {
 	for (const node of plan.nodes) {
 		const port = node.ports.find((candidate) => candidate.id === portId);
 		if (port) return { node, port };
@@ -84,15 +100,15 @@ function findPort(
 }
 
 export function addMachineNode(
-	plan: FactoryPlanV2,
+	plan: FactoryPlanV3,
 	template: MachineNodeTemplate,
 	position: CanvasPosition,
 	identities: NodeIdentitySet,
-): FactoryPlanV2 {
+): FactoryPlanV3 {
 	if (identities.portIds.length !== template.ports.length) {
 		throw new Error("Every graph port requires a stable UUID.");
 	}
-	const node: MachinePlanNodeV2 = {
+	const node: MachinePlanNodeV3 = {
 		kind: "machine",
 		id: identities.nodeId,
 		buildingId: template.buildingId,
@@ -111,11 +127,50 @@ export function addMachineNode(
 	return { ...withUpdatedAt(plan), nodes: [...plan.nodes, node] };
 }
 
-export function moveMachineNode(
-	plan: FactoryPlanV2,
+export function addResourceNode(
+	plan: FactoryPlanV3,
+	template: ResourceNodeTemplate,
+	position: CanvasPosition,
+	identities: NodeIdentitySet,
+): FactoryPlanV3 {
+	if (identities.portIds.length !== 1) {
+		throw new Error("A resource graph node requires one stable output-port UUID.");
+	}
+	if (!template.availableTierIds.includes(template.defaultTierId)) {
+		throw new DomainValidationError(
+			"INVALID_EXTRACTOR_CONFIG",
+			"Default extractor tier must exist in the resource template.",
+		);
+	}
+	const node: ResourcePlanNodeV3 = {
+		kind: "resource",
+		id: identities.nodeId,
+		resourceId: template.resourceId,
+		displayName: template.displayName,
+		purity: "normal",
+		extractorStrategyId: template.extractorStrategyId,
+		extractorTierId: template.defaultTierId,
+		clockPercent: "100.0000",
+		powerShardCount: 0,
+		position: { ...position },
+		ports: [
+			{
+				id: identities.portIds[0] as string,
+				key: "output-0",
+				direction: "output",
+				materialForm: template.materialForm,
+				materialId: template.resourceId,
+			},
+		],
+	};
+	return { ...withUpdatedAt(plan), nodes: [...plan.nodes, node] };
+}
+
+export function movePlanNode(
+	plan: FactoryPlanV3,
 	nodeId: string,
 	position: CanvasPosition,
-): FactoryPlanV2 {
+): FactoryPlanV3 {
 	return {
 		...withUpdatedAt(plan),
 		nodes: plan.nodes.map((node) =>
@@ -125,14 +180,14 @@ export function moveMachineNode(
 }
 
 export function setPlanViewport(
-	plan: FactoryPlanV2,
-	viewport: FactoryPlanV2["viewport"],
-): FactoryPlanV2 {
+	plan: FactoryPlanV3,
+	viewport: FactoryPlanV3["viewport"],
+): FactoryPlanV3 {
 	return { ...withUpdatedAt(plan), viewport: { ...viewport } };
 }
 
 export function validateConnection(
-	plan: FactoryPlanV2,
+	plan: FactoryPlanV3,
 	identity: ConnectionCandidate,
 ): ConnectionValidation {
 	const source = findPort(plan, identity.sourcePortId);
@@ -207,12 +262,12 @@ export function validateConnection(
 }
 
 export function connectMachinePorts(
-	plan: FactoryPlanV2,
+	plan: FactoryPlanV3,
 	identity: ConnectionIdentity,
-): { readonly plan: FactoryPlanV2; readonly validation: ConnectionValidation } {
+): { readonly plan: FactoryPlanV3; readonly validation: ConnectionValidation } {
 	const validation = validateConnection(plan, identity);
 	if (!validation.ok) return { plan, validation };
-	const edge: TransportEdgeV2 = {
+	const edge: TransportEdgeV3 = {
 		id: identity.edgeId,
 		fromPortId: identity.sourcePortId,
 		toPortId: identity.targetPortId,
@@ -225,10 +280,10 @@ export function connectMachinePorts(
 }
 
 export function deletePlanEntities(
-	plan: FactoryPlanV2,
+	plan: FactoryPlanV3,
 	nodeIds: readonly string[],
 	edgeIds: readonly string[],
-): FactoryPlanV2 {
+): FactoryPlanV3 {
 	const removedNodeIds = new Set(nodeIds);
 	const removedPortIds = new Set(
 		plan.nodes
@@ -248,16 +303,16 @@ export function deletePlanEntities(
 }
 
 export function duplicateMachineNode(
-	plan: FactoryPlanV2,
+	plan: FactoryPlanV3,
 	nodeId: string,
 	identities: NodeIdentitySet,
-): FactoryPlanV2 {
+): FactoryPlanV3 {
 	const source = plan.nodes.find((node) => node.id === nodeId);
-	if (!source) return plan;
+	if (source?.kind !== "machine") return plan;
 	if (identities.portIds.length !== source.ports.length) {
 		throw new Error("Every duplicated graph port requires a stable UUID.");
 	}
-	const duplicate: MachinePlanNodeV2 = {
+	const duplicate: MachinePlanNodeV3 = {
 		...source,
 		id: identities.nodeId,
 		position: { x: source.position.x + 48, y: source.position.y + 48 },
@@ -267,4 +322,58 @@ export function duplicateMachineNode(
 		})),
 	};
 	return { ...withUpdatedAt(plan), nodes: [...plan.nodes, duplicate] };
+}
+
+export interface ResourceSettingsPatch {
+	readonly purity?: ResourcePlanNodeV3["purity"];
+	readonly extractorTierId?: string;
+	readonly clockPercent?: string;
+	readonly powerShardCount?: number;
+}
+
+export function updateResourceNodeSettings(
+	plan: FactoryPlanV3,
+	nodeId: string,
+	patch: ResourceSettingsPatch,
+): FactoryPlanV3 {
+	const source = plan.nodes.find((node) => node.id === nodeId);
+	if (source?.kind !== "resource") {
+		throw new DomainValidationError(
+			"INVALID_EXTRACTOR_CONFIG",
+			"Selected resource instance is no longer available.",
+		);
+	}
+	const purity = patch.purity ?? source.purity;
+	if (!["impure", "normal", "pure"].includes(purity)) {
+		throw new DomainValidationError("INVALID_EXTRACTOR_CONFIG", "Unknown resource purity.");
+	}
+	const extractorTierId = patch.extractorTierId ?? source.extractorTierId;
+	if (extractorTierId.trim().length === 0) {
+		throw new DomainValidationError("INVALID_EXTRACTOR_CONFIG", "Extractor tier is required.");
+	}
+	const powerShardCount = patch.powerShardCount ?? source.powerShardCount;
+	if (!Number.isInteger(powerShardCount) || powerShardCount < 0 || powerShardCount > 3) {
+		throw new DomainValidationError(
+			"INVALID_POWER_SHARD_COUNT",
+			"Power shard count must be an integer between 0 and 3.",
+		);
+	}
+	const clock = ClockPercent.parse(patch.clockPercent ?? source.clockPercent);
+	if (clock.compare(ClockPercent.maximumForShardCount(powerShardCount)) > 0) {
+		throw new DomainValidationError(
+			"CLOCK_EXCEEDS_SHARD_CAPACITY",
+			`Clock ${clock} exceeds the capacity of ${powerShardCount} power shard(s).`,
+		);
+	}
+	const updated: ResourcePlanNodeV3 = {
+		...source,
+		purity,
+		extractorTierId,
+		clockPercent: clock.toJSON(),
+		powerShardCount,
+	};
+	return {
+		...withUpdatedAt(plan),
+		nodes: plan.nodes.map((node) => (node.id === nodeId ? updated : node)),
+	};
 }

@@ -5,13 +5,13 @@ import {
 	parseFactoryPlan,
 	PlanMigrationRegistry,
 	serializeFactoryPlan,
-	type FactoryPlanV2,
+	type FactoryPlanV3,
 	type JsonObject,
 	validateFactoryPlan,
 } from "./plan-schema";
 
 const fixtureJson = readFileSync(
-	new URL("./fixtures/factory-plan-v2.json", import.meta.url),
+	new URL("./fixtures/factory-plan-v3.json", import.meta.url),
 	"utf8",
 );
 
@@ -25,14 +25,14 @@ function firstNode(fixture: Record<string, unknown>): Record<string, unknown> {
 	return node;
 }
 
-describe("FactoryPlan v2 schema", () => {
+describe("FactoryPlan v3 schema", () => {
 	it("ships a versioned JSON Schema artifact", () => {
 		const schema = JSON.parse(
-			readFileSync(new URL("../schema/factory-plan-v2.schema.json", import.meta.url), "utf8"),
+			readFileSync(new URL("../schema/factory-plan-v3.schema.json", import.meta.url), "utf8"),
 		) as Record<string, unknown>;
 		expect(schema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
-		expect(schema.$id).toBe("https://satisplanner.dev/schema/factory-plan-v2.schema.json");
-		expect(FACTORY_PLAN_SCHEMA_VERSION).toBe(2);
+		expect(schema.$id).toBe("https://satisplanner.dev/schema/factory-plan-v3.schema.json");
+		expect(FACTORY_PLAN_SCHEMA_VERSION).toBe(3);
 	});
 
 	it("round-trips to byte-stable canonical JSON and preserves unknown fields", () => {
@@ -111,7 +111,7 @@ describe("FactoryPlan v2 schema", () => {
 		});
 		for (const [version, code] of [
 			[0, "MISSING_MIGRATION"],
-			[3, "UNSUPPORTED_SCHEMA_VERSION"],
+			[4, "UNSUPPORTED_SCHEMA_VERSION"],
 		] as const) {
 			const fixture = validFixture();
 			fixture.schemaVersion = version;
@@ -129,9 +129,39 @@ describe("FactoryPlan v2 schema", () => {
 		const result = parseFactoryPlan(legacy);
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
-		expect(result.value.schemaVersion).toBe(2);
+		expect(result.value.schemaVersion).toBe(3);
 		expect(result.value.nodes[0]?.position).toEqual({ x: 80, y: 80 });
 		expect(result.value.nodes[0]?.ports[0]?.materialId).toBe("unresolved:input-0");
+	});
+
+	it("migrates v2 without changing graph identity or position", () => {
+		const legacy = readFileSync(
+			new URL("./fixtures/factory-plan-v2.json", import.meta.url),
+			"utf8",
+		);
+		const result = parseFactoryPlan(legacy);
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		expect(result.value.schemaVersion).toBe(3);
+		expect(result.value.nodes[0]).toMatchObject({
+			id: "00000000-0000-4000-8000-000000000002",
+			position: { x: 80, y: 80 },
+		});
+	});
+
+	it("round-trips exact resource purity and extraction selection", () => {
+		const result = parseFactoryPlan(fixtureJson);
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		const resource = result.value.nodes.find((node) => node.kind === "resource");
+		expect(resource).toMatchObject({
+			purity: "pure",
+			extractorStrategyId: "miner",
+			extractorTierId: "miner-mk3",
+			clockPercent: "250.0000",
+			powerShardCount: 3,
+		});
+		expect(parseFactoryPlan(serializeFactoryPlan(result.value))).toEqual(result);
 	});
 
 	it("provides a sequential migration registry with fixture-friendly registration", () => {
@@ -150,7 +180,7 @@ describe("FactoryPlan v2 schema", () => {
 	});
 
 	it("rejects serialization of invalid typed input", () => {
-		const fixture = validFixture() as unknown as FactoryPlanV2;
+		const fixture = validFixture() as unknown as FactoryPlanV3;
 		(fixture as unknown as Record<string, unknown>).name = "";
 		expect(() => serializeFactoryPlan(fixture)).toThrowError(
 			expect.objectContaining({ code: "INVALID_PLAN", path: "$.name" }),

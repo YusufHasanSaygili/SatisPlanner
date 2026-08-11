@@ -1,21 +1,23 @@
 import { describe, expect, it } from "vitest";
 import {
 	addMachineNode,
+	addResourceNode,
 	connectMachinePorts,
 	deletePlanEntities,
 	duplicateMachineNode,
-	moveMachineNode,
+	movePlanNode,
 	setPlanViewport,
 	validateConnection,
-	type FactoryPlanV2,
+	updateResourceNodeSettings,
+	type FactoryPlanV3,
 	type MachineNodeTemplate,
 } from "./index";
 
 const baseTime = "2026-08-11T00:00:00.000Z";
 
-function emptyPlan(): FactoryPlanV2 {
+function emptyPlan(): FactoryPlanV3 {
 	return {
-		schemaVersion: 2,
+		schemaVersion: 3,
 		planId: "00000000-0000-4000-8000-000000000001",
 		name: "Graph command test",
 		createdAt: baseTime,
@@ -70,7 +72,7 @@ describe("domain-backed graph commands", () => {
 		);
 		expect(original.nodes).toEqual([]);
 		expect(added.nodes[0]).toMatchObject({ id: ids(10).nodeId, position: { x: 120, y: 180 } });
-		const moved = moveMachineNode(added, ids(10).nodeId, { x: 220, y: 280 });
+		const moved = movePlanNode(added, ids(10).nodeId, { x: 220, y: 280 });
 		const viewed = setPlanViewport(moved, { x: 12, y: -8, zoom: 1.25 });
 		expect(viewed.nodes[0]?.position).toEqual({ x: 220, y: 280 });
 		expect(viewed.viewport).toEqual({ x: 12, y: -8, zoom: 1.25 });
@@ -168,5 +170,59 @@ describe("domain-backed graph commands", () => {
 		expect(plan.nodes[1]?.position).toEqual({ x: 148, y: 148 });
 		plan = deletePlanEntities(plan, [ids(10).nodeId], []);
 		expect(plan.nodes.map((node) => node.id)).toEqual([ids(20).nodeId]);
+	});
+
+	it("creates and edits independent resource instances with shard-safe clock state", () => {
+		const template = {
+			classId: "Desc_OreIron_C::miner",
+			displayName: "Iron Ore",
+			category: "Resources" as const,
+			resourceId: "Desc_OreIron_C",
+			materialForm: "solid" as const,
+			extractorStrategyId: "miner",
+			defaultTierId: "miner-mk1",
+			availableTierIds: ["miner-mk1", "miner-mk2", "miner-mk3"],
+			aliases: ["iron"],
+		};
+		let plan = addResourceNode(
+			emptyPlan(),
+			template,
+			{ x: 10, y: 20 },
+			{
+				nodeId: ids(10).nodeId,
+				portIds: [ids(10).portIds[0] as string],
+			},
+		);
+		plan = addResourceNode(
+			plan,
+			template,
+			{ x: 310, y: 20 },
+			{
+				nodeId: ids(20).nodeId,
+				portIds: [ids(20).portIds[0] as string],
+			},
+		);
+		plan = updateResourceNodeSettings(plan, ids(10).nodeId, {
+			purity: "pure",
+			extractorTierId: "miner-mk3",
+			powerShardCount: 3,
+			clockPercent: "250",
+		});
+		expect(plan.nodes[0]).toMatchObject({
+			kind: "resource",
+			purity: "pure",
+			extractorTierId: "miner-mk3",
+			powerShardCount: 3,
+			clockPercent: "250.0000",
+		});
+		expect(plan.nodes[1]).toMatchObject({
+			kind: "resource",
+			purity: "normal",
+			extractorTierId: "miner-mk1",
+			clockPercent: "100.0000",
+		});
+		expect(() =>
+			updateResourceNodeSettings(plan, ids(10).nodeId, { powerShardCount: 2 }),
+		).toThrowError(expect.objectContaining({ code: "CLOCK_EXCEEDS_SHARD_CAPACITY" }));
 	});
 });

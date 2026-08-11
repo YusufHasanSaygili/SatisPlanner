@@ -1,23 +1,37 @@
-import { getCalculationFoundationStatus } from "@satisplanner/calculation";
+import {
+	calculateResourceExtraction,
+	extractionStrategyRegistry,
+	getCalculationFoundationStatus,
+} from "@satisplanner/calculation";
 import {
 	addMachineNode,
+	addResourceNode,
 	connectMachinePorts,
 	deletePlanEntities,
 	duplicateMachineNode,
-	moveMachineNode,
+	movePlanNode,
 	parseFactoryPlan,
+	Rational,
 	serializeFactoryPlan,
 	setPlanViewport,
+	updateResourceNodeSettings,
 	validateConnection,
-	type FactoryPlanV2,
+	type FactoryPlanV3,
+	type ResourceSettingsPatch,
 } from "@satisplanner/domain";
 import {
 	FALLBACK_GRAPH_CATALOG,
 	FALLBACK_GRAPH_CATALOG_VERSION,
 	FALLBACK_ICON_PATHS,
+	FALLBACK_RESOURCE_CATALOG,
 	getGameDataFoundationStatus,
 } from "@satisplanner/game-data";
-import { projectFactoryPlan, type MachineCanvasNode } from "@satisplanner/graph-adapter";
+import {
+	projectFactoryPlan,
+	type GraphCanvasNode,
+	type MachineCanvasNode,
+	type ResourceCanvasNode,
+} from "@satisplanner/graph-adapter";
 import {
 	Background,
 	Controls,
@@ -38,18 +52,19 @@ import { requestRuntimeInfo } from "./native/contracts";
 import { createMockNativeAdapter } from "./native/mock-adapter";
 import { createTauriNativeAdapter, isTauriRuntime } from "./native/tauri-adapter";
 
-const PLAN_STORAGE_KEY = "satisplanner.slice-05.factory-plan";
-const DRAG_MIME = "application/x-satisplanner-machine-template";
+const PLAN_STORAGE_KEY = "satisplanner.slice-06.factory-plan";
+const LEGACY_PLAN_STORAGE_KEY = "satisplanner.slice-05.factory-plan";
+const DRAG_MIME = "application/x-satisplanner-node-template";
 
 interface SelectionState {
 	readonly nodeIds: readonly string[];
 	readonly edgeIds: readonly string[];
 }
 
-function createEmptyPlan(): FactoryPlanV2 {
+function createEmptyPlan(): FactoryPlanV3 {
 	const now = new Date().toISOString();
 	return {
-		schemaVersion: 2,
+		schemaVersion: 3,
 		planId: crypto.randomUUID(),
 		name: "My factory plan",
 		createdAt: now,
@@ -59,15 +74,20 @@ function createEmptyPlan(): FactoryPlanV2 {
 		nodes: [],
 		edges: [],
 		viewport: { x: 0, y: 0, zoom: 1 },
-		userMetadata: { graphUxSlice: 5 },
+		userMetadata: { graphUxSlice: 6 },
 	};
 }
 
-function restorePlan(): FactoryPlanV2 {
-	const saved = localStorage.getItem(PLAN_STORAGE_KEY);
+function restorePlan(): FactoryPlanV3 {
+	const saved =
+		localStorage.getItem(PLAN_STORAGE_KEY) ?? localStorage.getItem(LEGACY_PLAN_STORAGE_KEY);
 	if (!saved) return createEmptyPlan();
 	const result = parseFactoryPlan(saved);
 	return result.ok ? result.value : createEmptyPlan();
+}
+
+function formatMaterialId(materialId: string): string {
+	return materialId.replace(/^Desc_|_C$/g, "");
 }
 
 function MachineNodeCard({ data, selected }: NodeProps<MachineCanvasNode>) {
@@ -85,7 +105,7 @@ function MachineNodeCard({ data, selected }: NodeProps<MachineCanvasNode>) {
 							style={{ top: 66 + index * 24 }}
 							aria-label={`Input ${port.materialId}`}
 						/>
-						<span>{port.materialId.replace(/^Desc_|_C$/g, "")}</span>
+						<span>{formatMaterialId(port.materialId)}</span>
 						<small>{port.materialForm}</small>
 					</div>
 				))}
@@ -93,7 +113,7 @@ function MachineNodeCard({ data, selected }: NodeProps<MachineCanvasNode>) {
 			<section className="port-list output-ports" aria-label={`${data.label} outputs`}>
 				{data.outputs.map((port, index) => (
 					<div className="port-row output" key={port.id}>
-						<span>{port.materialId.replace(/^Desc_|_C$/g, "")}</span>
+						<span>{formatMaterialId(port.materialId)}</span>
 						<small>{port.materialForm}</small>
 						<Handle
 							id={port.id}
@@ -109,11 +129,35 @@ function MachineNodeCard({ data, selected }: NodeProps<MachineCanvasNode>) {
 	);
 }
 
-const nodeTypes = { machine: MachineNodeCard };
+function ResourceNodeCard({ data, selected }: NodeProps<ResourceCanvasNode>) {
+	return (
+		<div className={selected ? "resource-node selected" : "resource-node"}>
+			<p className="resource-node-kind">Resource source</p>
+			<div className="machine-node-title">{data.label}</div>
+			<div className="resource-node-summary">
+				<span>{data.purity}</span>
+				<span>{data.extractorTierId}</span>
+				<span>{data.clockPercent}%</span>
+			</div>
+			<div className="port-row output resource-output">
+				<span>{formatMaterialId(data.output.materialId)}</span>
+				<small>{data.output.materialForm}</small>
+				<Handle
+					id={data.output.id}
+					type="source"
+					position={Position.Right}
+					aria-label={`Output ${data.output.materialId}`}
+				/>
+			</div>
+		</div>
+	);
+}
+
+const nodeTypes = { machine: MachineNodeCard, resource: ResourceNodeCard };
 
 function GraphWorkspace() {
-	const flow = useReactFlow<MachineCanvasNode>();
-	const [plan, setPlan] = useState<FactoryPlanV2>(restorePlan);
+	const flow = useReactFlow<GraphCanvasNode>();
+	const [plan, setPlan] = useState<FactoryPlanV3>(restorePlan);
 	const [selection, setSelection] = useState<SelectionState>({ nodeIds: [], edgeIds: [] });
 	const [query, setQuery] = useState("");
 	const [diagnostic, setDiagnostic] = useState(
@@ -132,6 +176,16 @@ function GraphWorkspace() {
 		() =>
 			FALLBACK_GRAPH_CATALOG.filter((entry) =>
 				[entry.displayName, entry.classId, entry.buildingId, entry.recipeId, ...entry.aliases]
+					.join(" ")
+					.toLocaleLowerCase()
+					.includes(normalizedQuery),
+			),
+		[normalizedQuery],
+	);
+	const filteredResources = useMemo(
+		() =>
+			FALLBACK_RESOURCE_CATALOG.filter((entry) =>
+				[entry.displayName, entry.classId, entry.resourceId, ...entry.aliases]
 					.join(" ")
 					.toLocaleLowerCase()
 					.includes(normalizedQuery),
@@ -218,6 +272,54 @@ function GraphWorkspace() {
 			? plan.edges.find((edge) => edge.id === selection.edgeIds[0])
 			: undefined;
 	const selectionCount = selection.nodeIds.length + selection.edgeIds.length;
+	const selectedResource = selectedNode?.kind === "resource" ? selectedNode : undefined;
+	const selectedMachine = selectedNode?.kind === "machine" ? selectedNode : undefined;
+	const selectedExtraction = selectedResource
+		? calculateResourceExtraction({
+				strategyId: selectedResource.extractorStrategyId,
+				tierId: selectedResource.extractorTierId,
+				resourceId: selectedResource.resourceId,
+				materialForm: selectedResource.ports[0]?.materialForm ?? "solid",
+				purity: selectedResource.purity,
+				clockPercent: selectedResource.clockPercent,
+				powerShardCount: selectedResource.powerShardCount,
+			})
+		: undefined;
+	const selectedStrategy = selectedResource
+		? extractionStrategyRegistry.get(selectedResource.extractorStrategyId)
+		: undefined;
+	const rateDisplay =
+		selectedExtraction?.ok === true
+			? `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 }).format(
+					Number(Rational.parse(selectedExtraction.ratePerMinute).toDecimal(4)),
+				)} ${selectedExtraction.unit}`
+			: undefined;
+
+	function editSelectedResource(patch: ResourceSettingsPatch): void {
+		if (!selectedResource) return;
+		try {
+			const next = updateResourceNodeSettings(plan, selectedResource.id, patch);
+			const updated = next.nodes.find((node) => node.id === selectedResource.id);
+			if (updated?.kind !== "resource") return;
+			const result = calculateResourceExtraction({
+				strategyId: updated.extractorStrategyId,
+				tierId: updated.extractorTierId,
+				resourceId: updated.resourceId,
+				materialForm: updated.ports[0]?.materialForm ?? "solid",
+				purity: updated.purity,
+				clockPercent: updated.clockPercent,
+				powerShardCount: updated.powerShardCount,
+			});
+			if (!result.ok) {
+				setDiagnostic(result.diagnostic.message);
+				return;
+			}
+			setPlan(next);
+			setDiagnostic(`${updated.displayName} extraction settings updated.`);
+		} catch (error) {
+			setDiagnostic(error instanceof Error ? error.message : "Resource settings are invalid.");
+		}
+	}
 
 	return (
 		<div className="workspace">
@@ -227,11 +329,43 @@ function GraphWorkspace() {
 					<kbd>⌘ K</kbd>
 				</div>
 				<input
-					aria-label="Search buildings"
-					placeholder="Search name, recipe or class id"
+					aria-label="Search catalog"
+					placeholder="Search resources, buildings or class id"
 					value={query}
 					onChange={(event) => setQuery(event.currentTarget.value)}
 				/>
+				<div className="catalog-meta">
+					<span>Resources</span>
+					<small>{filteredResources.length} entries</small>
+				</div>
+				<section className="catalog-list" aria-label="Resource catalog">
+					{filteredResources.map((entry) => (
+						<button
+							className="catalog-entry resource-entry"
+							type="button"
+							draggable
+							key={entry.classId}
+							aria-label={`Drag resource ${entry.displayName}`}
+							onDragStart={(event) => {
+								event.dataTransfer.setData(DRAG_MIME, entry.classId);
+								event.dataTransfer.effectAllowed = "copy";
+							}}
+						>
+							<img
+								src={`/${
+									entry.materialForm === "fluid"
+										? FALLBACK_ICON_PATHS["material-fluid"]
+										: FALLBACK_ICON_PATHS["material-solid"]
+								}`}
+								alt=""
+							/>
+							<span>
+								<strong>{entry.displayName}</strong>
+								<small>{entry.classId}</small>
+							</span>
+						</button>
+					))}
+				</section>
 				<div className="catalog-meta">
 					<span>Production</span>
 					<small>{filteredCatalog.length} entries</small>
@@ -277,19 +411,34 @@ function GraphWorkspace() {
 				onDrop={(event) => {
 					event.preventDefault();
 					const classId = event.dataTransfer.getData(DRAG_MIME);
-					const template = FALLBACK_GRAPH_CATALOG.find((entry) => entry.classId === classId);
-					if (!template) {
+					const machineTemplate = FALLBACK_GRAPH_CATALOG.find((entry) => entry.classId === classId);
+					const resourceTemplate = FALLBACK_RESOURCE_CATALOG.find(
+						(entry) => entry.classId === classId,
+					);
+					if (!machineTemplate && !resourceTemplate) {
 						setDiagnostic("The dropped library payload is not recognized.");
 						return;
 					}
 					const position = flow.screenToFlowPosition({ x: event.clientX, y: event.clientY });
-					setPlan((current) =>
-						addMachineNode(current, template, position, {
-							nodeId: crypto.randomUUID(),
-							portIds: template.ports.map(() => crypto.randomUUID()),
-						}),
-					);
-					setDiagnostic(`${template.displayName} added as a new machine instance.`);
+					if (resourceTemplate) {
+						setPlan((current) =>
+							addResourceNode(current, resourceTemplate, position, {
+								nodeId: crypto.randomUUID(),
+								portIds: [crypto.randomUUID()],
+							}),
+						);
+						setDiagnostic(`${resourceTemplate.displayName} added as a resource instance.`);
+						return;
+					}
+					if (machineTemplate) {
+						setPlan((current) =>
+							addMachineNode(current, machineTemplate, position, {
+								nodeId: crypto.randomUUID(),
+								portIds: machineTemplate.ports.map(() => crypto.randomUUID()),
+							}),
+						);
+						setDiagnostic(`${machineTemplate.displayName} added as a new machine instance.`);
+					}
 				}}
 			>
 				<ReactFlow
@@ -300,7 +449,7 @@ function GraphWorkspace() {
 					onConnect={connect}
 					isValidConnection={validatePreview}
 					onNodeDragStop={(_event, node) =>
-						setPlan((current) => moveMachineNode(current, node.id, node.position))
+						setPlan((current) => movePlanNode(current, node.id, node.position))
 					}
 					onNodeClick={(event, node) =>
 						setSelection((current) => {
@@ -349,27 +498,27 @@ function GraphWorkspace() {
 						<p>Bulk editing arrives in a later UX slice. Delete is available now.</p>
 					</section>
 				)}
-				{selectedNode && (
+				{selectedMachine && (
 					<section className="inspector-card" aria-label="Machine inspector">
 						<p className="eyebrow">Machine instance</p>
-						<h2>{selectedNode.displayName}</h2>
+						<h2>{selectedMachine.displayName}</h2>
 						<dl>
 							<div>
 								<dt>UUID</dt>
-								<dd>{selectedNode.id}</dd>
+								<dd>{selectedMachine.id}</dd>
 							</div>
 							<div>
 								<dt>Building</dt>
-								<dd>{selectedNode.buildingId}</dd>
+								<dd>{selectedMachine.buildingId}</dd>
 							</div>
 							<div>
 								<dt>Recipe</dt>
-								<dd>{selectedNode.recipeId}</dd>
+								<dd>{selectedMachine.recipeId}</dd>
 							</div>
 							<div>
 								<dt>Position</dt>
 								<dd>
-									{Math.round(selectedNode.position.x)}, {Math.round(selectedNode.position.y)}
+									{Math.round(selectedMachine.position.x)}, {Math.round(selectedMachine.position.y)}
 								</dd>
 							</div>
 						</dl>
@@ -377,16 +526,120 @@ function GraphWorkspace() {
 							type="button"
 							onClick={() => {
 								setPlan((current) =>
-									duplicateMachineNode(current, selectedNode.id, {
+									duplicateMachineNode(current, selectedMachine.id, {
 										nodeId: crypto.randomUUID(),
-										portIds: selectedNode.ports.map(() => crypto.randomUUID()),
+										portIds: selectedMachine.ports.map(() => crypto.randomUUID()),
 									}),
 								);
-								setDiagnostic(`${selectedNode.displayName} duplicated as an independent instance.`);
+								setDiagnostic(
+									`${selectedMachine.displayName} duplicated as an independent instance.`,
+								);
 							}}
 						>
 							Duplicate instance
 						</button>
+					</section>
+				)}
+				{selectedResource && (
+					<section className="inspector-card resource-inspector" aria-label="Resource inspector">
+						<p className="eyebrow">Resource source instance</p>
+						<h2>{selectedResource.displayName}</h2>
+						<dl>
+							<div>
+								<dt>UUID</dt>
+								<dd>{selectedResource.id}</dd>
+							</div>
+							<div>
+								<dt>Resource</dt>
+								<dd>{selectedResource.resourceId}</dd>
+							</div>
+						</dl>
+						<fieldset className="quick-setting">
+							<legend>Purity</legend>
+							<div className="segmented-control">
+								{(["impure", "normal", "pure"] as const).map((purity) => (
+									<button
+										type="button"
+										key={purity}
+										aria-label={`Set purity ${purity}`}
+										aria-pressed={selectedResource.purity === purity}
+										onClick={() => editSelectedResource({ purity })}
+									>
+										{purity[0]?.toUpperCase()}
+										{purity.slice(1)}
+									</button>
+								))}
+							</div>
+						</fieldset>
+						<label className="setting-field">
+							<span>Extractor tier</span>
+							<select
+								aria-label="Extractor tier"
+								value={selectedResource.extractorTierId}
+								onChange={(event) =>
+									editSelectedResource({ extractorTierId: event.currentTarget.value })
+								}
+							>
+								{selectedStrategy?.descriptor.tiers.map((tier) => (
+									<option key={tier.id} value={tier.id}>
+										{tier.displayName}
+									</option>
+								))}
+							</select>
+						</label>
+						<fieldset className="quick-setting">
+							<legend>Power Shards</legend>
+							<div className="segmented-control shards">
+								{[0, 1, 2, 3].map((count) => (
+									<button
+										type="button"
+										key={count}
+										aria-label={`Set ${count} Power Shards`}
+										aria-pressed={selectedResource.powerShardCount === count}
+										onClick={() => editSelectedResource({ powerShardCount: count })}
+									>
+										{count}
+									</button>
+								))}
+							</div>
+						</fieldset>
+						<label className="setting-field">
+							<span>Clock percent</span>
+							<input
+								key={`${selectedResource.id}:${selectedResource.clockPercent}`}
+								aria-label="Clock percent"
+								type="number"
+								min="1"
+								max="250"
+								step="0.0001"
+								defaultValue={selectedResource.clockPercent}
+								onBlur={(event) =>
+									editSelectedResource({ clockPercent: event.currentTarget.value })
+								}
+							/>
+						</label>
+						{selectedExtraction?.ok === false && (
+							<p className="inline-error" role="alert">
+								{selectedExtraction.diagnostic.message}
+							</p>
+						)}
+						{selectedExtraction?.ok === true && rateDisplay && (
+							<section className="extraction-results" aria-label="Extraction results">
+								<div>
+									<span>Theoretical output</span>
+									<strong>{rateDisplay}</strong>
+								</div>
+								<div>
+									<span>Transportable output</span>
+									<strong>{rateDisplay}</strong>
+									<small>No configured edge cap</small>
+								</div>
+								<div>
+									<span>Power</span>
+									<strong>{selectedExtraction.powerMW.toFixed(2)} MW</strong>
+								</div>
+							</section>
+						)}
 					</section>
 				)}
 				{selectedEdge && (

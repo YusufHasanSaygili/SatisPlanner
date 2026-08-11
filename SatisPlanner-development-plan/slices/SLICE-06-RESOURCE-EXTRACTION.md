@@ -8,9 +8,9 @@ Purity, miner/extractor tier, clock ve shard ayarlı gerçek resource source ins
 
 ## Task'lar
 
-- [S06-T01 — Resource/purity instance modeli](../tasks/S06-T01-RESOURCE-PURITY.md)
-- [S06-T02 — Miner ve extractor stratejileri](../tasks/S06-T02-EXTRACTOR-STRATEGIES.md)
-- [S06-T03 — Resource inspector ve fixtures](../tasks/S06-T03-RESOURCE-INSPECTOR.md)
+- [x] [S06-T01 — Resource/purity instance modeli](../tasks/S06-T01-RESOURCE-PURITY.md)
+- [x] [S06-T02 — Miner ve extractor stratejileri](../tasks/S06-T02-EXTRACTOR-STRATEGIES.md)
+- [x] [S06-T03 — Resource inspector ve fixtures](../tasks/S06-T03-RESOURCE-INSPECTOR.md)
 
 ## Slice acceptance
 

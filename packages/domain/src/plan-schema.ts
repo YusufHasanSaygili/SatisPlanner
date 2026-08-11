@@ -3,7 +3,7 @@ import { parseUuid } from "./machine";
 import { Rational, type RationalJson } from "./rational";
 import { ClockPercent } from "./units";
 
-export const FACTORY_PLAN_SCHEMA_VERSION = 2 as const;
+export const FACTORY_PLAN_SCHEMA_VERSION = 3 as const;
 
 export type JsonPrimitive = boolean | number | string | null;
 export type JsonValue = JsonPrimitive | JsonObject | readonly JsonValue[];
@@ -16,7 +16,7 @@ export interface GameProfileV1 {
 	readonly version: string;
 }
 
-export interface MachinePlanPortV2 {
+export interface PlanPortV3 {
 	readonly id: string;
 	readonly key: string;
 	readonly direction: "input" | "output";
@@ -24,7 +24,7 @@ export interface MachinePlanPortV2 {
 	readonly materialId: string;
 }
 
-export interface MachinePlanNodeV2 {
+export interface MachinePlanNodeV3 {
 	readonly kind: "machine";
 	readonly id: string;
 	readonly buildingId: string;
@@ -35,10 +35,26 @@ export interface MachinePlanNodeV2 {
 	readonly powerShardCount: number;
 	readonly somersloopCount: number;
 	readonly standby: boolean;
-	readonly ports: readonly MachinePlanPortV2[];
+	readonly ports: readonly PlanPortV3[];
 }
 
-export interface TransportEdgeV2 {
+export interface ResourcePlanNodeV3 {
+	readonly kind: "resource";
+	readonly id: string;
+	readonly resourceId: string;
+	readonly displayName: string;
+	readonly purity: "impure" | "normal" | "pure";
+	readonly extractorStrategyId: string;
+	readonly extractorTierId: string;
+	readonly clockPercent: string;
+	readonly powerShardCount: number;
+	readonly position: { readonly x: number; readonly y: number };
+	readonly ports: readonly PlanPortV3[];
+}
+
+export type PlanNodeV3 = MachinePlanNodeV3 | ResourcePlanNodeV3;
+
+export interface TransportEdgeV3 {
 	readonly id: string;
 	readonly fromPortId: string;
 	readonly toPortId: string;
@@ -48,7 +64,7 @@ export interface TransportEdgeV2 {
 	readonly actualRate: RationalJson;
 }
 
-export interface FactoryPlanV2 {
+export interface FactoryPlanV3 {
 	readonly schemaVersion: typeof FACTORY_PLAN_SCHEMA_VERSION;
 	readonly planId: string;
 	readonly name: string;
@@ -56,8 +72,8 @@ export interface FactoryPlanV2 {
 	readonly updatedAt: string;
 	readonly gameDataSnapshotId: string;
 	readonly gameProfile: GameProfileV1;
-	readonly nodes: readonly MachinePlanNodeV2[];
-	readonly edges: readonly TransportEdgeV2[];
+	readonly nodes: readonly PlanNodeV3[];
+	readonly edges: readonly TransportEdgeV3[];
 	readonly viewport: {
 		readonly x: number;
 		readonly y: number;
@@ -73,7 +89,7 @@ export interface PlanValidationIssue {
 }
 
 export type ParseFactoryPlanResult =
-	| { readonly ok: true; readonly value: FactoryPlanV2 }
+	| { readonly ok: true; readonly value: FactoryPlanV3 }
 	| { readonly ok: false; readonly issues: readonly PlanValidationIssue[] };
 
 export interface PlanMigration {
@@ -327,6 +343,92 @@ function validateMachineNode(
 	}
 }
 
+function validateResourceNode(
+	value: unknown,
+	index: number,
+	issues: PlanValidationIssue[],
+	entityIds: Set<string>,
+	portIds: Set<string>,
+): void {
+	const path = `$.nodes[${index}]`;
+	const node = requireRecord(value, path, issues);
+	if (!node) return;
+	if (node.kind !== "resource") issue(issues, "INVALID_PLAN", `${path}.kind`, "Expected resource.");
+	if (requireUuid(node.id, `${path}.id`, issues)) {
+		if (entityIds.has(node.id) || portIds.has(node.id))
+			issue(issues, "INVALID_PLAN", `${path}.id`, "Duplicate plan UUID.");
+		entityIds.add(node.id);
+	}
+	requireString(node.resourceId, `${path}.resourceId`, issues);
+	requireString(node.displayName, `${path}.displayName`, issues);
+	if (!["impure", "normal", "pure"].includes(node.purity as string)) {
+		issue(issues, "INVALID_PLAN", `${path}.purity`, "Expected impure, normal or pure.");
+	}
+	requireString(node.extractorStrategyId, `${path}.extractorStrategyId`, issues);
+	requireString(node.extractorTierId, `${path}.extractorTierId`, issues);
+	const position = requireRecord(node.position, `${path}.position`, issues);
+	if (position) {
+		requireFiniteNumber(position.x, `${path}.position.x`, issues);
+		requireFiniteNumber(position.y, `${path}.position.y`, issues);
+	}
+	let clock: ClockPercent | undefined;
+	if (typeof node.clockPercent !== "string") {
+		issue(issues, "INVALID_PLAN", `${path}.clockPercent`, "Expected a clock percent string.");
+	} else {
+		try {
+			clock = ClockPercent.parse(node.clockPercent);
+		} catch (error) {
+			issue(
+				issues,
+				"INVALID_PLAN",
+				`${path}.clockPercent`,
+				error instanceof Error ? error.message : "Invalid clock percent.",
+			);
+		}
+	}
+	if (requireInteger(node.powerShardCount, `${path}.powerShardCount`, issues, 0, 3) && clock) {
+		const maximum = ClockPercent.maximumForShardCount(node.powerShardCount);
+		if (clock.compare(maximum) > 0) {
+			issue(
+				issues,
+				"INVALID_PLAN",
+				`${path}.clockPercent`,
+				"Clock percent exceeds the saved power shard capacity.",
+			);
+		}
+	}
+	if (!Array.isArray(node.ports) || node.ports.length !== 1) {
+		issue(issues, "INVALID_PLAN", `${path}.ports`, "Resource nodes require one output port.");
+		return;
+	}
+	const portPath = `${path}.ports[0]`;
+	const port = requireRecord(node.ports[0], portPath, issues);
+	if (!port) return;
+	if (requireUuid(port.id, `${portPath}.id`, issues)) {
+		if (portIds.has(port.id) || entityIds.has(port.id))
+			issue(issues, "INVALID_PLAN", `${portPath}.id`, "Duplicate plan UUID.");
+		portIds.add(port.id);
+	}
+	requireString(port.key, `${portPath}.key`, issues);
+	if (port.direction !== "output") {
+		issue(issues, "INVALID_PLAN", `${portPath}.direction`, "Resource port must be output.");
+	}
+	if (port.materialForm !== "solid" && port.materialForm !== "fluid") {
+		issue(issues, "INVALID_PLAN", `${portPath}.materialForm`, "Expected solid or fluid.");
+	}
+	if (
+		requireString(port.materialId, `${portPath}.materialId`, issues) &&
+		port.materialId !== node.resourceId
+	) {
+		issue(
+			issues,
+			"INVALID_PLAN",
+			`${portPath}.materialId`,
+			"Resource output must match resourceId.",
+		);
+	}
+}
+
 function validateEdge(
 	value: unknown,
 	index: number,
@@ -393,7 +495,11 @@ function collectFactoryPlanIssues(value: JsonObject): readonly PlanValidationIss
 		issue(issues, "INVALID_PLAN", "$.nodes", "Expected an array.");
 	} else {
 		for (const [index, node] of value.nodes.entries()) {
-			validateMachineNode(node, index, issues, entityIds, portIds);
+			if (isRecord(node) && node.kind === "resource") {
+				validateResourceNode(node, index, issues, entityIds, portIds);
+			} else {
+				validateMachineNode(node, index, issues, entityIds, portIds);
+			}
 		}
 	}
 	if (!Array.isArray(value.edges)) {
@@ -493,41 +599,49 @@ export class PlanMigrationRegistry {
 	}
 }
 
-export const planMigrationRegistry = new PlanMigrationRegistry().register({
-	fromVersion: 1,
-	toVersion: 2,
-	migrate(plan) {
-		const nodes = Array.isArray(plan.nodes)
-			? plan.nodes.map((rawNode, index) => {
-					if (!isRecord(rawNode)) return rawNode;
-					const ports = Array.isArray(rawNode.ports)
-						? rawNode.ports.map((rawPort) => {
-								if (!isRecord(rawPort)) return rawPort;
-								return {
-									...rawPort,
-									materialId:
-										typeof rawPort.materialId === "string"
-											? rawPort.materialId
-											: `unresolved:${String(rawPort.key ?? "port")}`,
-								};
-							})
-						: rawNode.ports;
-					return {
-						...rawNode,
-						displayName:
-							typeof rawNode.displayName === "string"
-								? rawNode.displayName
-								: String(rawNode.buildingId ?? "Unresolved machine"),
-						position: isRecord(rawNode.position)
-							? rawNode.position
-							: { x: 80 + index * 280, y: 80 },
-						ports,
-					};
-				})
-			: plan.nodes;
-		return { ...plan, schemaVersion: 2, nodes } as JsonObject;
-	},
-});
+export const planMigrationRegistry = new PlanMigrationRegistry()
+	.register({
+		fromVersion: 1,
+		toVersion: 2,
+		migrate(plan) {
+			const nodes = Array.isArray(plan.nodes)
+				? plan.nodes.map((rawNode, index) => {
+						if (!isRecord(rawNode)) return rawNode;
+						const ports = Array.isArray(rawNode.ports)
+							? rawNode.ports.map((rawPort) => {
+									if (!isRecord(rawPort)) return rawPort;
+									return {
+										...rawPort,
+										materialId:
+											typeof rawPort.materialId === "string"
+												? rawPort.materialId
+												: `unresolved:${String(rawPort.key ?? "port")}`,
+									};
+								})
+							: rawNode.ports;
+						return {
+							...rawNode,
+							displayName:
+								typeof rawNode.displayName === "string"
+									? rawNode.displayName
+									: String(rawNode.buildingId ?? "Unresolved machine"),
+							position: isRecord(rawNode.position)
+								? rawNode.position
+								: { x: 80 + index * 280, y: 80 },
+							ports,
+						};
+					})
+				: plan.nodes;
+			return { ...plan, schemaVersion: 2, nodes } as JsonObject;
+		},
+	})
+	.register({
+		fromVersion: 2,
+		toVersion: 3,
+		migrate(plan) {
+			return { ...plan, schemaVersion: 3 } as JsonObject;
+		},
+	});
 
 export function parseFactoryPlan(
 	input: string | unknown,
@@ -565,10 +679,10 @@ export function parseFactoryPlan(
 	}
 	const issues = validateFactoryPlan(migrated);
 	if (issues.length > 0) return { ok: false, issues };
-	return { ok: true, value: cloneJson(migrated) as unknown as FactoryPlanV2 };
+	return { ok: true, value: cloneJson(migrated) as unknown as FactoryPlanV3 };
 }
 
-export function serializeFactoryPlan(plan: FactoryPlanV2): string {
+export function serializeFactoryPlan(plan: FactoryPlanV3): string {
 	const result = parseFactoryPlan(plan);
 	if (!result.ok) {
 		const first = result.issues[0];

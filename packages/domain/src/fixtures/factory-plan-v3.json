@@ -1,0 +1,58 @@
+{
+	"schemaVersion": 3,
+	"planId": "00000000-0000-4000-8000-000000000001",
+	"name": "Slice 06 canonical fixture",
+	"createdAt": "2026-08-11T00:00:00.000Z",
+	"updatedAt": "2026-08-11T00:00:00.000Z",
+	"gameDataSnapshotId": "fallback-graph-catalog-v2",
+	"gameProfile": { "id": "satisfactory", "version": "1.2" },
+	"nodes": [
+		{
+			"kind": "machine",
+			"id": "00000000-0000-4000-8000-000000000002",
+			"buildingId": "Build_ConstructorMk1_C",
+			"recipeId": "Recipe_IronPlate_C",
+			"futureNodeField": { "preserved": true },
+			"displayName": "Constructor · Iron Plate",
+			"position": { "x": 80, "y": 80 },
+			"clockPercent": "100.0000",
+			"powerShardCount": 0,
+			"somersloopCount": 0,
+			"standby": false,
+			"ports": [
+				{
+					"id": "00000000-0000-4000-8000-000000000003",
+					"key": "input-0",
+					"direction": "input",
+					"materialForm": "solid",
+					"materialId": "Desc_IronIngot_C"
+				}
+			]
+		},
+		{
+			"kind": "resource",
+			"id": "00000000-0000-4000-8000-000000000010",
+			"resourceId": "Desc_OreIron_C",
+			"displayName": "Iron Ore",
+			"purity": "pure",
+			"extractorStrategyId": "miner",
+			"extractorTierId": "miner-mk3",
+			"clockPercent": "250.0000",
+			"powerShardCount": 3,
+			"position": { "x": 400, "y": 80 },
+			"ports": [
+				{
+					"id": "00000000-0000-4000-8000-000000000011",
+					"key": "output-0",
+					"direction": "output",
+					"materialForm": "solid",
+					"materialId": "Desc_OreIron_C"
+				}
+			]
+		}
+	],
+	"edges": [],
+	"viewport": { "x": 0, "y": 0, "zoom": 1 },
+	"userMetadata": { "fixture": true },
+	"futureTopLevelField": { "preserved": true }
+}
