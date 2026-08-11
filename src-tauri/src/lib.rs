@@ -112,9 +112,9 @@ impl Drop for SaveLock {
 fn validate_plan_id(plan_id: &str) -> bool {
     !plan_id.is_empty()
         && plan_id.len() <= 80
-        && plan_id
-            .chars()
-            .all(|character| character.is_ascii_alphanumeric() || character == '-' || character == '_')
+        && plan_id.chars().all(|character| {
+            character.is_ascii_alphanumeric() || character == '-' || character == '_'
+        })
 }
 
 fn plan_metadata(contents: &str) -> Option<(u64, String)> {
@@ -163,7 +163,11 @@ fn replace_file_atomically(source: &Path, destination: &Path) -> std::io::Result
     if !destination.exists() {
         return fs::rename(source, destination);
     }
-    let destination_wide: Vec<u16> = destination.as_os_str().encode_wide().chain(Some(0)).collect();
+    let destination_wide: Vec<u16> = destination
+        .as_os_str()
+        .encode_wide()
+        .chain(Some(0))
+        .collect();
     let source_wide: Vec<u16> = source.as_os_str().encode_wide().chain(Some(0)).collect();
     let replaced = unsafe {
         ReplaceFileW(
@@ -199,7 +203,9 @@ fn sync_directory(_path: &Path) -> std::io::Result<()> {
 
 fn acquire_save_lock(path: &Path) -> Result<SaveLock, &'static str> {
     match OpenOptions::new().write(true).create_new(true).open(path) {
-        Ok(_) => Ok(SaveLock { path: path.to_owned() }),
+        Ok(_) => Ok(SaveLock {
+            path: path.to_owned(),
+        }),
         Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => Err("SAVE_BUSY"),
         Err(_) => Err("SAVE_FAILED"),
     }
@@ -250,7 +256,9 @@ fn inspect_file(path: &Path) -> Value {
             "modifiedAt": if updated_at == "unknown" { modified_at } else { updated_at },
             "schemaVersion": schema_version
         }),
-        None => json!({ "exists": true, "valid": false, "modifiedAt": modified_at, "schemaVersion": null }),
+        None => {
+            json!({ "exists": true, "valid": false, "modifiedAt": modified_at, "schemaVersion": null })
+        }
     }
 }
 
@@ -262,9 +270,9 @@ fn inspect_recovery(app_data_root: &Path, plan_id: &str) -> Result<Value, &'stat
     let primary = inspect_file(&paths.primary);
     let last_good = inspect_file(&paths.last_good);
     let interrupted_temp_present = paths.temporary.exists() || paths.backup_temporary.exists();
-    let recovery_recommended =
-        (!primary["valid"].as_bool().unwrap_or(false) || interrupted_temp_present)
-            && last_good["valid"].as_bool().unwrap_or(false);
+    let recovery_recommended = (!primary["valid"].as_bool().unwrap_or(false)
+        || interrupted_temp_present)
+        && last_good["valid"].as_bool().unwrap_or(false);
     Ok(json!({
         "primary": primary,
         "lastGood": last_good,
@@ -273,7 +281,11 @@ fn inspect_recovery(app_data_root: &Path, plan_id: &str) -> Result<Value, &'stat
     }))
 }
 
-fn load_plan(app_data_root: &Path, plan_id: &str, source: PlanSource) -> Result<Value, &'static str> {
+fn load_plan(
+    app_data_root: &Path,
+    plan_id: &str,
+    source: PlanSource,
+) -> Result<Value, &'static str> {
     if !validate_plan_id(plan_id) {
         return Err("INVALID_REQUEST");
     }
@@ -323,25 +335,35 @@ fn handle_native_request(request: NativeRequest, app_data_root: &Path) -> Native
                 "runtime": "desktop-native"
             }),
         ),
-        NativeCommand::SavePlan { plan_id, contents } => match save_plan(app_data_root, &plan_id, &contents) {
-            Ok(data) => NativeResponse::success(request_id, data),
-            Err(code) => native_error(request_id, code),
-        },
-        NativeCommand::InspectRecovery { plan_id } => match inspect_recovery(app_data_root, &plan_id) {
-            Ok(data) => NativeResponse::success(request_id, data),
-            Err(code) => native_error(request_id, code),
-        },
-        NativeCommand::LoadPlan { plan_id, source } => match load_plan(app_data_root, &plan_id, source) {
-            Ok(data) => NativeResponse::success(request_id, data),
-            Err(code) => native_error(request_id, code),
-        },
+        NativeCommand::SavePlan { plan_id, contents } => {
+            match save_plan(app_data_root, &plan_id, &contents) {
+                Ok(data) => NativeResponse::success(request_id, data),
+                Err(code) => native_error(request_id, code),
+            }
+        }
+        NativeCommand::InspectRecovery { plan_id } => {
+            match inspect_recovery(app_data_root, &plan_id) {
+                Ok(data) => NativeResponse::success(request_id, data),
+                Err(code) => native_error(request_id, code),
+            }
+        }
+        NativeCommand::LoadPlan { plan_id, source } => {
+            match load_plan(app_data_root, &plan_id, source) {
+                Ok(data) => NativeResponse::success(request_id, data),
+                Err(code) => native_error(request_id, code),
+            }
+        }
     }
 }
 
 #[tauri::command]
 fn native_request(app: tauri::AppHandle, request: NativeRequest) -> NativeResponse {
     let Ok(app_data_root) = app.path().app_data_dir() else {
-        return NativeResponse::error(request.request_id, "SAVE_FAILED", "The plan could not be saved safely.");
+        return NativeResponse::error(
+            request.request_id,
+            "SAVE_FAILED",
+            "The plan could not be saved safely.",
+        );
     };
     handle_native_request(request, &app_data_root)
 }
@@ -362,7 +384,10 @@ mod tests {
         let root = std::env::temp_dir().join(format!(
             "satisplanner-{name}-{}-{}",
             std::process::id(),
-            SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos()
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos()
         ));
         fs::create_dir_all(&root).expect("create test root");
         root
@@ -375,15 +400,21 @@ mod tests {
     }
 
     fn request(command: NativeCommand) -> NativeRequest {
-        NativeRequest { contract_version: CONTRACT_VERSION, request_id: "request-1".to_owned(), command }
+        NativeRequest {
+            contract_version: CONTRACT_VERSION,
+            request_id: "request-1".to_owned(),
+            command,
+        }
     }
 
     #[test]
     fn contract_round_trip_uses_frontend_field_names() {
         let root = test_root("contract");
         let request_json = r#"{"contractVersion":2,"requestId":"request-1","command":{"type":"system.runtime-info"}}"#;
-        let request: NativeRequest = serde_json::from_str(request_json).expect("deserialize request");
-        let response_json = serde_json::to_value(handle_native_request(request, &root)).expect("serialize response");
+        let request: NativeRequest =
+            serde_json::from_str(request_json).expect("deserialize request");
+        let response_json = serde_json::to_value(handle_native_request(request, &root))
+            .expect("serialize response");
         assert_eq!(response_json["contractVersion"], 2);
         assert_eq!(response_json["data"]["applicationVersion"], "0.11.0");
         assert_eq!(response_json["data"]["runtime"], "desktop-native");
@@ -397,8 +428,14 @@ mod tests {
         save_plan(&root, "plan-1", &plan_json(2)).expect("second save");
         let paths = PlanPaths::new(&root, "plan-1");
         write_and_sync(&paths.temporary, b"{truncated").expect("interrupted temp");
-        assert_eq!(fs::read_to_string(&paths.primary).expect("primary"), plan_json(2));
-        assert_eq!(fs::read_to_string(&paths.last_good).expect("backup"), plan_json(1));
+        assert_eq!(
+            fs::read_to_string(&paths.primary).expect("primary"),
+            plan_json(2)
+        );
+        assert_eq!(
+            fs::read_to_string(&paths.last_good).expect("backup"),
+            plan_json(1)
+        );
         let inspection = inspect_recovery(&root, "plan-1").expect("inspection");
         assert_eq!(inspection["interruptedTempPresent"], true);
         assert_eq!(inspection["recoveryRecommended"], true);
@@ -415,7 +452,10 @@ mod tests {
         let inspection = inspect_recovery(&root, "plan-1").expect("inspection");
         assert_eq!(inspection["primary"]["valid"], false);
         assert_eq!(inspection["lastGood"]["schemaVersion"], 4);
-        assert_eq!(inspection["lastGood"]["modifiedAt"], "2026-08-11T20:00:01.000Z");
+        assert_eq!(
+            inspection["lastGood"]["modifiedAt"],
+            "2026-08-11T20:00:01.000Z"
+        );
         let loaded = load_plan(&root, "plan-1", PlanSource::LastGood).expect("load backup");
         assert_eq!(loaded["contents"], plan_json(1));
         let _ = fs::remove_dir_all(root);
@@ -428,7 +468,10 @@ mod tests {
         fs::create_dir_all(paths.lock.parent().expect("plans directory")).expect("plans directory");
         fs::write(&paths.lock, "busy").expect("lock file");
         let busy = handle_native_request(
-            request(NativeCommand::SavePlan { plan_id: "plan-1".to_owned(), contents: plan_json(1) }),
+            request(NativeCommand::SavePlan {
+                plan_id: "plan-1".to_owned(),
+                contents: plan_json(1),
+            }),
             &root,
         );
         let busy_json = serde_json::to_string(&busy).expect("serialize busy");
@@ -437,7 +480,10 @@ mod tests {
 
         let invalid_root = root.join("not-a-directory");
         fs::write(&invalid_root, "file").expect("invalid root file");
-        assert_eq!(save_plan(&invalid_root, "plan-2", &plan_json(1)), Err("SAVE_FAILED"));
+        assert_eq!(
+            save_plan(&invalid_root, "plan-2", &plan_json(1)),
+            Err("SAVE_FAILED")
+        );
         let _ = fs::remove_dir_all(root);
     }
 
