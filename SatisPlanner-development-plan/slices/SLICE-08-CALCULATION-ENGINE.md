@@ -30,12 +30,12 @@ Golden rules, property conservation, byproduct loop fixture, determinism ve benc
 
 ## Delivery Record
 
-- Branch:
-- Closing SHA:
-- Remote SHA:
-- Tag:
-- GitHub Release URL:
-- CI:
-- Codex notification:
-- User approval:
-- Tarih:
+- Branch: `slice/08-calculation-engine`
+- Closing SHA: `592b8fb24b412bb9cef88cd845f9df2d05417f04`
+- Remote SHA: branch ve `main` kapanışta `592b8fb24b412bb9cef88cd845f9df2d05417f04`
+- Tag: annotated `v0.9.0` → `592b8fb24b412bb9cef88cd845f9df2d05417f04`
+- GitHub Release URL: https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v0.9.0
+- CI: branch run `31523532431` 5/5; main run `31524047573` 5/5; release run `31524526793` 6/6 başarılı
+- Codex notification: aynı görevde `WAITING_FOR_USER_APPROVAL` onay kapısı hazırlanmıştır
+- User approval: bekleniyor; açık onay olmadan Slice 09 başlamaz
+- Tarih: 2026-08-11
