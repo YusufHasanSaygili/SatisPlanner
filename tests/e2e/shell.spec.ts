@@ -43,12 +43,12 @@ test("renders the SatisPlanner graph shell and searchable fallback library", asy
 	await expect(page.getByLabel("Inspector")).toContainText("Nothing selected");
 	await expect(page.getByLabel("Production catalog").getByRole("button")).toHaveCount(4);
 
-	await page.getByLabel("Search buildings").fill("constructor");
+	await page.getByLabel("Search catalog").fill("constructor");
 	const matches = page.getByLabel("Production catalog").getByRole("button");
 	await expect(matches).toHaveCount(2);
 	await expect(matches.nth(0)).toContainText("Build_ConstructorMk1_C::Recipe_IronPlate_C");
 	await expect(matches.nth(1)).toContainText("Build_ConstructorMk1_C::Recipe_IronRod_C");
-	await expect(page.getByRole("status").first()).toContainText("Contract v1 · browser-mock · v0.6.0");
+	await expect(page.getByRole("status").first()).toContainText("Contract v1 · browser-mock · v0.7.0");
 });
 
 test("drag/drop, connect validation, inspector commands and reload remain domain-backed", async ({
@@ -100,7 +100,7 @@ test("drag/drop, connect validation, inspector commands and reload remain domain
 
 	const initialSavedPosition = await page.evaluate(() => {
 		const plan = JSON.parse(
-			localStorage.getItem("satisplanner.slice-05.factory-plan") ?? "{}",
+			localStorage.getItem("satisplanner.slice-06.factory-plan") ?? "{}",
 		) as { nodes?: Array<{ recipeId: string; position: { x: number; y: number } }> };
 		return plan.nodes?.find((node) => node.recipeId === "Recipe_IronPlate_C")?.position;
 	});
@@ -112,7 +112,7 @@ test("drag/drop, connect validation, inspector commands and reload remain domain
 	await page.mouse.up();
 	const savedPosition = await page.evaluate(() => {
 		const plan = JSON.parse(
-			localStorage.getItem("satisplanner.slice-05.factory-plan") ?? "{}",
+			localStorage.getItem("satisplanner.slice-06.factory-plan") ?? "{}",
 		) as { nodes?: Array<{ recipeId: string; position: { x: number; y: number } }> };
 		return plan.nodes?.find((node) => node.recipeId === "Recipe_IronPlate_C")?.position;
 	});
@@ -128,4 +128,41 @@ test("drag/drop, connect validation, inspector commands and reload remain domain
 	await expect(page.locator(".react-flow__node")).toHaveCount(3);
 	await expect(page.locator(".react-flow__edge")).toHaveCount(0);
 	await expect(page.getByTestId("plan-persistence")).toContainText("Saved · 3 nodes · 0 connections");
+});
+
+test("resource drag/drop keeps purity, tier, shards and golden output instance-local", async ({
+	page,
+}) => {
+	const iron = page.getByLabel("Drag resource Iron Ore");
+	await dropCatalogEntry(page, iron, { x: 430, y: 250 });
+	await dropCatalogEntry(page, iron, { x: 720, y: 450 });
+	const resources = page.locator(".react-flow__node-resource");
+	await expect(resources).toHaveCount(2);
+
+	await resources.nth(0).getByText("Iron Ore", { exact: true }).click();
+	const inspector = page.getByLabel("Resource inspector");
+	await expect(inspector).toContainText("60 items/min");
+	await page.getByLabel("Set purity pure").click();
+	await page.getByLabel("Extractor tier").selectOption("miner-mk3");
+	await page.getByLabel("Set 3 Power Shards").click();
+	await page.getByLabel("Clock percent").fill("250");
+	await page.getByLabel("Clock percent").blur();
+	await expect(page.getByLabel("Extraction results")).toContainText("1,200 items/min");
+	await expect(page.getByLabel("Extraction results")).toContainText("MW");
+
+	await page.getByLabel("Set 2 Power Shards").click();
+	await expect(page.getByRole("status").last()).toContainText("exceeds the capacity");
+	await expect(page.getByLabel("Set 3 Power Shards")).toHaveAttribute("aria-pressed", "true");
+
+	await resources.nth(1).getByText("Iron Ore", { exact: true }).click();
+	await expect(page.getByLabel("Set purity normal")).toHaveAttribute("aria-pressed", "true");
+	await expect(page.getByLabel("Extractor tier")).toHaveValue("miner-mk1");
+	await expect(page.getByLabel("Extraction results")).toContainText("60 items/min");
+
+	await page.reload();
+	await expect(page.locator(".react-flow__node-resource")).toHaveCount(2);
+	await page.locator(".react-flow__node-resource").nth(0).getByText("Iron Ore", { exact: true }).click();
+	await expect(page.getByLabel("Set purity pure")).toHaveAttribute("aria-pressed", "true");
+	await expect(page.getByLabel("Extractor tier")).toHaveValue("miner-mk3");
+	await expect(page.getByLabel("Extraction results")).toContainText("1,200 items/min");
 });

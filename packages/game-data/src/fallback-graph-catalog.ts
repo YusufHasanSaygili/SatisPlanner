@@ -1,6 +1,6 @@
-import type { MachineNodeTemplate } from "@satisplanner/domain";
+import type { MachineNodeTemplate, ResourceNodeTemplate } from "@satisplanner/domain";
 
-export const FALLBACK_GRAPH_CATALOG_VERSION = "fallback-graph-catalog-v1" as const;
+export const FALLBACK_GRAPH_CATALOG_VERSION = "fallback-graph-catalog-v2" as const;
 
 /**
  * Versioned, redistribution-safe placeholders used until the user's normalized
@@ -95,5 +95,63 @@ export const FALLBACK_GRAPH_CATALOG: readonly MachineNodeTemplate[] = [
 				materialId: "Desc_LiquidFuel_C",
 			},
 		],
+	},
+];
+
+export const FALLBACK_RESOURCE_CATALOG: readonly ResourceNodeTemplate[] = [
+	{
+		classId: "Desc_OreIron_C::miner",
+		displayName: "Iron Ore",
+		category: "Resources",
+		resourceId: "Desc_OreIron_C",
+		materialForm: "solid",
+		extractorStrategyId: "miner",
+		defaultTierId: "miner-mk1",
+		availableTierIds: ["miner-mk1", "miner-mk2", "miner-mk3"],
+		aliases: ["iron", "ore", "miner"],
+	},
+	{
+		classId: "Desc_OreCopper_C::miner",
+		displayName: "Copper Ore",
+		category: "Resources",
+		resourceId: "Desc_OreCopper_C",
+		materialForm: "solid",
+		extractorStrategyId: "miner",
+		defaultTierId: "miner-mk1",
+		availableTierIds: ["miner-mk1", "miner-mk2", "miner-mk3"],
+		aliases: ["copper", "ore", "miner"],
+	},
+	{
+		classId: "Desc_Stone_C::miner",
+		displayName: "Limestone",
+		category: "Resources",
+		resourceId: "Desc_Stone_C",
+		materialForm: "solid",
+		extractorStrategyId: "miner",
+		defaultTierId: "miner-mk1",
+		availableTierIds: ["miner-mk1", "miner-mk2", "miner-mk3"],
+		aliases: ["stone", "limestone", "miner"],
+	},
+	{
+		classId: "Desc_LiquidOil_C::oil-extractor",
+		displayName: "Crude Oil",
+		category: "Resources",
+		resourceId: "Desc_LiquidOil_C",
+		materialForm: "fluid",
+		extractorStrategyId: "oil-extractor",
+		defaultTierId: "oil-extractor",
+		availableTierIds: ["oil-extractor"],
+		aliases: ["crude", "oil", "extractor", "fluid"],
+	},
+	{
+		classId: "Desc_Water_C::water-extractor",
+		displayName: "Water",
+		category: "Resources",
+		resourceId: "Desc_Water_C",
+		materialForm: "fluid",
+		extractorStrategyId: "water-extractor",
+		defaultTierId: "water-extractor",
+		availableTierIds: ["water-extractor"],
+		aliases: ["water", "extractor", "fluid"],
 	},
 ];
