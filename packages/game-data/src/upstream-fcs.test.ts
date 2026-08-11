@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { previewUpstreamFcsImport } from "./upstream-fcs";
 
 const v7Fixture = readFileSync(
-	new URL("../../../tests/upstream-characterization/fixtures/simple-chain-v7.fcs", import.meta.url),
+	new URL("../../../tests/fixtures/upstream-fcs/simple-chain-v7.fcs", import.meta.url),
 	"utf8",
 );
 
