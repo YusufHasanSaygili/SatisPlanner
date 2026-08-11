@@ -9,6 +9,7 @@ import {
 	addMachineNode,
 	addResourceNode,
 	connectMachinePorts,
+	createPlanExportBundle,
 	deletePlanEntities,
 	duplicateMachineNode,
 	duplicateMachineNodes,
@@ -16,10 +17,12 @@ import {
 	type MachineSettingsPatch,
 	movePlanNode,
 	parseFactoryPlan,
+	previewFactoryPlanImport,
 	Rational,
 	type ResourceSettingsPatch,
 	rebindMachineRecipe,
 	serializeFactoryPlan,
+	serializePlanExportBundle,
 	setPlanViewport,
 	transportTiersForMedium,
 	updateTransportEdgeTier,
@@ -34,6 +37,9 @@ import {
 	FALLBACK_MACHINE_BUILDINGS,
 	FALLBACK_RESOURCE_CATALOG,
 	getGameDataFoundationStatus,
+	previewUpstreamFcsImport,
+	type AggregateExpansionStrategy,
+	type UpstreamFcsPreview,
 } from "@satisplanner/game-data";
 import {
 	type GraphCanvasNode,
@@ -56,8 +62,14 @@ import {
 	type Viewport,
 } from "@xyflow/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { RuntimeInfoResult } from "./native/contracts";
-import { requestRuntimeInfo } from "./native/contracts";
+import type { NativeAdapter, RecoveryInspection, RuntimeInfoResult } from "./native/contracts";
+import {
+	NATIVE_CONTRACT_VERSION,
+	requestPlanLoad,
+	requestPlanSave,
+	requestRecoveryInspection,
+	requestRuntimeInfo,
+} from "./native/contracts";
 import { createMockNativeAdapter } from "./native/mock-adapter";
 import { createTauriNativeAdapter, isTauriRuntime } from "./native/tauri-adapter";
 
@@ -185,7 +197,7 @@ function ResourceNodeCard({ data, selected }: NodeProps<ResourceCanvasNode>) {
 
 const nodeTypes = { machine: MachineNodeCard, resource: ResourceNodeCard };
 
-function GraphWorkspace() {
+function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapter }) {
 	const flow = useReactFlow<GraphCanvasNode>();
 	const [plan, setPlan] = useState<FactoryPlanV3>(restorePlan);
 	const [selection, setSelection] = useState<SelectionState>({ nodeIds: [], edgeIds: [] });
@@ -196,6 +208,17 @@ function GraphWorkspace() {
 		"Drag a library entry onto the canvas to create a domain instance.",
 	);
 	const [saveStatus, setSaveStatus] = useState("Plan loaded");
+	const [recoveryInspection, setRecoveryInspection] = useState<
+		RecoveryInspection | null | undefined
+	>(undefined);
+	const [planImportText, setPlanImportText] = useState("");
+	const [planImportPreview, setPlanImportPreview] = useState<
+		ReturnType<typeof previewFactoryPlanImport> | undefined
+	>();
+	const [upstreamText, setUpstreamText] = useState("");
+	const [upstreamStrategy, setUpstreamStrategy] =
+		useState<AggregateExpansionStrategy>("expand-rounded-up");
+	const [upstreamPreview, setUpstreamPreview] = useState<UpstreamFcsPreview | undefined>();
 	const flowResult = useMemo(() => calculateFactoryPlan(plan), [plan]);
 
 	const projection = useMemo(
@@ -241,9 +264,36 @@ function GraphWorkspace() {
 	);
 
 	useEffect(() => {
-		localStorage.setItem(PLAN_STORAGE_KEY, serializeFactoryPlan(plan));
-		setSaveStatus(`Saved · ${plan.nodes.length} nodes · ${plan.edges.length} connections`);
-	}, [plan]);
+		let cancelled = false;
+		setRecoveryInspection(undefined);
+		void requestRecoveryInspection(nativeAdapter, crypto.randomUUID(), plan.planId).then(
+			(result) => {
+				if (!cancelled) setRecoveryInspection(result.ok ? result.data : null);
+			},
+		);
+		return () => {
+			cancelled = true;
+		};
+	}, [nativeAdapter, plan.planId]);
+
+	useEffect(() => {
+		if (recoveryInspection === undefined || recoveryInspection?.recoveryRecommended) return;
+		setSaveStatus("Autosave pending…");
+		const contents = serializeFactoryPlan(plan);
+		localStorage.setItem(PLAN_STORAGE_KEY, contents);
+		const timer = window.setTimeout(() => {
+			void requestPlanSave(nativeAdapter, crypto.randomUUID(), plan.planId, contents).then(
+				(result) => {
+					setSaveStatus(
+						result.ok
+							? `Saved · ${plan.nodes.length} nodes · ${plan.edges.length} connections`
+							: `Save failed · ${result.error.message}`,
+					);
+				},
+			);
+		}, 600);
+		return () => window.clearTimeout(timer);
+	}, [nativeAdapter, plan, recoveryInspection]);
 
 	useEffect(() => {
 		const validNodes = selection.nodeIds.filter((id) => plan.nodes.some((node) => node.id === id));
@@ -476,6 +526,54 @@ function GraphWorkspace() {
 		}
 	}
 
+	function exportCurrentPlan(): void {
+		const bundle = createPlanExportBundle(plan);
+		const blob = new Blob([serializePlanExportBundle(bundle)], { type: "application/json" });
+		const url = URL.createObjectURL(blob);
+		const anchor = document.createElement("a");
+		anchor.href = url;
+		anchor.download = `${plan.name.replace(/[^a-z0-9_-]+/gi, "-").toLocaleLowerCase()}.satisplan.json`;
+		anchor.click();
+		URL.revokeObjectURL(url);
+		setDiagnostic("Canonical plan export created. The active plan was not modified.");
+	}
+
+	async function readImportFile(
+		file: File | undefined,
+		accept: (contents: string) => void,
+	): Promise<void> {
+		if (!file) return;
+		accept(await file.text());
+	}
+
+	function previewPlanImport(): void {
+		const knownRecipeIds = new Set(FALLBACK_GRAPH_CATALOG.map((entry) => entry.recipeId));
+		setPlanImportPreview(
+			previewFactoryPlanImport(planImportText, FALLBACK_GRAPH_CATALOG_VERSION, knownRecipeIds),
+		);
+	}
+
+	async function recoverLastGood(): Promise<void> {
+		const result = await requestPlanLoad(
+			nativeAdapter,
+			crypto.randomUUID(),
+			plan.planId,
+			"last-good",
+		);
+		if (!result.ok) {
+			setDiagnostic(result.error.message);
+			return;
+		}
+		const parsed = parseFactoryPlan(result.data.contents);
+		if (!parsed.ok) {
+			setDiagnostic("The last-good file failed plan validation and was not applied.");
+			return;
+		}
+		setPlan(parsed.value);
+		setRecoveryInspection(null);
+		setDiagnostic(`Recovered last-good plan from ${result.data.modifiedAt}.`);
+	}
+
 	return (
 		<div className="workspace">
 			<aside className="panel library-panel" aria-label="Building library">
@@ -647,6 +745,192 @@ function GraphWorkspace() {
 
 			<aside className="panel inspector-panel" aria-label="Inspector">
 				<div className="panel-heading">Inspector</div>
+				{recoveryInspection?.recoveryRecommended && (
+					<section className="recovery-card" role="alert" aria-label="Plan recovery available">
+						<strong>⚠ Last-good recovery available</strong>
+						<p>
+							Primary save is invalid or an interrupted temporary write was found. Recovery schema{" "}
+							{recoveryInspection.lastGood.schemaVersion} from{" "}
+							{recoveryInspection.lastGood.modifiedAt} is valid.
+						</p>
+						<div className="persistence-actions">
+							<button type="button" onClick={() => void recoverLastGood()}>
+								Recover last-good
+							</button>
+							<button type="button" onClick={() => setRecoveryInspection(null)}>
+								Keep current plan
+							</button>
+						</div>
+					</section>
+				)}
+				<details className="persistence-panel">
+					<summary>Save, import & migration</summary>
+					<section aria-label="Plan import and export">
+						<p className="persistence-note">
+							Autosave uses an app-owned directory with atomic replacement and a last-good backup.
+							Imported originals are read-only.
+						</p>
+						<button type="button" onClick={exportCurrentPlan}>
+							Export canonical plan
+						</button>
+						<label className="setting-field">
+							<span>Import SatisPlanner plan</span>
+							<input
+								type="file"
+								accept=".json,.satisplan.json,application/json"
+								aria-label="Import plan file"
+								onChange={(event) =>
+									void readImportFile(event.currentTarget.files?.[0], (contents) => {
+										setPlanImportText(contents);
+										setPlanImportPreview(undefined);
+									})
+								}
+							/>
+						</label>
+						<button type="button" disabled={!planImportText} onClick={previewPlanImport}>
+							Preview plan import
+						</button>
+						{planImportPreview?.ok === false && (
+							<p className="inline-error" role="alert">
+								{planImportPreview.issues
+									.map((issue) => `${issue.path}: ${issue.message}`)
+									.join(" ")}
+							</p>
+						)}
+						{planImportPreview?.ok === true && (
+							<section className="migration-report" aria-label="Plan migration report">
+								<strong>
+									Schema {planImportPreview.report.sourceSchemaVersion} →{" "}
+									{planImportPreview.report.targetSchemaVersion}
+								</strong>
+								<p>
+									{planImportPreview.report.appliedVersions.length > 0
+										? planImportPreview.report.appliedVersions.join(", ")
+										: "No schema migration required."}
+								</p>
+								<p
+									className={
+										planImportPreview.report.snapshotStatus === "mismatch"
+											? "report-warning"
+											: undefined
+									}
+								>
+									Snapshot {planImportPreview.report.snapshotStatus}:{" "}
+									{planImportPreview.report.sourceSnapshotId} →{" "}
+									{planImportPreview.report.activeSnapshotId}
+								</p>
+								<p>
+									Unresolved recipes:{" "}
+									{planImportPreview.report.unresolvedRecipeIds.length > 0
+										? planImportPreview.report.unresolvedRecipeIds.join(", ")
+										: "none"}
+								</p>
+								<div className="persistence-actions">
+									<button
+										type="button"
+										onClick={() => {
+											setPlan(planImportPreview.plan);
+											setPlanImportPreview(undefined);
+											setDiagnostic("Imported plan applied. Original file remains unchanged.");
+										}}
+									>
+										Apply imported plan
+									</button>
+									<button type="button" onClick={() => setPlanImportPreview(undefined)}>
+										Cancel import
+									</button>
+								</div>
+							</section>
+						)}
+					</section>
+					<section aria-label="Upstream FCS migration">
+						<label className="setting-field">
+							<span>Import upstream .fcs</span>
+							<input
+								type="file"
+								accept=".fcs,application/json"
+								aria-label="Import upstream FCS file"
+								onChange={(event) =>
+									void readImportFile(event.currentTarget.files?.[0], (contents) => {
+										setUpstreamText(contents);
+										setUpstreamPreview(undefined);
+									})
+								}
+							/>
+						</label>
+						<label className="setting-field">
+							<span>Aggregate expansion</span>
+							<select
+								aria-label="Aggregate expansion strategy"
+								value={upstreamStrategy}
+								onChange={(event) =>
+									setUpstreamStrategy(event.currentTarget.value as AggregateExpansionStrategy)
+								}
+							>
+								<option value="expand-rounded-up">Expand to physical instances</option>
+								<option value="single-aggregate">Keep one aggregate instance</option>
+							</select>
+						</label>
+						<button
+							type="button"
+							disabled={!upstreamText}
+							onClick={() =>
+								setUpstreamPreview(previewUpstreamFcsImport(upstreamText, upstreamStrategy))
+							}
+						>
+							Preview .fcs conversion
+						</button>
+						{upstreamPreview?.ok === false && (
+							<p className="inline-error" role="alert">
+								{upstreamPreview.message}
+							</p>
+						)}
+						{upstreamPreview?.ok === true && (
+							<section className="migration-report" aria-label="FCS conversion report">
+								<strong>
+									.fcs v{upstreamPreview.report.sourceVersion} → v
+									{upstreamPreview.report.targetVersion}
+								</strong>
+								<p>
+									{upstreamPreview.report.convertedCraftNodes} craft nodes →{" "}
+									{upstreamPreview.report.generatedPhysicalInstances} physical instances ·{" "}
+									{upstreamPreview.report.convertedLinks} links
+								</p>
+								<p>Strategy: {upstreamStrategy}</p>
+								<p>
+									Unknown recipes:{" "}
+									{upstreamPreview.report.unknownRecipes.length > 0
+										? upstreamPreview.report.unknownRecipes.join(", ")
+										: "none"}
+								</p>
+								<p>
+									Unsupported node kinds:{" "}
+									{upstreamPreview.report.unsupportedNodeKinds.length > 0
+										? upstreamPreview.report.unsupportedNodeKinds.join(", ")
+										: "none"}{" "}
+									· dropped links: {upstreamPreview.report.droppedLinks}
+								</p>
+								<div className="persistence-actions">
+									<button
+										type="button"
+										onClick={() => {
+											setPlan(upstreamPreview.plan);
+											setUpstreamPreview(undefined);
+											setDiagnostic(
+												"Upstream conversion applied. Original .fcs remains unchanged.",
+											);
+										}}
+									>
+										Apply .fcs conversion
+									</button>
+									<button type="button" onClick={() => setUpstreamPreview(undefined)}>
+										Cancel conversion
+									</button>
+								</div>
+							</section>
+						)}
+					</section>
+				</details>
 				<section className="bottleneck-panel" aria-label="Transport bottlenecks">
 					<div className="bottleneck-heading">
 						<strong>Transport bottlenecks</strong>
@@ -1162,7 +1446,7 @@ export default function App() {
 					<span className={runtimeInfo?.ok ? "status-dot ready" : "status-dot"} />
 					{runtimeInfo === null && "Connecting to desktop contract…"}
 					{runtimeInfo?.ok &&
-						`Contract v1 · ${runtimeInfo.data.runtime} · v${runtimeInfo.data.applicationVersion}`}
+						`Contract v${NATIVE_CONTRACT_VERSION} · ${runtimeInfo.data.runtime} · v${runtimeInfo.data.applicationVersion}`}
 					{runtimeInfo && !runtimeInfo.ok && runtimeInfo.error.message}
 					<span className="foundation-signal" title="Package boundaries ready">
 						{domain.kind === "calculation-foundation" && !gameData.catalogLoaded
@@ -1172,7 +1456,7 @@ export default function App() {
 				</div>
 			</header>
 			<ReactFlowProvider>
-				<GraphWorkspace />
+				<GraphWorkspace nativeAdapter={nativeAdapter} />
 			</ReactFlowProvider>
 		</div>
 	);

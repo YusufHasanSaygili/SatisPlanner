@@ -19,3 +19,4 @@ export * from "./icon-image";
 export * from "./icon-resolver";
 export * from "./icon-types";
 export * from "./snapshot";
+export * from "./upstream-fcs";

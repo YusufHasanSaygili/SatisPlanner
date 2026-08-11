@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { createMockNativeAdapter } from "./mock-adapter";
-import { NATIVE_CONTRACT_VERSION, requestRuntimeInfo, type RuntimeInfo } from "./contracts";
+import {
+	NATIVE_CONTRACT_VERSION,
+	requestPlanLoad,
+	requestPlanSave,
+	requestRecoveryInspection,
+	requestRuntimeInfo,
+	type RuntimeInfo,
+} from "./contracts";
 
 describe("native/frontend contract", () => {
 	it("round-trips through a mock adapter without Tauri", async () => {
@@ -9,7 +16,7 @@ describe("native/frontend contract", () => {
 			ok: true,
 			data: {
 				applicationName: "SatisPlanner",
-				applicationVersion: "0.10.0",
+				applicationVersion: "0.11.0",
 				runtime: "browser-mock",
 			},
 		});
@@ -58,5 +65,29 @@ describe("native/frontend contract", () => {
 				message: "Desktop service is unavailable.",
 			},
 		});
+	});
+
+	it("autosave creates a last-good revision and exposes typed recovery metadata", async () => {
+		const adapter = createMockNativeAdapter();
+		const first = JSON.stringify({ schemaVersion: 4, revision: 1 });
+		const second = JSON.stringify({ schemaVersion: 4, revision: 2 });
+		expect(await requestPlanSave(adapter, "save-1", "plan-1", first)).toMatchObject({
+			ok: true,
+			data: { schemaVersion: 4, backupCreated: false },
+		});
+		expect(await requestPlanSave(adapter, "save-2", "plan-1", second)).toMatchObject({
+			ok: true,
+			data: { backupCreated: true },
+		});
+		expect(await requestRecoveryInspection(adapter, "inspect-1", "plan-1")).toMatchObject({
+			ok: true,
+			data: {
+				primary: { exists: true, valid: true, schemaVersion: 4 },
+				lastGood: { exists: true, valid: true, schemaVersion: 4 },
+			},
+		});
+		const recovered = await requestPlanLoad(adapter, "load-1", "plan-1", "last-good");
+		expect(recovered.ok).toBe(true);
+		if (recovered.ok) expect(recovered.data.contents).toBe(first);
 	});
 });

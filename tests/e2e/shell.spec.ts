@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 
 async function dropCatalogEntry(page: Page, entry: Locator, position: { x: number; y: number }) {
@@ -33,6 +35,7 @@ test.beforeEach(async ({ page }) => {
 	await page.goto("/");
 	await page.evaluate(() => localStorage.clear());
 	await page.reload();
+	await expect(page.getByTestId("plan-persistence")).toContainText("Saved");
 });
 
 test("renders the SatisPlanner graph shell and searchable fallback library", async ({ page }) => {
@@ -49,7 +52,7 @@ test("renders the SatisPlanner graph shell and searchable fallback library", asy
 	await expect(matches.nth(0)).toContainText("Build_ConstructorMk1_C::Recipe_IronPlate_C");
 	await expect(matches.nth(1)).toContainText("Build_ConstructorMk1_C::Recipe_IronRod_C");
 	await expect(page.getByRole("status").first()).toContainText(
-		"Contract v1 · browser-mock · v0.10.0",
+		"Contract v2 · browser-mock · v0.11.0",
 	);
 });
 
@@ -280,6 +283,54 @@ test("Coal Pure Mk.3 at 250% exposes and clears the Mk.5 transport bottleneck", 
 	await expect(inspector).toContainText("0/min");
 	await expect(inspector.getByRole("alert")).toHaveCount(0);
 	await expect(bottlenecks).toContainText("No capacity bottlenecks");
+});
+
+test("plan migration and upstream FCS conversion stay previewable, cancellable and loss-visible", async ({
+	page,
+}) => {
+	await page.getByText("Save, import & migration").click();
+	const persistence = page.getByLabel("Plan import and export");
+	const legacyPlanPath = path.resolve(
+		"packages/domain/src/fixtures/factory-plan-v1.json",
+	);
+	const legacyPlanBefore = readFileSync(legacyPlanPath, "utf8");
+	await page.getByLabel("Import plan file").setInputFiles(legacyPlanPath);
+	await page.getByRole("button", { name: "Preview plan import" }).click();
+	const planReport = page.getByLabel("Plan migration report");
+	await expect(planReport).toContainText("Schema 1 → 4");
+	await expect(planReport).toContainText("1→2, 2→3, 3→4");
+	await expect(planReport).toContainText("Snapshot mismatch");
+	await planReport.getByRole("button", { name: "Cancel import" }).click();
+	await expect(page.locator(".react-flow__node")).toHaveCount(0);
+
+	await page.getByRole("button", { name: "Preview plan import" }).click();
+	await page.getByRole("button", { name: "Apply imported plan" }).click();
+	await expect(page.locator(".react-flow__node")).toHaveCount(1);
+	await expect(page.getByTestId("plan-persistence")).toContainText("Saved · 1 nodes");
+	expect(readFileSync(legacyPlanPath, "utf8")).toBe(legacyPlanBefore);
+
+	const upstreamPath = path.resolve(
+		"tests/upstream-characterization/fixtures/simple-chain-v7.fcs",
+	);
+	const upstreamBefore = readFileSync(upstreamPath, "utf8");
+	await page.getByLabel("Import upstream FCS file").setInputFiles(upstreamPath);
+	await page.getByLabel("Aggregate expansion strategy").selectOption("expand-rounded-up");
+	await page.getByRole("button", { name: "Preview .fcs conversion" }).click();
+	const fcsReport = page.getByLabel("FCS conversion report");
+	await expect(fcsReport).toContainText(".fcs v7 → v7");
+	await expect(fcsReport).toContainText("2 craft nodes → 4 physical instances · 2 links");
+	await expect(fcsReport).toContainText("Unknown recipes: none");
+	await expect(fcsReport).toContainText("dropped links: 0");
+	await fcsReport.getByRole("button", { name: "Cancel conversion" }).click();
+	await expect(page.locator(".react-flow__node")).toHaveCount(1);
+
+	await page.getByRole("button", { name: "Preview .fcs conversion" }).click();
+	await page.getByRole("button", { name: "Apply .fcs conversion" }).click();
+	await expect(page.locator(".react-flow__node")).toHaveCount(4);
+	await expect(page.locator(".react-flow__edge")).toHaveCount(2);
+	await expect(page.getByTestId("plan-persistence")).toContainText("Saved · 4 nodes · 2 connections");
+	expect(readFileSync(upstreamPath, "utf8")).toBe(upstreamBefore);
+	await expect(persistence).toBeVisible();
 });
 
 test("machine inspector exposes the exact Constructor, Assembler and Manufacturer sloop matrices", async ({

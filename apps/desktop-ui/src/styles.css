@@ -617,6 +617,73 @@ select:focus-visible {
 	background: #2b2115;
 }
 
+.persistence-panel,
+.recovery-card {
+	margin: 10px;
+	padding: 10px;
+	border: 1px solid #42576a;
+	border-radius: 8px;
+	background: #111b25;
+}
+
+.persistence-panel summary {
+	cursor: pointer;
+	color: #d8e8f4;
+	font-size: 11px;
+	font-weight: 700;
+}
+
+.persistence-panel section {
+	margin-top: 10px;
+	padding-top: 10px;
+	border-top: 1px solid #2b3b49;
+}
+
+.persistence-note,
+.migration-report p,
+.recovery-card p {
+	margin: 6px 0;
+	color: #9eb1c0;
+	font-size: 10px;
+	line-height: 1.45;
+}
+
+.persistence-panel input[type="file"] {
+	width: 100%;
+	font-size: 9px;
+}
+
+.persistence-panel > section > button,
+.persistence-actions button {
+	margin-top: 7px;
+	border-color: #45647e;
+	background: #172838;
+}
+
+.migration-report {
+	margin-top: 8px;
+	padding: 8px;
+	border: 1px solid #36546a;
+	border-radius: 6px;
+	background: #0d1720;
+}
+
+.migration-report .report-warning {
+	color: #f2c078;
+}
+
+.persistence-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.recovery-card {
+	border-color: #91672f;
+	color: #ffd494;
+	background: #2a2115;
+}
+
 .quick-setting {
 	margin: 13px 0 0;
 	padding: 0;

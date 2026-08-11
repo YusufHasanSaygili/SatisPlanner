@@ -2527,12 +2527,13 @@ dependencies = [
 
 [[package]]
 name = "satisplanner"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

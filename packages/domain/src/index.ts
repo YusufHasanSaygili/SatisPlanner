@@ -17,6 +17,7 @@ export function getDomainFoundationStatus(): DomainFoundationStatus {
 export * from "./errors";
 export * from "./graph";
 export * from "./machine";
+export * from "./persistence";
 export * from "./plan-schema";
 export * from "./rational";
 export * from "./transport";

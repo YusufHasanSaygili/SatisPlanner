@@ -1,9 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { NativeAdapter, RuntimeInfoRequest } from "./contracts";
+import type { NativeAdapter, NativeRequest } from "./contracts";
 
 export function createTauriNativeAdapter(): NativeAdapter {
 	return {
-		request(request: RuntimeInfoRequest) {
+		request(request: NativeRequest) {
 			return invoke<unknown>("native_request", { request });
 		},
 	};
