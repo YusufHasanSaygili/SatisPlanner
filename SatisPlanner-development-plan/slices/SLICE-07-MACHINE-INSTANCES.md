@@ -8,9 +8,9 @@ Her Smelter/Constructor/Foundry/Assembler/Manufacturer/Refinery/Blender vb. node
 
 ## Task'lar
 
-- [S07-T01 — Building/recipe binding](../tasks/S07-T01-BUILDING-RECIPE.md)
-- [S07-T02 — Per-instance clock/shard/sloop controls](../tasks/S07-T02-INSTANCE-CONTROLS.md)
-- [S07-T03 — Instance isolation ve batch create](../tasks/S07-T03-INSTANCE-ISOLATION.md)
+- [x] [S07-T01 — Building/recipe binding](../tasks/S07-T01-BUILDING-RECIPE.md)
+- [x] [S07-T02 — Per-instance clock/shard/sloop controls](../tasks/S07-T02-INSTANCE-CONTROLS.md)
+- [x] [S07-T03 — Instance isolation ve batch create](../tasks/S07-T03-INSTANCE-ISOLATION.md)
 
 ## Slice acceptance
 

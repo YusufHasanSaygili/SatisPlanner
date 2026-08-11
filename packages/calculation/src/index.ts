@@ -13,3 +13,4 @@ export function getCalculationFoundationStatus(): CalculationFoundationStatus {
 }
 
 export * from "./resource-extraction";
+export * from "./somersloop";

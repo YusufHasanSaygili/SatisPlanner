@@ -5,11 +5,15 @@ import {
 	connectMachinePorts,
 	deletePlanEntities,
 	duplicateMachineNode,
+	duplicateMachineNodes,
 	movePlanNode,
+	rebindMachineRecipe,
 	setPlanViewport,
+	updateMachineNodeSettings,
 	validateConnection,
 	updateResourceNodeSettings,
 	type FactoryPlanV3,
+	type MachineBuildingDefinition,
 	type MachineNodeTemplate,
 } from "./index";
 
@@ -224,5 +228,152 @@ describe("domain-backed graph commands", () => {
 		expect(() =>
 			updateResourceNodeSettings(plan, ids(10).nodeId, { powerShardCount: 2 }),
 		).toThrowError(expect.objectContaining({ code: "CLOCK_EXCEEDS_SHARD_CAPACITY" }));
+	});
+
+	it("updates selected machine controls atomically and leaves sibling instances untouched", () => {
+		const machineTemplate = template(
+			"Build_ConstructorMk1_C",
+			{ form: "solid", id: "Ingot" },
+			{ form: "solid", id: "Plate" },
+		);
+		const definition: MachineBuildingDefinition = {
+			buildingId: "Build_ConstructorMk1_C",
+			displayName: "Constructor",
+			compatibleRecipeIds: ["Recipe_Build_ConstructorMk1_C"],
+			powerShardSlots: 3,
+			somersloopSlots: 1,
+		};
+		let plan = addMachineNode(emptyPlan(), machineTemplate, { x: 0, y: 0 }, ids(10));
+		plan = addMachineNode(plan, machineTemplate, { x: 300, y: 0 }, ids(20));
+		plan = updateMachineNodeSettings(plan, ids(10).nodeId, definition, {
+			powerShardCount: 2,
+			clockPercent: "200",
+			somersloopCount: 1,
+			standby: true,
+		});
+		expect(plan.nodes[0]).toMatchObject({
+			clockPercent: "200.0000",
+			powerShardCount: 2,
+			somersloopCount: 1,
+			standby: true,
+		});
+		expect(plan.nodes[1]).toMatchObject({
+			clockPercent: "100.0000",
+			powerShardCount: 0,
+			somersloopCount: 0,
+			standby: false,
+		});
+		expect(() =>
+			updateMachineNodeSettings(plan, ids(10).nodeId, definition, { powerShardCount: 1 }),
+		).toThrowError(expect.objectContaining({ code: "CLOCK_EXCEEDS_SHARD_CAPACITY" }));
+		expect(
+			updateMachineNodeSettings(plan, ids(10).nodeId, definition, {
+				powerShardCount: 1,
+				clockPercent: "150",
+			}).nodes[0],
+		).toMatchObject({ powerShardCount: 1, clockPercent: "150.0000" });
+	});
+
+	it("batch duplicates machines with unique deep identities and no shared mutable arrays", () => {
+		const original = addMachineNode(
+			emptyPlan(),
+			template("Assembler", { form: "solid", id: "A" }, { form: "solid", id: "B" }),
+			{ x: 10, y: 20 },
+			ids(10),
+		);
+		const duplicated = duplicateMachineNodes(original, ids(10).nodeId, [
+			{ ...ids(20), labelSuffix: "#2" },
+			{ ...ids(30), labelSuffix: "#3" },
+		]);
+		expect(duplicated.nodes).toHaveLength(3);
+		expect(new Set(duplicated.nodes.map((node) => node.id)).size).toBe(3);
+		expect(
+			new Set(duplicated.nodes.flatMap((node) => node.ports.map((port) => port.id))).size,
+		).toBe(6);
+		expect(duplicated.nodes[0]?.ports).not.toBe(duplicated.nodes[1]?.ports);
+		expect(duplicated.nodes[1]?.displayName).toContain("#2");
+		expect(original.nodes).toHaveLength(1);
+	});
+
+	it("rebinds compatible recipes, preserves edges and reports every unsafe port change", () => {
+		const firstRecipe = template(
+			"Assembler",
+			{ form: "solid", id: "Plate" },
+			{ form: "solid", id: "ReinforcedPlate" },
+		);
+		const secondRecipe = {
+			...firstRecipe,
+			classId: "Assembler::Recipe_Rotor_C",
+			recipeId: "Recipe_Rotor_C",
+			displayName: "Assembler · Rotor",
+			ports: [
+				{ ...firstRecipe.ports[0], materialId: "Rod" },
+				{ ...firstRecipe.ports[1], materialId: "Rotor" },
+			],
+		} as MachineNodeTemplate;
+		const definition: MachineBuildingDefinition = {
+			buildingId: "Assembler",
+			displayName: "Assembler",
+			compatibleRecipeIds: [firstRecipe.recipeId, secondRecipe.recipeId],
+			powerShardSlots: 3,
+			somersloopSlots: 2,
+		};
+		let plan = addMachineNode(emptyPlan(), firstRecipe, { x: 0, y: 0 }, ids(10));
+		plan = addMachineNode(
+			plan,
+			template("Consumer", { form: "solid", id: "ReinforcedPlate" }, { form: "solid", id: "X" }),
+			{ x: 300, y: 0 },
+			ids(20),
+		);
+		plan = connectMachinePorts(plan, {
+			edgeId: "00000000-0000-4000-8000-000000000099",
+			sourceNodeId: ids(10).nodeId,
+			sourcePortId: ids(10).portIds[1] as string,
+			targetNodeId: ids(20).nodeId,
+			targetPortId: ids(20).portIds[0] as string,
+		}).plan;
+		const rebound = rebindMachineRecipe(plan, ids(10).nodeId, definition, secondRecipe, []);
+		expect(rebound.applied).toBe(true);
+		expect(rebound.plan.edges).toEqual(plan.edges);
+		expect(rebound.plan.nodes[0]).toMatchObject({
+			recipeId: "Recipe_Rotor_C",
+			ports: expect.arrayContaining([expect.objectContaining({ materialId: "Rotor" })]),
+		});
+		expect(rebound.diagnostics).toContainEqual(
+			expect.objectContaining({
+				code: "EDGE_REQUIRES_REVIEW",
+				edgeId: "00000000-0000-4000-8000-000000000099",
+			}),
+		);
+		expect(() =>
+			rebindMachineRecipe(
+				plan,
+				ids(10).nodeId,
+				definition,
+				{ ...secondRecipe, buildingId: "Build_FoundryMk1_C" },
+				[],
+			),
+		).toThrowError(expect.objectContaining({ code: "INCOMPATIBLE_RECIPE" }));
+
+		const removesOutput = {
+			...secondRecipe,
+			classId: "Assembler::Recipe_NoOutput_C",
+			recipeId: "Recipe_NoOutput_C",
+			ports: secondRecipe.ports.slice(0, 1),
+		};
+		const removalDefinition = {
+			...definition,
+			compatibleRecipeIds: [...definition.compatibleRecipeIds, removesOutput.recipeId],
+		};
+		const rejected = rebindMachineRecipe(
+			plan,
+			ids(10).nodeId,
+			removalDefinition,
+			removesOutput,
+			[],
+		);
+		expect(rejected.applied).toBe(false);
+		expect(rejected.plan).toBe(plan);
+		expect(rejected.diagnostics[0]?.code).toBe("CONNECTED_PORT_REMOVAL");
 	});
 });
