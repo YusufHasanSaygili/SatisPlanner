@@ -44,11 +44,10 @@ Cache integration tests use tiny synthetic byte arrays and a fake WebP
 processor. The visual fallback set and screenshot are original generic
 SatisPlanner assets. No user-extracted image is copied into the repository.
 
-The 153 upstream game icons under `assets/icons/` remain quarantined baseline
-evidence required by the controlled rewrite; the application, build and release
-inputs may not reference them. `scripts/check-game-assets.mjs` freezes that
-quarantine count, rejects new raster locations and validates that generic SVG
-fallbacks contain no external/executable resources.
+The 153 upstream game icons used during the controlled-rewrite audit were retired
+after the parity and migration gates passed. `scripts/check-game-assets.mjs`
+prevents those legacy roots from returning, rejects unexpected raster locations
+and validates that generic SVG fallbacks contain no external/executable resources.
 
 ## Verification commands
 

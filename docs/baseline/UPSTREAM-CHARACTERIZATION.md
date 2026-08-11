@@ -2,13 +2,15 @@
 
 Bu rapor Slice 00 / S00-T02 kapsamında, immutable
 `upstream-d5c449a` baseline'ının korunması gereken davranışlarını executable
-örneklerle kaydeder. Test harness upstream dosyalarını değiştirmez; ayrı
-`tests/upstream-characterization` CMake projesi upstream kaynaklarını doğrudan
-derler.
+örneklerle kaydeder. Orijinal C++ test harness'i upstream dosyalarını değiştirmeden
+doğrudan derledi; `v0.11.0` parity ve migration kapıları geçildikten sonra ağır
+runtime kaynaklarıyla birlikte aktif ağaçtan kaldırıldı. Kanıt sonuçları, audited
+upstream commit'i ve portable `.fcs` fixture'ı korunur.
 
 ## Çalıştırma
 
-Visual Studio Developer PowerShell içinde:
+Tarihsel harness, `v0.11.0` veya daha eski bir checkout üzerinde Visual Studio
+Developer PowerShell içinde şu komutlarla çalıştırılmıştı:
 
 ```powershell
 cmake -S tests/upstream-characterization -B build/upstream-characterization -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -42,7 +44,7 @@ Slice 07'de kaldırılması gereken ana model boşluğudur.
 ## `.fcs` v7 şeması
 
 Golden örnek:
-`tests/upstream-characterization/fixtures/simple-chain-v7.fcs`.
+`tests/fixtures/upstream-fcs/simple-chain-v7.fcs`.
 
 Top-level alanlar:
 

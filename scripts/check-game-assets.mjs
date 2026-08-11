@@ -14,19 +14,23 @@ const tracked = execFileSync("git", ["ls-files", "-z"], {
 
 const rasterExtensions = new Set([".png", ".webp", ".jpg", ".jpeg", ".tga", ".dds"]);
 const rasters = tracked.filter((path) => rasterExtensions.has(extname(path).toLowerCase()));
-const quarantinedGameIcons = rasters.filter((path) => path.startsWith("assets/icons/"));
 const allowedRaster = (path) =>
-	path === "assets/icon.png" ||
-	path.startsWith("assets/icons/") ||
-	path.startsWith("src-tauri/icons/") ||
-	path.startsWith("tests/e2e/snapshots/");
+	path.startsWith("src-tauri/icons/") || path.startsWith("tests/e2e/snapshots/");
 const unexpectedRaster = rasters.filter((path) => !allowedRaster(path));
+const retiredLegacyRoots = [
+	"assets/",
+	"cmake/",
+	"emscripten/",
+	"ficsit-companion/",
+	"spikes/rewrite/",
+];
+const retiredLegacyFiles = tracked.filter((path) =>
+	retiredLegacyRoots.some((root) => path.startsWith(root)),
+);
 
 const violations = [];
-if (quarantinedGameIcons.length !== 153) {
-	violations.push(
-		`Preserved upstream assets/icons quarantine changed: expected 153 files, found ${quarantinedGameIcons.length}.`,
-	);
+if (retiredLegacyFiles.length > 0) {
+	violations.push(`Retired upstream files returned:\n${retiredLegacyFiles.join("\n")}`);
 }
 if (unexpectedRaster.length > 0) {
 	violations.push(`Unexpected tracked raster assets:\n${unexpectedRaster.join("\n")}`);
@@ -69,6 +73,6 @@ if (violations.length > 0) {
 	process.exitCode = 1;
 } else {
 	console.log(
-		"Game-asset policy verified: legacy artwork remains quarantined and application/release inputs are generic-only.",
+		"Game-asset policy verified: bundled upstream artwork is absent and application/release inputs are generic-only.",
 	);
 }

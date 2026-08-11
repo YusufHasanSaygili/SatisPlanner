@@ -6,7 +6,8 @@
 
 ## Strateji
 
-- Upstream repo kaynak, davranış, format ve lisans referansı olarak korunur.
+- Upstream repo'nun audited commit/tag kimliği, davranış/format fixture'ları ve
+  lisans kayıtları korunur; ağır kaynak ağacı gerektiğinde upstream'den yeniden alınır.
 - Slice 00'da build/behavior baseline alınır ve kontrollü yeniden yazım ADR'si onaylanır.
 - Domain/calculation çekirdeği UI ve Tauri'den bağımsız geliştirilir.
 - Kurulu oyun verisi normalize edilmiş, immutable ve checksum'lı snapshot'a dönüştürülür.

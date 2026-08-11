@@ -54,6 +54,7 @@ packages/calculation/            Deterministic calculation boundary
 packages/graph-adapter/           Domain-to-React-Flow projection boundary
 src-tauri/                        Narrow native runtime and capability policy
 tests/e2e/                        Browser shell smoke tests
+tests/fixtures/upstream-fcs/      Portable upstream save-format fixture
 docs/foundation/                  Slice 01 architecture and verification evidence
 docs/domain/                      Slice 02 domain/schema verification evidence
 docs/game-data/                   Slice 03 import and snapshot verification evidence
@@ -65,16 +66,12 @@ docs/calculation-engine/         Slice 08 formula, flow and diagnostics evidence
 docs/logistics-bottlenecks/      Slice 09 transport capacity and UX evidence
 docs/persistence-migration/      Slice 10 save, recovery and import evidence
 docs/baseline/                   Audits, measurements and verification records
-tests/upstream-characterization/ Executable upstream behavior fixtures
-spikes/rewrite/                  Disposable React/Tauri decision spike
-ficsit-companion/                Preserved upstream C++ baseline
-assets/                          Preserved upstream data/artwork baseline
 ```
 
-The `ficsit-companion/` and `assets/` directories remain in the repository only
-to preserve the audited upstream baseline until parity and migration gates are
-passed. They are not the SatisPlanner product source or a game-data source of
-truth.
+The retired upstream C++ runtime, bundled game assets and disposable rewrite
+spike were removed after the `v0.11.0` parity and migration gates passed. Their
+audit records remain under `docs/baseline/`; the original source is reproducible
+from the attributed upstream commit and the immutable pre-cleanup Git history.
 
 ## Develop and verify
 
@@ -105,12 +102,6 @@ pnpm desktop:build
 `pnpm quality` also runs controlled negative probes proving that lint,
 typecheck and unit-test failures return non-zero status. The package boundary
 gate prevents React, React Flow and Tauri imports from entering core packages.
-
-Slice 00 upstream characterization remains reproducible with:
-
-```powershell
-ctest --test-dir build/upstream-characterization --output-on-failure
-```
 
 ## Game data and artwork policy
 

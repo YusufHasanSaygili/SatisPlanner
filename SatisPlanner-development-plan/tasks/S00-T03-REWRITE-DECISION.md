@@ -1,7 +1,7 @@
 # S00-T03 — Rewrite Spike ve ADR Kararı
 
-**Durum:** Done — Kanıt: `docs/baseline/REWRITE-SPIKE-REPORT.md` ve
-`spikes/rewrite`.
+**Durum:** Done — Kanıt: `docs/baseline/REWRITE-SPIKE-REPORT.md` ve immutable
+pre-cleanup Git history. Disposable spike, `v0.11.0` kapılarından sonra kaldırıldı.
 
 **Amaç:** Kontrollü rewrite önerisini teknoloji zevkiyle değil ölçümle karara bağlamak.
 

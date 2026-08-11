@@ -1,8 +1,9 @@
 # SatisPlanner kontrollü rewrite spike raporu
 
-Bu rapor Slice 00 / S00-T03 karar kapısını kapatır. Spike kodu
-`spikes/rewrite` altındadır ve üretim workspace'i değildir; Slice 01 iskeleti
-bu kanıttan sonra, ayrı kullanıcı onayıyla kurulacaktır.
+Bu rapor Slice 00 / S00-T03 karar kapısını kapatır. Disposable spike kodu
+`spikes/rewrite` altında doğrulandı ve üretim workspace'ine hiç katılmadı;
+`v0.11.0` parity/migration kapıları geçildikten sonra aktif ağaçtan kaldırıldı.
+Ölçümler ve karar kaydı burada, kaynak ise immutable Git geçmişinde korunur.
 
 ## Ölçüm ortamı
 
@@ -121,6 +122,6 @@ kabul edilmiştir.
 
 ## Sonuç
 
-ADR-001 **Kabul edildi**. Yeni stack ayrı dizinde kurulabilir; upstream kaynak
-ve tag korunacak, P0 parity ve `.fcs` migration raporu tamamlanmadan eski C++
-runtime silinmeyecektir.
+ADR-001 **Kabul edildi**. Yeni stack ayrı dizinde kuruldu; P0 parity ve `.fcs`
+migration raporu `v0.11.0` ile tamamlandıktan sonra eski C++ runtime ve disposable
+spike aktif ağaçtan silindi. Audited commit/tag ve raporlar geçmişte korunur.

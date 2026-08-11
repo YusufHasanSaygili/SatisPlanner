@@ -310,7 +310,7 @@ test("plan migration and upstream FCS conversion stay previewable, cancellable a
 	expect(readFileSync(legacyPlanPath, "utf8")).toBe(legacyPlanBefore);
 
 	const upstreamPath = path.resolve(
-		"tests/upstream-characterization/fixtures/simple-chain-v7.fcs",
+		"tests/fixtures/upstream-fcs/simple-chain-v7.fcs",
 	);
 	const upstreamBefore = readFileSync(upstreamPath, "utf8");
 	await page.getByLabel("Import upstream FCS file").setInputFiles(upstreamPath);

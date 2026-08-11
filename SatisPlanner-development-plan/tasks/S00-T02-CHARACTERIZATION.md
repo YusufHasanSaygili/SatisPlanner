@@ -1,7 +1,7 @@
 # S00-T02 — Characterization ve Save Davranışı
 
-**Durum:** Done — Kanıt: `docs/baseline/UPSTREAM-CHARACTERIZATION.md` ve
-`tests/upstream-characterization`.
+**Durum:** Done — Kanıt: `docs/baseline/UPSTREAM-CHARACTERIZATION.md`, immutable
+pre-cleanup Git history ve `tests/fixtures/upstream-fcs/simple-chain-v7.fcs`.
 
 **Amaç:** Rewrite sırasında kaybedilmemesi gereken upstream davranışlarını executable örneklerle kilitlemek.
 
