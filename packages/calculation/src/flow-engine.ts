@@ -1,6 +1,8 @@
 import {
 	type FactoryPlanV3,
+	getTransportTier,
 	type MachinePlanNodeV3,
+	minimumTransportTier,
 	type PlanNodeV3,
 	Rational,
 	type RationalJson,
@@ -52,7 +54,8 @@ export type FlowDiagnosticCode =
 	| "CYCLE_CONVERGED"
 	| "NON_CONVERGENT_LOOP"
 	| "ITERATION_LIMIT"
-	| "CONSERVATION_VIOLATION";
+	| "CONSERVATION_VIOLATION"
+	| "TRANSPORT_BOTTLENECK";
 
 export interface FlowDiagnostic {
 	readonly code: FlowDiagnosticCode;
@@ -85,8 +88,20 @@ export interface NodeFlowResult {
 export interface EdgeFlowResult {
 	readonly edgeId: string;
 	readonly materialId: string;
+	readonly medium: TransportEdgeV3["medium"];
+	readonly transportTierId: string;
+	readonly requestedRate: RationalJson;
 	readonly requiredRate: RationalJson;
+	readonly capacityRate: RationalJson | null;
 	readonly actualRate: RationalJson;
+	readonly lostRate: RationalJson;
+	readonly deficitReasons: readonly (
+		| "transport-capacity"
+		| "upstream-supply"
+		| "downstream-demand"
+	)[];
+	readonly recommendedTierId: string | null;
+	readonly bottleneckRank: number | null;
 }
 
 export interface FlowInstrumentation {
@@ -209,7 +224,11 @@ function allocationEntries(
 	policy: FlowAllocationPolicy | undefined,
 ): readonly WeightedAllocationEntry[] {
 	return edges.map((edge) => {
-		const cap = demands.get(edge.toPortId) ?? ZERO;
+		const explicitRequest = Rational.parse(edge.requestedRate);
+		const demandCap =
+			explicitRequest.compare(ZERO) > 0 ? explicitRequest : (demands.get(edge.toPortId) ?? ZERO);
+		const tierCapacity = getTransportTier(edge.transportTierId)?.capacityPerMinute;
+		const cap = tierCapacity ? minimum(demandCap, Rational.parse(tierCapacity)) : demandCap;
 		if (policy?.mode === "manual") {
 			const requested = policy.ratesByEdgeId[edge.id];
 			const manualCap = requested ? minimum(cap, maximumZero(Rational.parse(requested))) : ZERO;
@@ -631,22 +650,73 @@ export function calculateFactoryPlan(
 		})
 		.sort((left, right) => left.nodeId.localeCompare(right.nodeId));
 	const edges = [...plan.edges]
-		.map(
-			(edge): EdgeFlowResult => ({
+		.map((edge): EdgeFlowResult => {
+			const required = requiredEdgeRate(edge, requiredByInputPort, incomingCountByPort);
+			const requested =
+				Rational.parse(edge.requestedRate).compare(ZERO) > 0
+					? Rational.parse(edge.requestedRate)
+					: required;
+			const tier = getTransportTier(edge.transportTierId);
+			const capacity = tier?.capacityPerMinute ? Rational.parse(tier.capacityPerMinute) : null;
+			const actual = state.edges.get(edge.id) ?? ZERO;
+			const lost = maximumZero(required.subtract(actual));
+			const targetDemand = requiredByInputPort.get(edge.toPortId) ?? ZERO;
+			const reasons: Array<"transport-capacity" | "upstream-supply" | "downstream-demand"> = [];
+			if (capacity && required.compare(capacity) > 0 && actual.compare(capacity) >= 0) {
+				reasons.push("transport-capacity");
+			}
+			if (lost.compare(ZERO) > 0 && (!capacity || actual.compare(capacity) < 0)) {
+				reasons.push("upstream-supply");
+			}
+			if (requested.compare(targetDemand) > 0) reasons.push("downstream-demand");
+			return {
 				edgeId: edge.id,
 				materialId: edge.itemOrFluidId,
-				requiredRate: requiredEdgeRate(edge, requiredByInputPort, incomingCountByPort).toJSON(),
-				actualRate: (state.edges.get(edge.id) ?? ZERO).toJSON(),
-			}),
-		)
+				medium: edge.medium,
+				transportTierId: edge.transportTierId,
+				requestedRate: requested.toJSON(),
+				requiredRate: required.toJSON(),
+				capacityRate: capacity?.toJSON() ?? null,
+				actualRate: actual.toJSON(),
+				lostRate: lost.toJSON(),
+				deficitReasons: reasons,
+				recommendedTierId: minimumTransportTier(edge.medium, required.toJSON())?.id ?? null,
+				bottleneckRank: null,
+			};
+		})
 		.sort((left, right) => left.edgeId.localeCompare(right.edgeId));
+	const rankedBottlenecks = edges
+		.filter((edge) => edge.deficitReasons.includes("transport-capacity"))
+		.sort((left, right) => {
+			const lostComparison = Rational.parse(right.lostRate).compare(Rational.parse(left.lostRate));
+			return lostComparison === 0 ? left.edgeId.localeCompare(right.edgeId) : lostComparison;
+		});
+	const rankByEdgeId = new Map(rankedBottlenecks.map((edge, index) => [edge.edgeId, index + 1]));
+	const rankedEdges = edges.map((edge) => ({
+		...edge,
+		bottleneckRank: rankByEdgeId.get(edge.edgeId) ?? null,
+	}));
+	const portOwners = nodeByPortId(plan);
+	for (const edge of rankedBottlenecks) {
+		const planEdge = plan.edges.find((candidate) => candidate.id === edge.edgeId);
+		if (!planEdge) continue;
+		diagnostics.push({
+			code: "TRANSPORT_BOTTLENECK",
+			severity: "warning",
+			message: `${edge.transportTierId} limits ${edge.materialId}: ${Rational.parse(edge.actualRate).toDecimal(4)}/min actual, ${Rational.parse(edge.lostRate).toDecimal(4)}/min lost.${edge.recommendedTierId ? ` Upgrade to ${edge.recommendedTierId}.` : " No available tier meets the requested rate."}`,
+			nodeIds: [portOwners.get(planEdge.fromPortId), portOwners.get(planEdge.toPortId)].filter(
+				(nodeId): nodeId is string => nodeId !== undefined,
+			),
+			edgeId: edge.edgeId,
+		});
+	}
 	const sortedDiagnostics = diagnostics.sort((left, right) =>
 		diagnosticSortKey(left).localeCompare(diagnosticSortKey(right)),
 	);
 	return {
 		resolved: converged && nodes.every((node) => node.status === "resolved"),
 		nodes,
-		edges,
+		edges: rankedEdges,
 		diagnostics: sortedDiagnostics,
 		totalPowerMW: nodes.reduce((total, node) => total + node.powerMW, 0),
 		instrumentation: {
@@ -688,22 +758,42 @@ export class IncrementalFlowEngine {
 		this.#options = options;
 	}
 
-	compute(plan: FactoryPlanV3, changedNodeIds?: readonly string[]): FactoryFlowResult {
-		if (!this.#previousPlan || !this.#previousResult || !changedNodeIds) {
+	compute(
+		plan: FactoryPlanV3,
+		changedNodeIds?: readonly string[],
+		changedEdgeIds: readonly string[] = [],
+	): FactoryFlowResult {
+		if (
+			!this.#previousPlan ||
+			!this.#previousResult ||
+			(!changedNodeIds && changedEdgeIds.length === 0)
+		) {
 			const result = calculateFactoryPlan(plan, this.#options);
 			this.#previousPlan = plan;
 			this.#previousResult = result;
 			return result;
 		}
-		if (changedNodeIds.length === 0) {
+		if ((changedNodeIds?.length ?? 0) === 0 && changedEdgeIds.length === 0) {
 			return {
 				...this.#previousResult,
 				instrumentation: { iterationCount: 0, recomputedNodeIds: [] },
 			};
 		}
+		const edgeSeedNodes = (candidatePlan: FactoryPlanV3): string[] => {
+			const owners = nodeByPortId(candidatePlan);
+			return candidatePlan.edges
+				.filter((edge) => changedEdgeIds.includes(edge.id))
+				.flatMap((edge) => [owners.get(edge.fromPortId), owners.get(edge.toPortId)])
+				.filter((nodeId): nodeId is string => nodeId !== undefined);
+		};
+		const seeds = [
+			...(changedNodeIds ?? []),
+			...edgeSeedNodes(plan),
+			...edgeSeedNodes(this.#previousPlan),
+		];
 		const affected = new Set([
-			...connectedNodeIds(plan, changedNodeIds),
-			...connectedNodeIds(this.#previousPlan, changedNodeIds),
+			...connectedNodeIds(plan, seeds),
+			...connectedNodeIds(this.#previousPlan, seeds),
 		]);
 		const affectedPortIds = new Set(
 			plan.nodes

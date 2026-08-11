@@ -2,10 +2,9 @@
 
 Offline-first, graph-based desktop factory planner for Satisfactory 1.2.
 
-> **Development status:** Slice 08 deterministic material and power calculation
-> is implemented on the `slice/08-calculation-engine` branch. Formula strategies,
-> steady-state flow propagation, loop diagnostics and incremental recompute form
-> the `v0.9.0` milestone.
+> **Development status:** Slice 09 logistics capacity and bottleneck diagnostics
+> are implemented on the `slice/09-logistics-bottlenecks` branch. Versioned transport
+> tiers, capacity-aware flow and accessible upgrade guidance form the `v0.10.0` milestone.
 
 [![SatisPlanner Quality](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml/badge.svg)](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml)
 
@@ -27,18 +26,17 @@ SatisPlanner will let players model the factory they will actually build:
 The full scope and the 16-slice delivery roadmap are in the
 [development plan](SatisPlanner-development-plan/00-MASTER-PLAN.md).
 
-## Current milestone: v0.9.0
+## Current milestone: v0.10.0
 
-Slice 08 calculates deterministic steady-state material flow and power:
+Slice 09 turns graph connections into capacity-constrained transport equipment:
 
-- versioned production formula registry with explicit unsupported-formula errors;
-- exact clock-only input and clock × Somersloop-amplified output rules;
-- production power exponent `1.321928` and squared Somersloop power multiplier;
-- deterministic equal, manual and ratio splitting with merger conservation;
-- bounded SCC/fixed-point recycle-loop solving and non-convergence diagnostics;
-- connected-component incremental recompute instrumentation;
-- actual/required/efficiency/power results in machine and connection inspectors;
-- golden, randomized conservation, determinism, loop, benchmark and E2E evidence.
+- Conveyor Mk.1–Mk.6 capacities of 60/120/270/480/780/1200 items per minute;
+- Pipeline Mk.1–Mk.2 capacities of 300/600 cubic metres per minute;
+- medium-safe tier selection persisted through the FactoryPlan v4 schema;
+- requested, required, capacity, actual and lost rates in the connection inspector;
+- ranked, text-and-icon bottleneck diagnostics with navigation to the source edge;
+- minimum sufficient tier recommendations and incremental edge-tier recompute;
+- Coal Pure Miner Mk.3 250% acceptance coverage for Mk.5 and Mk.6.
 
 Calculation evidence is collected under
 [docs/calculation-engine](docs/calculation-engine). Machine instances, resource
@@ -64,6 +62,7 @@ docs/graph-ux/                    Slice 05 graph UX and persistence evidence
 docs/resource-extraction/        Slice 06 extraction model and inspector evidence
 docs/machine-instances/          Slice 07 machine binding and isolation evidence
 docs/calculation-engine/         Slice 08 formula, flow and diagnostics evidence
+docs/logistics-bottlenecks/      Slice 09 transport capacity and UX evidence
 docs/baseline/                   Audits, measurements and verification records
 tests/upstream-characterization/ Executable upstream behavior fixtures
 spikes/rewrite/                  Disposable React/Tauri decision spike

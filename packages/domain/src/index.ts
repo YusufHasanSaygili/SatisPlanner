@@ -19,4 +19,5 @@ export * from "./graph";
 export * from "./machine";
 export * from "./plan-schema";
 export * from "./rational";
+export * from "./transport";
 export * from "./units";

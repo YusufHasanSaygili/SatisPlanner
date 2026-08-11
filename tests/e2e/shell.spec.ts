@@ -49,7 +49,7 @@ test("renders the SatisPlanner graph shell and searchable fallback library", asy
 	await expect(matches.nth(0)).toContainText("Build_ConstructorMk1_C::Recipe_IronPlate_C");
 	await expect(matches.nth(1)).toContainText("Build_ConstructorMk1_C::Recipe_IronRod_C");
 	await expect(page.getByRole("status").first()).toContainText(
-		"Contract v1 · browser-mock · v0.9.0",
+		"Contract v1 · browser-mock · v0.10.0",
 	);
 });
 
@@ -214,6 +214,67 @@ test("steady-state engine exposes actual, required, efficiency and edge rates", 
 	await expect(edgeInspector).toContainText("Actual rate");
 	await expect(edgeInspector).toContainText("30/min");
 	await expect(edgeInspector).toContainText("Required rate");
+});
+
+test("Coal Pure Mk.3 at 250% exposes and clears the Mk.5 transport bottleneck", async ({
+	page,
+}) => {
+	await dropCatalogEntry(page, page.getByLabel("Drag resource Coal"), { x: 320, y: 250 });
+	await dropCatalogEntry(page, page.getByLabel("Drag Foundry · Steel Ingot"), { x: 720, y: 250 });
+
+	await page.locator(".react-flow__node-resource .machine-node-title").getByText("Coal", { exact: true }).click();
+	await page.getByLabel("Set purity pure").click();
+	await page.getByLabel("Extractor tier").selectOption("miner-mk3");
+	await page.getByLabel("Set 3 Power Shards").click();
+	await page.getByLabel("Clock percent").fill("250");
+	await page.getByLabel("Clock percent").blur();
+	await expect(page.getByLabel("Extraction results")).toContainText("1,200 items/min");
+
+	await connectHandles(page, "Output Desc_Coal_C", "Input Desc_Coal_C");
+	await expect(page.locator(".react-flow__edge")).toHaveCount(1);
+	await page.evaluate(() => {
+		const key = "satisplanner.slice-07.factory-plan";
+		const plan = JSON.parse(localStorage.getItem(key) ?? "{}") as {
+			edges: Array<{
+				transportTierId: string;
+				requestedRate: { numerator: string; denominator: string };
+			}>;
+		};
+		if (!plan.edges[0]) throw new Error("Expected the Coal transport edge.");
+		plan.edges[0].transportTierId = "conveyor-mk5";
+		plan.edges[0].requestedRate = { numerator: "1200", denominator: "1" };
+		localStorage.setItem(key, JSON.stringify(plan));
+	});
+	await page.reload();
+
+	const bottlenecks = page.getByLabel("Transport bottlenecks");
+	await expect(bottlenecks).toContainText("1");
+	await expect(bottlenecks).toContainText("420/min lost");
+	await expect(page.locator(".react-flow__edge")).toHaveAttribute(
+		"aria-label",
+		/Warning: transport capacity bottleneck/,
+	);
+	await bottlenecks.getByRole("button", { name: /420\/min lost/ }).click();
+
+	const inspector = page.getByLabel("Connection inspector");
+	await expect(inspector.getByRole("alert")).toContainText("Capacity bottleneck");
+	await expect(inspector).toContainText("Requested rate");
+	await expect(inspector).toContainText("1,200/min");
+	await expect(inspector).toContainText("Capacity");
+	await expect(inspector).toContainText("780/min");
+	await expect(inspector).toContainText("Actual rate");
+	await expect(inspector).toContainText("Lost rate");
+	await expect(inspector).toContainText("420/min");
+	await expect(inspector).toContainText("conveyor-mk6");
+	await expect(inspector).toHaveScreenshot("coal-mk5-bottleneck.png", {
+		mask: [inspector.locator("dd").first()],
+	});
+
+	await page.getByLabel("Transport tier").selectOption("conveyor-mk6");
+	await expect(inspector).toContainText("1,200/min");
+	await expect(inspector).toContainText("0/min");
+	await expect(inspector.getByRole("alert")).toHaveCount(0);
+	await expect(bottlenecks).toContainText("No capacity bottlenecks");
 });
 
 test("machine inspector exposes the exact Constructor, Assembler and Manufacturer sloop matrices", async ({

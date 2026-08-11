@@ -280,6 +280,7 @@ export function connectMachinePorts(
 		fromPortId: identity.sourcePortId,
 		toPortId: identity.targetPortId,
 		medium: validation.medium,
+		transportTierId: validation.medium === "pipeline" ? "pipeline-mk1" : "conveyor-mk1",
 		itemOrFluidId: validation.materialId,
 		requestedRate: { numerator: "0", denominator: "1" },
 		actualRate: { numerator: "0", denominator: "1" },

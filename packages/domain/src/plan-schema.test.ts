@@ -11,7 +11,7 @@ import {
 } from "./plan-schema";
 
 const fixtureJson = readFileSync(
-	new URL("./fixtures/factory-plan-v3.json", import.meta.url),
+	new URL("./fixtures/factory-plan-v4.json", import.meta.url),
 	"utf8",
 );
 
@@ -20,19 +20,21 @@ function validFixture(): Record<string, unknown> {
 }
 
 function firstNode(fixture: Record<string, unknown>): Record<string, unknown> {
-	const node = (fixture.nodes as Record<string, unknown>[])[0];
+	const node = (fixture.nodes as Record<string, unknown>[]).find(
+		(entry) => entry.kind === "machine",
+	);
 	if (!node) throw new Error("The canonical fixture must contain a machine node.");
 	return node;
 }
 
-describe("FactoryPlan v3 schema", () => {
+describe("FactoryPlan v4 schema", () => {
 	it("ships a versioned JSON Schema artifact", () => {
 		const schema = JSON.parse(
-			readFileSync(new URL("../schema/factory-plan-v3.schema.json", import.meta.url), "utf8"),
+			readFileSync(new URL("../schema/factory-plan-v4.schema.json", import.meta.url), "utf8"),
 		) as Record<string, unknown>;
 		expect(schema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
-		expect(schema.$id).toBe("https://satisplanner.dev/schema/factory-plan-v3.schema.json");
-		expect(FACTORY_PLAN_SCHEMA_VERSION).toBe(3);
+		expect(schema.$id).toBe("https://satisplanner.dev/schema/factory-plan-v4.schema.json");
+		expect(FACTORY_PLAN_SCHEMA_VERSION).toBe(4);
 	});
 
 	it("round-trips to byte-stable canonical JSON and preserves unknown fields", () => {
@@ -47,7 +49,10 @@ describe("FactoryPlan v3 schema", () => {
 		expect(second).toBe(first);
 		const exported = JSON.parse(first) as Record<string, unknown>;
 		expect(exported.futureTopLevelField).toEqual({ preserved: true });
-		expect((exported.nodes as Record<string, unknown>[])[0]?.futureNodeField).toEqual({
+		expect(
+			(exported.nodes as Record<string, unknown>[]).find((entry) => entry.kind === "machine")
+				?.futureNodeField,
+		).toEqual({
 			preserved: true,
 		});
 	});
@@ -57,13 +62,13 @@ describe("FactoryPlan v3 schema", () => {
 			["$.planId", (fixture) => (fixture.planId = "not-a-uuid")],
 			["$.updatedAt", (fixture) => (fixture.updatedAt = "yesterday")],
 			[
-				"$.nodes[0].clockPercent",
+				"$.nodes[1].clockPercent",
 				(fixture) => {
 					firstNode(fixture).clockPercent = "150.0000";
 				},
 			],
 			[
-				"$.nodes[0].somersloopCount",
+				"$.nodes[1].somersloopCount",
 				(fixture) => {
 					firstNode(fixture).somersloopCount = -1;
 				},
@@ -75,7 +80,7 @@ describe("FactoryPlan v3 schema", () => {
 				},
 			],
 			[
-				"$.nodes[0].id",
+				"$.nodes[1].id",
 				(fixture) => {
 					firstNode(fixture).id = fixture.planId;
 				},
@@ -111,7 +116,7 @@ describe("FactoryPlan v3 schema", () => {
 		});
 		for (const [version, code] of [
 			[0, "MISSING_MIGRATION"],
-			[4, "UNSUPPORTED_SCHEMA_VERSION"],
+			[5, "UNSUPPORTED_SCHEMA_VERSION"],
 		] as const) {
 			const fixture = validFixture();
 			fixture.schemaVersion = version;
@@ -129,7 +134,7 @@ describe("FactoryPlan v3 schema", () => {
 		const result = parseFactoryPlan(legacy);
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
-		expect(result.value.schemaVersion).toBe(3);
+		expect(result.value.schemaVersion).toBe(4);
 		expect(result.value.nodes[0]?.position).toEqual({ x: 80, y: 80 });
 		expect(result.value.nodes[0]?.ports[0]?.materialId).toBe("unresolved:input-0");
 	});
@@ -142,11 +147,32 @@ describe("FactoryPlan v3 schema", () => {
 		const result = parseFactoryPlan(legacy);
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
-		expect(result.value.schemaVersion).toBe(3);
+		expect(result.value.schemaVersion).toBe(4);
 		expect(result.value.nodes[0]).toMatchObject({
 			id: "00000000-0000-4000-8000-000000000002",
 			position: { x: 80, y: 80 },
 		});
+	});
+
+	it("migrates v3 edges to medium-safe default tiers", () => {
+		const legacy = JSON.parse(
+			readFileSync(new URL("./fixtures/factory-plan-v3.json", import.meta.url), "utf8"),
+		) as Record<string, unknown>;
+		legacy.edges = [
+			{
+				id: "00000000-0000-4000-8000-000000000030",
+				fromPortId: "00000000-0000-4000-8000-000000000011",
+				toPortId: "00000000-0000-4000-8000-000000000003",
+				medium: "conveyor",
+				itemOrFluidId: "Desc_OreIron_C",
+				requestedRate: { numerator: "0", denominator: "1" },
+				actualRate: { numerator: "0", denominator: "1" },
+			},
+		];
+		const result = parseFactoryPlan(legacy);
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		expect(result.value.edges[0]?.transportTierId).toBe("conveyor-mk1");
 	});
 
 	it("round-trips exact resource purity and extraction selection", () => {

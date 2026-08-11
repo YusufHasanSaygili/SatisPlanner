@@ -1,9 +1,10 @@
 import { DomainValidationError, type DomainErrorCode } from "./errors";
 import { parseUuid } from "./machine";
 import { Rational, type RationalJson } from "./rational";
+import { getTransportTier } from "./transport";
 import { ClockPercent } from "./units";
 
-export const FACTORY_PLAN_SCHEMA_VERSION = 3 as const;
+export const FACTORY_PLAN_SCHEMA_VERSION = 4 as const;
 
 export type JsonPrimitive = boolean | number | string | null;
 export type JsonValue = JsonPrimitive | JsonObject | readonly JsonValue[];
@@ -54,17 +55,18 @@ export interface ResourcePlanNodeV3 {
 
 export type PlanNodeV3 = MachinePlanNodeV3 | ResourcePlanNodeV3;
 
-export interface TransportEdgeV3 {
+export interface TransportEdgeV4 {
 	readonly id: string;
 	readonly fromPortId: string;
 	readonly toPortId: string;
 	readonly medium: "conveyor" | "pipeline" | "virtual";
+	readonly transportTierId: string;
 	readonly itemOrFluidId: string;
 	readonly requestedRate: RationalJson;
 	readonly actualRate: RationalJson;
 }
 
-export interface FactoryPlanV3 {
+export interface FactoryPlanV4 {
 	readonly schemaVersion: typeof FACTORY_PLAN_SCHEMA_VERSION;
 	readonly planId: string;
 	readonly name: string;
@@ -73,7 +75,7 @@ export interface FactoryPlanV3 {
 	readonly gameDataSnapshotId: string;
 	readonly gameProfile: GameProfileV1;
 	readonly nodes: readonly PlanNodeV3[];
-	readonly edges: readonly TransportEdgeV3[];
+	readonly edges: readonly TransportEdgeV4[];
 	readonly viewport: {
 		readonly x: number;
 		readonly y: number;
@@ -82,6 +84,12 @@ export interface FactoryPlanV3 {
 	readonly userMetadata: Readonly<Record<string, JsonValue>>;
 }
 
+/** @deprecated Use TransportEdgeV4 for the current save schema. */
+export type TransportEdgeV3 = TransportEdgeV4;
+
+/** @deprecated Use FactoryPlanV4 for the current save schema. */
+export type FactoryPlanV3 = FactoryPlanV4;
+
 export interface PlanValidationIssue {
 	readonly code: DomainErrorCode;
 	readonly path: string;
@@ -89,7 +97,7 @@ export interface PlanValidationIssue {
 }
 
 export type ParseFactoryPlanResult =
-	| { readonly ok: true; readonly value: FactoryPlanV3 }
+	| { readonly ok: true; readonly value: FactoryPlanV4 }
 	| { readonly ok: false; readonly issues: readonly PlanValidationIssue[] };
 
 export interface PlanMigration {
@@ -452,6 +460,19 @@ function validateEdge(
 	if (!["conveyor", "pipeline", "virtual"].includes(edge.medium as string)) {
 		issue(issues, "INVALID_PLAN", `${path}.medium`, "Unknown transport medium.");
 	}
+	if (requireString(edge.transportTierId, `${path}.transportTierId`, issues)) {
+		const tier = getTransportTier(edge.transportTierId);
+		if (!tier) {
+			issue(issues, "INVALID_PLAN", `${path}.transportTierId`, "Unknown transport tier.");
+		} else if (tier.medium !== edge.medium) {
+			issue(
+				issues,
+				"INVALID_PLAN",
+				`${path}.transportTierId`,
+				"Transport tier does not match edge medium.",
+			);
+		}
+	}
 	requireString(edge.itemOrFluidId, `${path}.itemOrFluidId`, issues);
 	validateRate(edge.requestedRate, `${path}.requestedRate`, issues);
 	validateRate(edge.actualRate, `${path}.actualRate`, issues);
@@ -641,6 +662,25 @@ export const planMigrationRegistry = new PlanMigrationRegistry()
 		migrate(plan) {
 			return { ...plan, schemaVersion: 3 } as JsonObject;
 		},
+	})
+	.register({
+		fromVersion: 3,
+		toVersion: 4,
+		migrate(plan) {
+			const edges = Array.isArray(plan.edges)
+				? plan.edges.map((rawEdge) => {
+						if (!isRecord(rawEdge)) return rawEdge;
+						const transportTierId =
+							rawEdge.medium === "pipeline"
+								? "pipeline-mk1"
+								: rawEdge.medium === "virtual"
+									? "virtual-unlimited"
+									: "conveyor-mk1";
+						return { ...rawEdge, transportTierId };
+					})
+				: plan.edges;
+			return { ...plan, schemaVersion: 4, edges } as JsonObject;
+		},
 	});
 
 export function parseFactoryPlan(
@@ -679,10 +719,10 @@ export function parseFactoryPlan(
 	}
 	const issues = validateFactoryPlan(migrated);
 	if (issues.length > 0) return { ok: false, issues };
-	return { ok: true, value: cloneJson(migrated) as unknown as FactoryPlanV3 };
+	return { ok: true, value: cloneJson(migrated) as unknown as FactoryPlanV4 };
 }
 
-export function serializeFactoryPlan(plan: FactoryPlanV3): string {
+export function serializeFactoryPlan(plan: FactoryPlanV4): string {
 	const result = parseFactoryPlan(plan);
 	if (!result.ok) {
 		const first = result.issues[0];

@@ -72,6 +72,7 @@ function connection(
 		fromPortId,
 		toPortId,
 		medium: "conveyor",
+		transportTierId: "conveyor-mk6",
 		itemOrFluidId: materialId,
 		requestedRate: Rational.parse("0").toJSON(),
 		actualRate: Rational.parse("0").toJSON(),
@@ -80,7 +81,7 @@ function connection(
 
 function plan(nodes: readonly PlanNodeV3[], edges: readonly TransportEdgeV3[]): FactoryPlanV3 {
 	return {
-		schemaVersion: 3,
+		schemaVersion: 4,
 		planId: "flow-test",
 		name: "Flow test",
 		createdAt: "2026-08-11T00:00:00.000Z",
