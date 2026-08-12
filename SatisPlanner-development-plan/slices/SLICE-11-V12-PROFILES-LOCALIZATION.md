@@ -31,7 +31,7 @@ Profile matrix, locale fallback, missing translation, snapshot switch E2E.
 
 - Branch: `slice/11-v12-profiles-localization`
 - Closing SHA: `1239d87960b940b0ebfa69fa7b76f172c14b1812`
-- Remote SHA: `origin/main` ve `origin/slice/11-v12-profiles-localization` → `1239d87960b940b0ebfa69fa7b76f172c14b1812`
+- Remote SHA: release öncesi doğrulanan branch/main push `1239d87960b940b0ebfa69fa7b76f172c14b1812`; sonraki commit'ler yalnız Delivery Record metadata'sıdır.
 - Tag: annotated `v0.12.0` → `1239d87960b940b0ebfa69fa7b76f172c14b1812`
 - GitHub Release URL: https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v0.12.0 (Latest, non-draft, non-prerelease, 5 asset)
 - CI: PASS — branch https://github.com/YusufHasanSaygili/SatisPlanner/actions/runs/31549573750 ve main https://github.com/YusufHasanSaygili/SatisPlanner/actions/runs/31549909093 (`web-quality`, `rust-quality`, Linux/Windows/macOS `desktop-smoke`)
