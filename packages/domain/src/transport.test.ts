@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_SATISFACTORY_12_PROFILE } from "./game-profile";
 import type { FactoryPlanV3 } from "./plan-schema";
 import {
 	getTransportTier,
@@ -11,13 +12,14 @@ import {
 
 function transportPlan(): FactoryPlanV3 {
 	return {
-		schemaVersion: 4,
+		schemaVersion: 5,
 		planId: "00000000-0000-4000-8000-000000000001",
 		name: "Transport test",
 		createdAt: "2026-08-11T00:00:00.000Z",
 		updatedAt: "2026-08-11T00:00:00.000Z",
 		gameDataSnapshotId: "test",
-		gameProfile: { id: "satisfactory", version: "1.2" },
+		gameProfile: DEFAULT_SATISFACTORY_12_PROFILE,
+		localization: { uiLocale: "en", gameDataLocale: "en-US", gameDataFallbackLocale: "en-US" },
 		nodes: [],
 		edges: [
 			{

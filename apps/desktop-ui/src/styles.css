@@ -96,10 +96,12 @@ button {
 
 .library-panel {
 	border-right: 1px solid #273442;
+	overflow-y: auto;
 }
 
 .inspector-panel {
 	border-left: 1px solid #273442;
+	overflow-y: auto;
 }
 
 .panel-heading {
@@ -181,6 +183,67 @@ select:focus-visible {
 	color: #b9c8d5;
 	font-size: 12px;
 	font-weight: 700;
+}
+
+.profile-panel {
+	margin-bottom: 12px;
+	padding: 9px;
+	border: 1px solid #34475a;
+	border-radius: 8px;
+	background: #111922;
+}
+
+.profile-panel summary {
+	cursor: pointer;
+	color: #d8e8f4;
+	font-size: 11px;
+	font-weight: 700;
+}
+
+.profile-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 7px;
+	margin-top: 9px;
+}
+
+.profile-grid label {
+	display: grid;
+	gap: 4px;
+	color: #8297aa;
+	font-size: 9px;
+}
+
+.profile-grid select,
+.profile-grid input {
+	min-width: 0;
+	padding: 6px;
+	border: 1px solid #314256;
+	border-radius: 6px;
+	color: #e9eef4;
+	background: #101820;
+	font-size: 9px;
+}
+
+.profile-seed {
+	grid-column: 1 / -1;
+}
+
+.profile-summary {
+	display: grid;
+	gap: 3px;
+	margin: 8px 0 0;
+	color: #9fb6c8;
+	font-size: 9px;
+}
+
+.profile-summary strong {
+	color: #d8f3e0;
+}
+
+.profile-summary small {
+	color: #71879a;
+	line-height: 1.35;
 }
 
 .catalog-meta small,

@@ -11,7 +11,7 @@ recovery is recommended, automatic native writes pause until the user explicitly
 last-known-good plan or keeps the current plan. Save failures remain visible and retryable.
 
 Plan export uses a versioned canonical manifest. Import is preview-first: every historical schema
-fixture migrates sequentially to FactoryPlan v4, while the report exposes applied steps, catalog
+fixture migrates sequentially to FactoryPlan v5, while the report exposes applied steps, catalog
 snapshot mismatch and unresolved recipes. Cancel leaves the active plan untouched, and the exact
 original import text remains available for auditing.
 

@@ -1,4 +1,5 @@
 import {
+	DEFAULT_SATISFACTORY_12_PROFILE,
 	type FactoryPlanV3,
 	type MachinePlanNodeV3,
 	type PlanNodeV3,
@@ -81,13 +82,14 @@ function connection(
 
 function plan(nodes: readonly PlanNodeV3[], edges: readonly TransportEdgeV3[]): FactoryPlanV3 {
 	return {
-		schemaVersion: 4,
+		schemaVersion: 5,
 		planId: "flow-test",
 		name: "Flow test",
 		createdAt: "2026-08-11T00:00:00.000Z",
 		updatedAt: "2026-08-11T00:00:00.000Z",
 		gameDataSnapshotId: "flow-fixture-v1",
-		gameProfile: { id: "satisfactory", version: "1.2" },
+		gameProfile: DEFAULT_SATISFACTORY_12_PROFILE,
+		localization: { uiLocale: "en", gameDataLocale: "en-US", gameDataFallbackLocale: "en-US" },
 		nodes,
 		edges,
 		viewport: { x: 0, y: 0, zoom: 1 },

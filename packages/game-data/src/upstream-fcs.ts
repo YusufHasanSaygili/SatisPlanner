@@ -1,4 +1,5 @@
 import {
+	DEFAULT_SATISFACTORY_12_PROFILE,
 	type FactoryPlanV4,
 	type MachinePlanNodeV3,
 	Rational,
@@ -267,13 +268,14 @@ export function previewUpstreamFcsImport(
 	}
 	const now = "2026-08-11T00:00:00.000Z";
 	const plan: FactoryPlanV4 = {
-		schemaVersion: 4,
+		schemaVersion: 5,
 		planId,
 		name: "Imported upstream factory",
 		createdAt: now,
 		updatedAt: now,
 		gameDataSnapshotId: FALLBACK_GRAPH_CATALOG_VERSION,
-		gameProfile: { id: "satisfactory", version: String(migrated.value.game_version ?? "unknown") },
+		gameProfile: DEFAULT_SATISFACTORY_12_PROFILE,
+		localization: { uiLocale: "en", gameDataLocale: "en-US", gameDataFallbackLocale: "en-US" },
 		nodes,
 		edges,
 		viewport: { x: 0, y: 0, zoom: 1 },

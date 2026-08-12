@@ -36,5 +36,5 @@ Crash/truncated write, round-trip, all-version migration, representative `.fcs` 
 - GitHub Release URL: https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v0.11.0
 - CI: branch `31531695495` 5/5 success; release `31532248113` 6/6 success; local `pnpm quality` and 9/9 Playwright E2E success
 - Codex notification: `SatisPlanner v0.11.0 yayımlandı. Slice 11/16 tamamlandı. Slice 11'e devam edilsin mi?`
-- User approval: Bekleniyor; Slice 11 açık onay olmadan başlatılmayacak.
+- User approval: 2026-08-12 tarihinde kullanıcı `devam` diyerek Slice 11 için açık onay verdi.
 - Tarih: 2026-08-11

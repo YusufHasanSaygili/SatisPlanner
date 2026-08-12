@@ -2,9 +2,9 @@
 
 Offline-first, graph-based desktop factory planner for Satisfactory 1.2.
 
-> **Development status:** Slice 10 resilient persistence and upstream migration
-> are implemented on the `slice/10-persistence-migration` branch. Atomic saves,
-> recovery, schema migration and `.fcs` conversion form the `v0.11.0` milestone.
+> **Development status:** Slice 11 Satisfactory 1.2 profiles and localization
+> are implemented on the `slice/11-v12-profiles-localization` branch. Versioned
+> game-mode multipliers and independent UI/game-data locales form `v0.12.0`.
 
 [![SatisPlanner Quality](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml/badge.svg)](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml)
 
@@ -26,20 +26,19 @@ SatisPlanner will let players model the factory they will actually build:
 The full scope and the 16-slice delivery roadmap are in the
 [development plan](SatisPlanner-development-plan/00-MASTER-PLAN.md).
 
-## Current milestone: v0.11.0
+## Current milestone: v0.12.0
 
-Slice 10 makes local plans durable and older plans safely portable:
+Slice 11 makes 1.2 game modes explicit and localization identity-safe:
 
-- atomic native saves with a last-known-good copy and interrupted-write detection;
-- debounced autosave plus an immediate browser-session safety copy;
-- explicit recovery inspection and user-controlled last-good restoration;
-- canonical plan export and preview-first import through every schema migration;
-- game-data snapshot mismatch and unresolved-recipe reporting before import;
-- upstream `.fcs` v1–v7 conversion with selectable expansion strategy;
-- conversion reports that keep unknown nodes, dropped links and the original file visible.
+- vanilla and custom Satisfactory 1.2 profiles persisted in FactoryPlan v5;
+- official recipe, power, Space Elevator, purity and randomization option matrices;
+- recipe-cost scaling on inputs and power scaling on consumption with provenance;
+- world seed retained as metadata without pretending to generate resource coordinates;
+- independent TR/EN UI and game-data locale selection;
+- locale fallback, stable class-id bindings and Turkish/English search aliases.
 
-Persistence and migration evidence is collected under
-[docs/persistence-migration](docs/persistence-migration). Logistics, calculation,
+Profile and localization evidence is collected under
+[docs/game-profiles-localization](docs/game-profiles-localization). Persistence, logistics, calculation,
 machine instances, resource extraction, graph UX, local icons, game-data, domain,
 foundation and baseline evidence remain under their respective documentation directories.
 
@@ -65,6 +64,7 @@ docs/machine-instances/          Slice 07 machine binding and isolation evidence
 docs/calculation-engine/         Slice 08 formula, flow and diagnostics evidence
 docs/logistics-bottlenecks/      Slice 09 transport capacity and UX evidence
 docs/persistence-migration/      Slice 10 save, recovery and import evidence
+docs/game-profiles-localization/ Slice 11 profiles, multiplier and locale evidence
 docs/baseline/                   Audits, measurements and verification records
 ```
 

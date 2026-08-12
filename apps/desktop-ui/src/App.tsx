@@ -9,6 +9,8 @@ import {
 	addMachineNode,
 	addResourceNode,
 	connectMachinePorts,
+	createSatisfactory12Profile,
+	DEFAULT_SATISFACTORY_12_PROFILE,
 	createPlanExportBundle,
 	deletePlanEntities,
 	duplicateMachineNode,
@@ -19,6 +21,11 @@ import {
 	parseFactoryPlan,
 	previewFactoryPlanImport,
 	Rational,
+	POWER_CONSUMPTION_MULTIPLIERS,
+	RECIPE_COST_MULTIPLIERS,
+	RESOURCE_PURITY_MODES,
+	RESOURCE_RANDOMIZATION_MODES,
+	type Satisfactory12GameProfile,
 	type ResourceSettingsPatch,
 	rebindMachineRecipe,
 	serializeFactoryPlan,
@@ -36,7 +43,10 @@ import {
 	FALLBACK_ICON_PATHS,
 	FALLBACK_MACHINE_BUILDINGS,
 	FALLBACK_RESOURCE_CATALOG,
+	fallbackLocalizedAliases,
+	fallbackLocalizedName,
 	getGameDataFoundationStatus,
+	localizedSearchMatch,
 	previewUpstreamFcsImport,
 	type AggregateExpansionStrategy,
 	type UpstreamFcsPreview,
@@ -72,6 +82,7 @@ import {
 } from "./native/contracts";
 import { createMockNativeAdapter } from "./native/mock-adapter";
 import { createTauriNativeAdapter, isTauriRuntime } from "./native/tauri-adapter";
+import { translate } from "./localization";
 
 const PLAN_STORAGE_KEY = "satisplanner.slice-07.factory-plan";
 const LEGACY_PLAN_STORAGE_KEY = "satisplanner.slice-06.factory-plan";
@@ -85,13 +96,14 @@ interface SelectionState {
 function createEmptyPlan(): FactoryPlanV3 {
 	const now = new Date().toISOString();
 	return {
-		schemaVersion: 4,
+		schemaVersion: 5,
 		planId: crypto.randomUUID(),
 		name: "My factory plan",
 		createdAt: now,
 		updatedAt: now,
 		gameDataSnapshotId: FALLBACK_GRAPH_CATALOG_VERSION,
-		gameProfile: { id: "satisfactory", version: "1.2" },
+		gameProfile: DEFAULT_SATISFACTORY_12_PROFILE,
+		localization: { uiLocale: "en", gameDataLocale: "en-US", gameDataFallbackLocale: "en-US" },
 		nodes: [],
 		edges: [],
 		viewport: { x: 0, y: 0, zoom: 1 },
@@ -115,9 +127,9 @@ function formatFlowRate(rate: {
 	readonly numerator: string;
 	readonly denominator: string;
 }): string {
-	return new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 }).format(
-		Number(Rational.parse(rate).toDecimal(4)),
-	);
+	return new Intl.NumberFormat(document.documentElement.lang === "tr" ? "tr-TR" : "en-US", {
+		maximumFractionDigits: 4,
+	}).format(Number(Rational.parse(rate).toDecimal(4)));
 }
 
 function formatEfficiency(
@@ -219,6 +231,8 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 	const [upstreamStrategy, setUpstreamStrategy] =
 		useState<AggregateExpansionStrategy>("expand-rounded-up");
 	const [upstreamPreview, setUpstreamPreview] = useState<UpstreamFcsPreview | undefined>();
+	const uiLocale = plan.localization.uiLocale;
+	const t = (key: Parameters<typeof translate>[1]) => translate(uiLocale, key);
 	const flowResult = useMemo(() => calculateFactoryPlan(plan), [plan]);
 
 	const projection = useMemo(
@@ -241,27 +255,57 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 			}),
 		[flowResult.edges, projection.edges],
 	);
-	const normalizedQuery = query.trim().toLocaleLowerCase();
 	const filteredCatalog = useMemo(
 		() =>
 			FALLBACK_GRAPH_CATALOG.filter((entry) =>
-				[entry.displayName, entry.classId, entry.buildingId, entry.recipeId, ...entry.aliases]
-					.join(" ")
-					.toLocaleLowerCase()
-					.includes(normalizedQuery),
+				localizedSearchMatch(
+					query,
+					fallbackLocalizedAliases(entry.classId, entry.displayName, [
+						entry.buildingId,
+						entry.recipeId,
+						...entry.aliases,
+					]),
+					plan.localization.gameDataLocale,
+				),
 			),
-		[normalizedQuery],
+		[query, plan.localization.gameDataLocale],
 	);
 	const filteredResources = useMemo(
 		() =>
 			FALLBACK_RESOURCE_CATALOG.filter((entry) =>
-				[entry.displayName, entry.classId, entry.resourceId, ...entry.aliases]
-					.join(" ")
-					.toLocaleLowerCase()
-					.includes(normalizedQuery),
+				localizedSearchMatch(
+					query,
+					fallbackLocalizedAliases(entry.classId, entry.displayName, [
+						entry.resourceId,
+						...entry.aliases,
+					]),
+					plan.localization.gameDataLocale,
+				),
 			),
-		[normalizedQuery],
+		[query, plan.localization.gameDataLocale],
 	);
+
+	useEffect(() => {
+		document.documentElement.lang = uiLocale;
+	}, [uiLocale]);
+
+	function editGameProfile(
+		patch: Partial<Omit<Satisfactory12GameProfile, "id" | "version" | "kind" | "source">>,
+	): void {
+		setPlan((current) => ({
+			...current,
+			updatedAt: new Date().toISOString(),
+			gameProfile: createSatisfactory12Profile({
+				recipePartsCostMultiplier: current.gameProfile.recipePartsCostMultiplier,
+				powerConsumptionMultiplier: current.gameProfile.powerConsumptionMultiplier,
+				spaceElevatorCostMultiplier: current.gameProfile.spaceElevatorCostMultiplier,
+				resourceNodeRandomization: current.gameProfile.resourceNodeRandomization,
+				resourceNodePurity: current.gameProfile.resourceNodePurity,
+				worldSeed: current.gameProfile.worldSeed,
+				...patch,
+			}),
+		}));
+	}
 
 	useEffect(() => {
 		let cancelled = false;
@@ -405,6 +449,9 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 				purity: selectedResource.purity,
 				clockPercent: selectedResource.clockPercent,
 				powerShardCount: selectedResource.powerShardCount,
+				powerConsumptionMultiplier: Rational.parse(
+					plan.gameProfile.powerConsumptionMultiplier,
+				).toJSON(),
 			})
 		: undefined;
 	const selectedNodeFlow = selectedNode
@@ -454,6 +501,9 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 				purity: updated.purity,
 				clockPercent: updated.clockPercent,
 				powerShardCount: updated.powerShardCount,
+				powerConsumptionMultiplier: Rational.parse(
+					plan.gameProfile.powerConsumptionMultiplier,
+				).toJSON(),
 			});
 			if (!result.ok) {
 				setDiagnostic(result.diagnostic.message);
@@ -578,18 +628,159 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 		<div className="workspace">
 			<aside className="panel library-panel" aria-label="Building library">
 				<div className="panel-heading">
-					<span>Library</span>
+					<span>{t("library")}</span>
 					<kbd>⌘ K</kbd>
 				</div>
+				<details className="profile-panel" open>
+					<summary>{t("profileSettings")}</summary>
+					<div className="profile-grid">
+						<label>
+							<span>{t("uiLanguage")}</span>
+							<select
+								aria-label="UI language"
+								value={uiLocale}
+								onChange={(event) => {
+									const uiLocale = event.currentTarget.value as "en" | "tr";
+									setPlan((current) => ({
+										...current,
+										localization: { ...current.localization, uiLocale },
+									}));
+								}}
+							>
+								<option value="en">English</option>
+								<option value="tr">Türkçe</option>
+							</select>
+						</label>
+						<label>
+							<span>{t("gameDataLanguage")}</span>
+							<select
+								aria-label="Game data language"
+								value={plan.localization.gameDataLocale}
+								onChange={(event) => {
+									const gameDataLocale = event.currentTarget.value;
+									setPlan((current) => ({
+										...current,
+										localization: { ...current.localization, gameDataLocale },
+									}));
+								}}
+							>
+								<option value="en-US">English (game)</option>
+								<option value="tr">Türkçe (oyun)</option>
+							</select>
+						</label>
+						<label>
+							<span>{t("recipeCost")}</span>
+							<select
+								aria-label="Recipe parts cost multiplier"
+								value={plan.gameProfile.recipePartsCostMultiplier}
+								onChange={(event) =>
+									editGameProfile({
+										recipePartsCostMultiplier: event.currentTarget
+											.value as Satisfactory12GameProfile["recipePartsCostMultiplier"],
+									})
+								}
+							>
+								{RECIPE_COST_MULTIPLIERS.map((value) => (
+									<option key={value} value={value}>
+										×{value}
+									</option>
+								))}
+							</select>
+						</label>
+						<label>
+							<span>{t("powerConsumption")}</span>
+							<select
+								aria-label="Power consumption multiplier"
+								value={plan.gameProfile.powerConsumptionMultiplier}
+								onChange={(event) =>
+									editGameProfile({
+										powerConsumptionMultiplier: event.currentTarget
+											.value as Satisfactory12GameProfile["powerConsumptionMultiplier"],
+									})
+								}
+							>
+								{POWER_CONSUMPTION_MULTIPLIERS.map((value) => (
+									<option key={value} value={value}>
+										×{value}
+									</option>
+								))}
+							</select>
+						</label>
+						<label>
+							<span>{t("resourcePurity")}</span>
+							<select
+								aria-label="Resource node purity mode"
+								value={plan.gameProfile.resourceNodePurity}
+								onChange={(event) =>
+									editGameProfile({
+										resourceNodePurity: event.currentTarget
+											.value as Satisfactory12GameProfile["resourceNodePurity"],
+									})
+								}
+							>
+								{RESOURCE_PURITY_MODES.map((value) => (
+									<option key={value} value={value}>
+										{value}
+									</option>
+								))}
+							</select>
+						</label>
+						<label>
+							<span>{t("nodeRandomization")}</span>
+							<select
+								aria-label="Resource node randomization mode"
+								value={plan.gameProfile.resourceNodeRandomization}
+								onChange={(event) =>
+									editGameProfile({
+										resourceNodeRandomization: event.currentTarget
+											.value as Satisfactory12GameProfile["resourceNodeRandomization"],
+									})
+								}
+							>
+								{RESOURCE_RANDOMIZATION_MODES.map((value) => (
+									<option key={value} value={value}>
+										{value}
+									</option>
+								))}
+							</select>
+						</label>
+						<label className="profile-seed">
+							<span>{t("worldSeed")}</span>
+							<input
+								aria-label="World seed metadata"
+								inputMode="numeric"
+								key={plan.gameProfile.worldSeed}
+								defaultValue={plan.gameProfile.worldSeed}
+								onBlur={(event) => {
+									const value = event.currentTarget.value.trim();
+									if (/^\d+$/.test(value)) editGameProfile({ worldSeed: value });
+									else event.currentTarget.value = plan.gameProfile.worldSeed;
+								}}
+							/>
+						</label>
+					</div>
+					<p className="profile-summary" data-testid="game-profile-summary">
+						<strong>
+							{plan.gameProfile.kind === "default" ? t("defaultProfile") : t("customProfile")}
+						</strong>
+						<span>
+							recipe ×{plan.gameProfile.recipePartsCostMultiplier} · power ×
+							{plan.gameProfile.powerConsumptionMultiplier}
+						</span>
+						<small>{t("seedPolicy")}</small>
+					</p>
+				</details>
 				<input
 					aria-label="Search catalog"
-					placeholder="Search resources, buildings or class id"
+					placeholder={t("searchPlaceholder")}
 					value={query}
 					onChange={(event) => setQuery(event.currentTarget.value)}
 				/>
 				<div className="catalog-meta">
-					<span>Resources</span>
-					<small>{filteredResources.length} entries</small>
+					<span>{t("resources")}</span>
+					<small>
+						{filteredResources.length} {t("entries")}
+					</small>
 				</div>
 				<section className="catalog-list" aria-label="Resource catalog">
 					{filteredResources.map((entry) => (
@@ -613,15 +804,23 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 								alt=""
 							/>
 							<span>
-								<strong>{entry.displayName}</strong>
+								<strong>
+									{fallbackLocalizedName(
+										entry.classId,
+										entry.displayName,
+										plan.localization.gameDataLocale,
+									)}
+								</strong>
 								<small>{entry.classId}</small>
 							</span>
 						</button>
 					))}
 				</section>
 				<div className="catalog-meta">
-					<span>Production</span>
-					<small>{filteredCatalog.length} entries</small>
+					<span>{t("production")}</span>
+					<small>
+						{filteredCatalog.length} {t("entries")}
+					</small>
 				</div>
 				<section className="catalog-list" aria-label="Production catalog">
 					{filteredCatalog.map((entry) => (
@@ -638,14 +837,20 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 						>
 							<img src={`/${FALLBACK_ICON_PATHS.building}`} alt="" />
 							<span>
-								<strong>{entry.displayName}</strong>
+								<strong>
+									{fallbackLocalizedName(
+										entry.classId,
+										entry.displayName,
+										plan.localization.gameDataLocale,
+									)}
+								</strong>
 								<small>{entry.classId}</small>
 							</span>
 						</button>
 					))}
 					{filteredCatalog.length === 0 && (
 						<div className="empty-state">
-							<strong>No catalog match</strong>
+							<strong>{t("noCatalogMatch")}</strong>
 						</div>
 					)}
 				</section>
@@ -735,8 +940,8 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 						<span>{diagnostic}</span>
 						<small data-testid="flow-engine-status">
 							{flowResult.resolved
-								? `Flow solved · ${flowResult.nodes.length} nodes · ${flowResult.totalPowerMW.toFixed(2)} MW`
-								: `Flow unresolved · ${flowResult.diagnostics.filter((entry) => entry.severity === "error").length} errors`}
+								? `${t("flowSolved")} · ${flowResult.nodes.length} ${t("nodes")} · ${flowResult.totalPowerMW.toFixed(2)} MW`
+								: `${t("flowUnresolved")} · ${flowResult.diagnostics.filter((entry) => entry.severity === "error").length} ${t("errors")}`}
 						</small>
 					</div>
 					<small data-testid="plan-persistence">{saveStatus}</small>
@@ -744,7 +949,7 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 			</main>
 
 			<aside className="panel inspector-panel" aria-label="Inspector">
-				<div className="panel-heading">Inspector</div>
+				<div className="panel-heading">{t("inspector")}</div>
 				{recoveryInspection?.recoveryRecommended && (
 					<section className="recovery-card" role="alert" aria-label="Plan recovery available">
 						<strong>⚠ Last-good recovery available</strong>

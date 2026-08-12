@@ -1,4 +1,4 @@
-import { Rational } from "@satisplanner/domain";
+import { POWER_CONSUMPTION_MULTIPLIERS, Rational } from "@satisplanner/domain";
 import { describe, expect, it } from "vitest";
 import {
 	calculateResourceExtraction,
@@ -82,6 +82,28 @@ describe("resource extraction strategies", () => {
 			if (!result.ok) continue;
 			expect(Rational.parse(result.ratePerMinute).toString()).toBe(expected.rate);
 			expect(result.powerMW).toBe(expected.power);
+		}
+	});
+
+	it("applies every supported profile power multiplier once to extractors", () => {
+		for (const multiplier of POWER_CONSUMPTION_MULTIPLIERS) {
+			const result = calculateResourceExtraction({
+				strategyId: "miner",
+				tierId: "miner-mk1",
+				resourceId: "Desc_OreIron_C",
+				materialForm: "solid",
+				purity: "normal",
+				clockPercent: "100",
+				powerShardCount: 0,
+				powerConsumptionMultiplier: Rational.parse(multiplier).toJSON(),
+			});
+			expect(result.ok).toBe(true);
+			if (!result.ok) continue;
+			expect(result.ratePerMinute).toEqual({ numerator: "60", denominator: "1" });
+			expect(result.powerMW).toBeCloseTo(5 * Number(multiplier), 10);
+			expect(result.provenance.powerConsumptionMultiplier).toEqual(
+				Rational.parse(multiplier).toJSON(),
+			);
 		}
 	});
 

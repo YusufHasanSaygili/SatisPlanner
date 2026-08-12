@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	DEFAULT_SATISFACTORY_12_PROFILE,
 	addMachineNode,
 	addResourceNode,
 	connectMachinePorts,
@@ -21,13 +22,14 @@ const baseTime = "2026-08-11T00:00:00.000Z";
 
 function emptyPlan(): FactoryPlanV3 {
 	return {
-		schemaVersion: 4,
+		schemaVersion: 5,
 		planId: "00000000-0000-4000-8000-000000000001",
 		name: "Graph command test",
 		createdAt: baseTime,
 		updatedAt: baseTime,
 		gameDataSnapshotId: "fallback-graph-catalog-v1",
-		gameProfile: { id: "satisfactory", version: "1.2" },
+		gameProfile: DEFAULT_SATISFACTORY_12_PROFILE,
+		localization: { uiLocale: "en", gameDataLocale: "en-US", gameDataFallbackLocale: "en-US" },
 		nodes: [],
 		edges: [],
 		viewport: { x: 0, y: 0, zoom: 1 },

@@ -1,4 +1,5 @@
 import {
+	DEFAULT_SATISFACTORY_12_PROFILE,
 	type FactoryPlanV3,
 	type MachinePlanNodeV3,
 	type PlanPortV3,
@@ -92,13 +93,14 @@ function fixture(
 	return {
 		registry,
 		plan: {
-			schemaVersion: 4,
+			schemaVersion: 5,
 			planId: "capacity-plan",
 			name: "Capacity fixture",
 			createdAt: "2026-08-11T00:00:00.000Z",
 			updatedAt: "2026-08-11T00:00:00.000Z",
 			gameDataSnapshotId: "test",
-			gameProfile: { id: "satisfactory", version: "1.2" },
+			gameProfile: DEFAULT_SATISFACTORY_12_PROFILE,
+			localization: { uiLocale: "en", gameDataLocale: "en-US", gameDataFallbackLocale: "en-US" },
 			nodes: [source, sink],
 			edges: tierIds.map((tierId, index) => edge(`edge-${index}`, "source-out", "sink-in", tierId)),
 			viewport: { x: 0, y: 0, zoom: 1 },
