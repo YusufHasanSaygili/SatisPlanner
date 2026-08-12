@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
 	FACTORY_PLAN_SCHEMA_VERSION,
+	MAX_FACTORY_PLAN_JSON_BYTES,
 	parseFactoryPlan,
 	PlanMigrationRegistry,
 	serializeFactoryPlan,
@@ -125,6 +126,34 @@ describe("FactoryPlan v5 schema", () => {
 			const result = parseFactoryPlan(fixture);
 			expect(result.ok).toBe(false);
 			if (!result.ok) expect(result.issues[0]?.code).toBe(code);
+		}
+	});
+
+	it("bounds oversized, deeply nested and cyclic inputs without throwing", () => {
+		expect(parseFactoryPlan(" ".repeat(MAX_FACTORY_PLAN_JSON_BYTES + 1))).toMatchObject({
+			ok: false,
+			issues: [expect.objectContaining({ message: expect.stringContaining("size limit") })],
+		});
+		let nested: Record<string, unknown> = {};
+		for (let depth = 0; depth < 140; depth += 1) nested = { child: nested };
+		expect(() => parseFactoryPlan(nested)).not.toThrow();
+		expect(parseFactoryPlan(nested).ok).toBe(false);
+		const cyclic: Record<string, unknown> = {};
+		cyclic.self = cyclic;
+		expect(() => parseFactoryPlan(cyclic)).not.toThrow();
+		expect(parseFactoryPlan(cyclic).ok).toBe(false);
+	});
+
+	it("rejects deterministic malformed fuzz samples without throwing", () => {
+		let seed = 0x13_500_800;
+		const random = (): number => {
+			seed = (seed * 1_664_525 + 1_013_904_223) >>> 0;
+			return seed;
+		};
+		for (let sample = 0; sample < 128; sample += 1) {
+			const length = 1 + (random() % 1024);
+			const text = Array.from({ length }, () => String.fromCharCode(32 + (random() % 95))).join("");
+			expect(() => parseFactoryPlan(text), `seed=0x13500800 sample=${sample}`).not.toThrow();
 		}
 	});
 

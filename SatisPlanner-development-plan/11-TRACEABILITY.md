@@ -1,5 +1,9 @@
 # Gereksinim İzlenebilirliği
 
+R-001–R-016 için stable evidence id, tam test dosyası ve golden/property provenance eşlemesi
+[`docs/hardening-performance/TRACEABILITY.md`](../docs/hardening-performance/TRACEABILITY.md)
+içinde CI tarafından doğrulanan yürütülebilir kanıta bağlanır.
+
 | ID | Gereksinim | Slice | Ana test |
 |---|---|---|---|
 | R-001 | Her machine instance bağımsız clock/shard/sloop | 02,07 | Instance isolation property + E2E |

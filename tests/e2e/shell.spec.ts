@@ -39,6 +39,24 @@ test.beforeEach(async ({ page }) => {
 	await expect(page.getByTestId("plan-persistence")).toContainText("Saved");
 });
 
+test.afterEach(async ({ page }, testInfo) => {
+	if (testInfo.status === testInfo.expectedStatus) return;
+	try {
+		const savedPlan = await page.evaluate(
+			() => localStorage.getItem("satisplanner.slice-07.factory-plan") ?? "null",
+		);
+		await testInfo.attach("factory-plan-save.json", {
+			body: Buffer.from(savedPlan),
+			contentType: "application/json",
+		});
+	} catch {
+		await testInfo.attach("factory-plan-save-unavailable.txt", {
+			body: Buffer.from("The browser page was unavailable before the save could be attached."),
+			contentType: "text/plain",
+		});
+	}
+});
+
 test("renders the SatisPlanner graph shell and searchable fallback library", async ({ page }) => {
 	await expect(page).toHaveTitle("SatisPlanner");
 	await expect(page.getByRole("heading", { name: "SatisPlanner" })).toBeVisible();
@@ -53,7 +71,7 @@ test("renders the SatisPlanner graph shell and searchable fallback library", asy
 	await expect(matches.nth(0)).toContainText("Build_ConstructorMk1_C::Recipe_IronPlate_C");
 	await expect(matches.nth(1)).toContainText("Build_ConstructorMk1_C::Recipe_IronRod_C");
 	await expect(page.getByRole("status").first()).toContainText(
-		"Contract v2 · browser-mock · v0.13.0",
+		"Contract v2 · browser-mock · v0.14.0",
 	);
 });
 
@@ -360,6 +378,15 @@ test("plan migration and upstream FCS conversion stay previewable, cancellable a
 }) => {
 	await page.getByText("Save, import & migration").click();
 	const persistence = page.getByLabel("Plan import and export");
+	await page.getByLabel("Import plan file").setInputFiles({
+		name: "malformed.satisplan.json",
+		mimeType: "application/json",
+		buffer: Buffer.from("{broken"),
+	});
+	await page.getByRole("button", { name: "Preview plan import" }).click();
+	await expect(persistence.getByRole("alert")).toContainText("Import is not valid JSON");
+	await expect(page.locator(".react-flow__node")).toHaveCount(0);
+
 	const legacyPlanPath = path.resolve(
 		"packages/domain/src/fixtures/factory-plan-v1.json",
 	);

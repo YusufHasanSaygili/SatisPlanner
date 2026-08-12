@@ -41,5 +41,5 @@ Keyboard E2E, clipboard round-trip, visual snapshots, axe/accessibility smoke.
   ve main [31552723723](https://github.com/YusufHasanSaygili/SatisPlanner/actions/runs/31552723723)
   başarılı; web quality/E2E, Rust fmt/clippy/test ve Windows/macOS/Linux native build geçti.
 - Codex notification: `SatisPlanner v0.13.0 yayımlandı. Slice 13/16 tamamlandı. Slice 13'e devam edilsin mi?`
-- User approval: Bekleniyor.
+- User approval: 2026-08-12 tarihinde kullanıcı `devam et` diyerek Slice 13 için açık onay verdi.
 - Tarih: 2026-08-12

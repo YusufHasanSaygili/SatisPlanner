@@ -15,6 +15,9 @@ import { getTransportTier } from "./transport";
 import { ClockPercent } from "./units";
 
 export const FACTORY_PLAN_SCHEMA_VERSION = 5 as const;
+export const MAX_FACTORY_PLAN_JSON_BYTES = 8 * 1024 * 1024;
+export const MAX_FACTORY_PLAN_JSON_DEPTH = 128;
+export const MAX_FACTORY_PLAN_JSON_VALUES = 250_000;
 
 export type JsonPrimitive = boolean | number | string | null;
 export type JsonValue = JsonPrimitive | JsonObject | readonly JsonValue[];
@@ -131,11 +134,28 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isJsonValue(value: unknown): value is JsonValue {
-	if (value === null || typeof value === "string" || typeof value === "boolean") return true;
-	if (typeof value === "number") return Number.isFinite(value);
-	if (Array.isArray(value)) return value.every(isJsonValue);
-	if (!isRecord(value)) return false;
-	return Object.values(value).every(isJsonValue);
+	const stack: Array<{ readonly value: unknown; readonly depth: number }> = [{ value, depth: 1 }];
+	const visited = new WeakSet<object>();
+	let valueCount = 0;
+	while (stack.length > 0) {
+		const current = stack.pop();
+		if (!current || current.depth > MAX_FACTORY_PLAN_JSON_DEPTH) return false;
+		valueCount += 1;
+		if (valueCount > MAX_FACTORY_PLAN_JSON_VALUES) return false;
+		const entry = current.value;
+		if (entry === null || typeof entry === "string" || typeof entry === "boolean") continue;
+		if (typeof entry === "number") {
+			if (!Number.isFinite(entry)) return false;
+			continue;
+		}
+		if (typeof entry !== "object") return false;
+		if (visited.has(entry)) return false;
+		visited.add(entry);
+		const children = Array.isArray(entry) ? entry : isRecord(entry) ? Object.values(entry) : [];
+		if (!Array.isArray(entry) && !isRecord(entry)) return false;
+		for (const child of children) stack.push({ value: child, depth: current.depth + 1 });
+	}
+	return true;
 }
 
 function cloneJson<T extends JsonValue>(value: T): T {
@@ -825,6 +845,12 @@ export function parseFactoryPlan(
 ): ParseFactoryPlanResult {
 	let raw: unknown = input;
 	if (typeof input === "string") {
+		if (new TextEncoder().encode(input).byteLength > MAX_FACTORY_PLAN_JSON_BYTES) {
+			return {
+				ok: false,
+				issues: [{ code: "INVALID_PLAN", path: "$", message: "Plan exceeds the safe size limit." }],
+			};
+		}
 		try {
 			raw = JSON.parse(input);
 		} catch {
@@ -851,11 +877,21 @@ export function parseFactoryPlan(
 				issues: [{ code: error.code, path: error.path, message: error.message }],
 			};
 		}
-		throw error;
+		return {
+			ok: false,
+			issues: [{ code: "INVALID_PLAN", path: "$", message: "Plan could not be processed safely." }],
+		};
 	}
-	const issues = validateFactoryPlan(migrated);
-	if (issues.length > 0) return { ok: false, issues };
-	return { ok: true, value: cloneJson(migrated) as unknown as FactoryPlanV5 };
+	try {
+		const issues = validateFactoryPlan(migrated);
+		if (issues.length > 0) return { ok: false, issues };
+		return { ok: true, value: cloneJson(migrated) as unknown as FactoryPlanV5 };
+	} catch {
+		return {
+			ok: false,
+			issues: [{ code: "INVALID_PLAN", path: "$", message: "Plan could not be processed safely." }],
+		};
+	}
 }
 
 export function serializeFactoryPlan(plan: FactoryPlanV5): string {

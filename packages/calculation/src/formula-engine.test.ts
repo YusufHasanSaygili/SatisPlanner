@@ -2,6 +2,7 @@ import { Rational } from "@satisplanner/domain";
 import { describe, expect, it } from "vitest";
 import {
 	calculateMachineFormula,
+	createProductionFormulaStrategy,
 	FALLBACK_PRODUCTION_FORMULAS,
 	FormulaStrategyRegistry,
 	PRODUCTION_POWER_EXPONENT,
@@ -209,5 +210,60 @@ describe("machine formula strategies", () => {
 		if (!descriptor) return;
 		registry.register(descriptor);
 		expect(() => registry.register(descriptor)).toThrowError(/already registered/);
+	});
+
+	it("rejects malformed descriptors, mismatched identities and invalid shard counts", () => {
+		const descriptor = FALLBACK_PRODUCTION_FORMULAS[0];
+		expect(descriptor).toBeDefined();
+		if (!descriptor) return;
+		const input = descriptor.inputs[0];
+		expect(input).toBeDefined();
+		if (!input) return;
+		for (const invalid of [
+			{ ...descriptor, id: "" },
+			{ ...descriptor, inputs: [{ ...input, portKey: "" }] },
+			{ ...descriptor, inputs: [...descriptor.inputs, ...descriptor.inputs] },
+			{
+				...descriptor,
+				inputs: [{ ...input, ratePerMinute: Rational.parse("-1").toJSON() }],
+			},
+		]) {
+			const result = createProductionFormulaStrategy(invalid).calculate({
+				buildingId: descriptor.buildingId,
+				recipeId: descriptor.recipeId,
+				clockPercent: "100",
+				powerShardCount: 0,
+				somersloopCount: 0,
+				somersloopSlots: 0,
+				standby: false,
+			});
+			expect(result).toMatchObject({
+				ok: false,
+				diagnostic: { code: "INVALID_FORMULA_DESCRIPTOR" },
+			});
+		}
+		const strategy = createProductionFormulaStrategy(descriptor);
+		expect(
+			strategy.calculate({
+				buildingId: "Build_Other_C",
+				recipeId: descriptor.recipeId,
+				clockPercent: "100",
+				powerShardCount: 0,
+				somersloopCount: 0,
+				somersloopSlots: 0,
+				standby: false,
+			}),
+		).toMatchObject({ ok: false, diagnostic: { code: "UNSUPPORTED_FORMULA" } });
+		expect(
+			strategy.calculate({
+				buildingId: descriptor.buildingId,
+				recipeId: descriptor.recipeId,
+				clockPercent: "100",
+				powerShardCount: 4,
+				somersloopCount: 0,
+				somersloopSlots: 0,
+				standby: false,
+			}),
+		).toMatchObject({ ok: false, diagnostic: { code: "INVALID_MACHINE_SETTINGS" } });
 	});
 });
