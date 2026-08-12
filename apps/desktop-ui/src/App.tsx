@@ -19,6 +19,9 @@ import {
 	type MachineSettingsPatch,
 	movePlanNode,
 	parseFactoryPlan,
+	PlanCommandHistory,
+	copyPlanSubgraph,
+	pastePlanSubgraph,
 	previewFactoryPlanImport,
 	Rational,
 	POWER_CONSUMPTION_MULTIPLIERS,
@@ -36,6 +39,7 @@ import {
 	updateMachineNodeSettings,
 	updateResourceNodeSettings,
 	validateConnection,
+	upsertWorkspaceGroup,
 } from "@satisplanner/domain";
 import {
 	FALLBACK_GRAPH_CATALOG,
@@ -54,6 +58,7 @@ import {
 import {
 	type GraphCanvasNode,
 	type MachineCanvasNode,
+	autoLayoutFactoryPlan,
 	projectFactoryPlan,
 	type ResourceCanvasNode,
 } from "@satisplanner/graph-adapter";
@@ -71,7 +76,7 @@ import {
 	useReactFlow,
 	type Viewport,
 } from "@xyflow/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { NativeAdapter, RecoveryInspection, RuntimeInfoResult } from "./native/contracts";
 import {
 	NATIVE_CONTRACT_VERSION,
@@ -211,8 +216,15 @@ const nodeTypes = { machine: MachineNodeCard, resource: ResourceNodeCard };
 
 function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapter }) {
 	const flow = useReactFlow<GraphCanvasNode>();
-	const [plan, setPlan] = useState<FactoryPlanV3>(restorePlan);
+	const initialPlan = useMemo(restorePlan, []);
+	const history = useRef(new PlanCommandHistory(initialPlan));
+	const clipboardFallback = useRef("");
+	const [plan, setPlanState] = useState<FactoryPlanV3>(initialPlan);
+	const [, setHistoryRevision] = useState(0);
 	const [selection, setSelection] = useState<SelectionState>({ nodeIds: [], edgeIds: [] });
+	const [diagnosticCursor, setDiagnosticCursor] = useState(-1);
+	const [sloopCursor, setSloopCursor] = useState(-1);
+	const [minimapFilter, setMinimapFilter] = useState<"all" | "machine" | "resource">("all");
 	const [query, setQuery] = useState("");
 	const [machineRecipeQuery, setMachineRecipeQuery] = useState("");
 	const [machineError, setMachineError] = useState<string | null>(null);
@@ -234,6 +246,36 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 	const uiLocale = plan.localization.uiLocale;
 	const t = (key: Parameters<typeof translate>[1]) => translate(uiLocale, key);
 	const flowResult = useMemo(() => calculateFactoryPlan(plan), [plan]);
+	const historyState = history.current.state;
+
+	const setPlan = useCallback(
+		(update: FactoryPlanV3 | ((current: FactoryPlanV3) => FactoryPlanV3), label = "Edit plan") => {
+			const next = history.current.execute(label, (current) =>
+				typeof update === "function" ? update(current) : update,
+			);
+			setPlanState(next);
+			setHistoryRevision((value) => value + 1);
+		},
+		[],
+	);
+
+	const resetPlan = useCallback((next: FactoryPlanV3) => {
+		setPlanState(history.current.reset(next));
+		setHistoryRevision((value) => value + 1);
+		setSelection({ nodeIds: [], edgeIds: [] });
+	}, []);
+
+	const undoPlan = useCallback(() => {
+		setPlanState(history.current.undo());
+		setHistoryRevision((value) => value + 1);
+		setDiagnostic("Undo applied.");
+	}, []);
+
+	const redoPlan = useCallback(() => {
+		setPlanState(history.current.redo());
+		setHistoryRevision((value) => value + 1);
+		setDiagnostic("Redo applied.");
+	}, []);
 
 	const projection = useMemo(
 		() => projectFactoryPlan(plan, new Set(selection.nodeIds), new Set(selection.edgeIds)),
@@ -394,7 +436,7 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 			);
 			if (result.validation.ok) setPlan(result.plan);
 		},
-		[connectionParts, plan],
+		[connectionParts, plan, setPlan],
 	);
 
 	const removeSelection = useCallback(() => {
@@ -402,7 +444,7 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 		setPlan((current) => deletePlanEntities(current, selection.nodeIds, selection.edgeIds));
 		setSelection({ nodeIds: [], edgeIds: [] });
 		setDiagnostic("Selection deleted. Stale inspector references were cleared.");
-	}, [selection]);
+	}, [selection, setPlan]);
 
 	const selectedNode =
 		selection.nodeIds.length === 1 && selection.edgeIds.length === 0
@@ -413,6 +455,225 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 			? plan.edges.find((edge) => edge.id === selection.edgeIds[0])
 			: undefined;
 	const selectionCount = selection.nodeIds.length + selection.edgeIds.length;
+
+	const copySelection = useCallback(async () => {
+		if (selection.nodeIds.length === 0) {
+			setDiagnostic("Select one or more nodes before copying.");
+			return;
+		}
+		const payload = copyPlanSubgraph(plan, selection.nodeIds);
+		clipboardFallback.current = payload;
+		try {
+			await navigator.clipboard.writeText(payload);
+		} catch {
+			// The in-memory fallback keeps desktop/web keyboard behavior deterministic.
+		}
+		setDiagnostic(`${selection.nodeIds.length} node subgraph copied.`);
+	}, [plan, selection.nodeIds]);
+
+	const pasteSelection = useCallback(async () => {
+		let payload = clipboardFallback.current;
+		if (!payload) {
+			try {
+				payload = await navigator.clipboard.readText();
+			} catch {
+				// Clipboard permission is optional; use the last internal copy.
+			}
+		}
+		if (!payload) {
+			setDiagnostic("Clipboard does not contain a SatisPlanner subgraph.");
+			return;
+		}
+		try {
+			const result = pastePlanSubgraph(plan, payload, () => crypto.randomUUID());
+			setPlan(result.plan, "Paste subgraph");
+			setSelection({ nodeIds: result.pastedNodeIds, edgeIds: result.pastedEdgeIds });
+			setDiagnostic(`${result.pastedNodeIds.length} nodes pasted with new UUIDs.`);
+		} catch (error) {
+			setDiagnostic(error instanceof Error ? error.message : "Clipboard paste was rejected.");
+		}
+	}, [plan, setPlan]);
+
+	const duplicateSelection = useCallback(() => {
+		if (selection.nodeIds.length === 0) {
+			setDiagnostic("Select one or more nodes before duplicating.");
+			return;
+		}
+		try {
+			const payload = copyPlanSubgraph(plan, selection.nodeIds);
+			const result = pastePlanSubgraph(plan, payload, () => crypto.randomUUID());
+			setPlan(result.plan, "Duplicate subgraph");
+			setSelection({ nodeIds: result.pastedNodeIds, edgeIds: result.pastedEdgeIds });
+			setDiagnostic(`${result.pastedNodeIds.length} nodes duplicated with new UUIDs.`);
+		} catch (error) {
+			setDiagnostic(error instanceof Error ? error.message : "Subgraph duplication was rejected.");
+		}
+	}, [plan, selection.nodeIds, setPlan]);
+
+	const applyAutoLayout = useCallback(() => {
+		setPlan((current) => autoLayoutFactoryPlan(current), "Auto layout");
+		setDiagnostic("Deterministic auto-layout applied. Undo is available.");
+		window.setTimeout(() => {
+			void flow.fitView({
+				padding: 0.18,
+				duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 220,
+			});
+		}, 0);
+	}, [flow, setPlan]);
+
+	const groupSelection = useCallback(() => {
+		if (selection.nodeIds.length === 0) {
+			setDiagnostic("Select nodes before creating a group.");
+			return;
+		}
+		setPlan(
+			(current) =>
+				upsertWorkspaceGroup(current, {
+					id: crypto.randomUUID(),
+					label: `Group ${Date.now().toString().slice(-4)}`,
+					note: "",
+					color: "#6db6e8",
+					nodeIds: [...selection.nodeIds],
+				}),
+			"Group selection",
+		);
+		setDiagnostic(
+			`${selection.nodeIds.length} nodes grouped without changing calculation semantics.`,
+		);
+	}, [selection.nodeIds, setPlan]);
+
+	const focusNode = useCallback(
+		(nodeId: string, message: string) => {
+			setSelection({ nodeIds: [nodeId], edgeIds: [] });
+			void flow.fitView({
+				nodes: [{ id: nodeId }],
+				padding: 0.7,
+				duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 180,
+			});
+			setDiagnostic(message);
+		},
+		[flow],
+	);
+
+	const focusNextDiagnostic = useCallback(() => {
+		const targets = flowResult.diagnostics.flatMap((entry) =>
+			entry.nodeIds.map((nodeId) => ({ nodeId, message: entry.message })),
+		);
+		if (targets.length === 0) {
+			setDiagnostic("No node diagnostic to focus.");
+			return;
+		}
+		const next = (diagnosticCursor + 1) % targets.length;
+		setDiagnosticCursor(next);
+		const target = targets[next];
+		if (target) focusNode(target.nodeId, target.message);
+	}, [diagnosticCursor, flowResult.diagnostics, focusNode]);
+
+	const focusNextSloop = useCallback(() => {
+		const targets = plan.nodes.filter(
+			(node) =>
+				node.kind === "machine" &&
+				(FALLBACK_MACHINE_BUILDINGS.find((entry) => entry.buildingId === node.buildingId)
+					?.somersloopSlots ?? 0) > 0,
+		);
+		if (targets.length === 0) {
+			setDiagnostic("No Somersloop-capable machine to focus.");
+			return;
+		}
+		const next = (sloopCursor + 1) % targets.length;
+		setSloopCursor(next);
+		const target = targets[next];
+		if (target) focusNode(target.id, `${target.displayName} is Somersloop-capable.`);
+	}, [focusNode, plan.nodes, sloopCursor]);
+
+	const addTemplateFromLibrary = useCallback(
+		(classId: string) => {
+			const machineTemplate = FALLBACK_GRAPH_CATALOG.find((entry) => entry.classId === classId);
+			const resourceTemplate = FALLBACK_RESOURCE_CATALOG.find((entry) => entry.classId === classId);
+			const nodeId = crypto.randomUUID();
+			const position = {
+				x: 120 + (plan.nodes.length % 4) * 280,
+				y: 100 + Math.floor(plan.nodes.length / 4) * 180,
+			};
+			if (resourceTemplate) {
+				setPlan(
+					(current) =>
+						addResourceNode(current, resourceTemplate, position, {
+							nodeId,
+							portIds: [crypto.randomUUID()],
+						}),
+					"Add resource from library",
+				);
+				setSelection({ nodeIds: [nodeId], edgeIds: [] });
+				setDiagnostic(
+					`${resourceTemplate.displayName} added from the keyboard-accessible library.`,
+				);
+				return;
+			}
+			if (machineTemplate) {
+				setPlan(
+					(current) =>
+						addMachineNode(current, machineTemplate, position, {
+							nodeId,
+							portIds: machineTemplate.ports.map(() => crypto.randomUUID()),
+						}),
+					"Add machine from library",
+				);
+				setSelection({ nodeIds: [nodeId], edgeIds: [] });
+				setDiagnostic(`${machineTemplate.displayName} added from the keyboard-accessible library.`);
+			}
+		},
+		[plan.nodes.length, setPlan],
+	);
+
+	useEffect(() => {
+		const onKeyDown = (event: KeyboardEvent) => {
+			const target = event.target as HTMLElement | null;
+			if (target?.matches("input, textarea, select, [contenteditable='true']")) return;
+			const command = event.ctrlKey || event.metaKey;
+			if (command && event.key.toLocaleLowerCase() === "z") {
+				event.preventDefault();
+				event.shiftKey ? redoPlan() : undoPlan();
+			} else if (command && event.key.toLocaleLowerCase() === "y") {
+				event.preventDefault();
+				redoPlan();
+			} else if (command && event.key.toLocaleLowerCase() === "a") {
+				event.preventDefault();
+				setSelection({ nodeIds: plan.nodes.map((node) => node.id), edgeIds: [] });
+				setDiagnostic(`${plan.nodes.length} nodes selected.`);
+			} else if (command && event.key.toLocaleLowerCase() === "c") {
+				event.preventDefault();
+				void copySelection();
+			} else if (command && event.key.toLocaleLowerCase() === "v") {
+				event.preventDefault();
+				void pasteSelection();
+			} else if (command && event.key.toLocaleLowerCase() === "d") {
+				event.preventDefault();
+				duplicateSelection();
+			} else if (event.key === "Delete" || event.key === "Backspace") {
+				event.preventDefault();
+				removeSelection();
+			} else if (event.altKey && event.key.toLocaleLowerCase() === "d") {
+				event.preventDefault();
+				focusNextDiagnostic();
+			} else if (event.altKey && event.key.toLocaleLowerCase() === "s") {
+				event.preventDefault();
+				focusNextSloop();
+			}
+		};
+		window.addEventListener("keydown", onKeyDown);
+		return () => window.removeEventListener("keydown", onKeyDown);
+	}, [
+		copySelection,
+		duplicateSelection,
+		focusNextDiagnostic,
+		focusNextSloop,
+		pasteSelection,
+		plan.nodes,
+		redoPlan,
+		removeSelection,
+		undoPlan,
+	]);
 	const selectedResource = selectedNode?.kind === "resource" ? selectedNode : undefined;
 	const selectedMachine = selectedNode?.kind === "machine" ? selectedNode : undefined;
 	const selectedMachineDefinition = selectedMachine
@@ -619,7 +880,7 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 			setDiagnostic("The last-good file failed plan validation and was not applied.");
 			return;
 		}
-		setPlan(parsed.value);
+		resetPlan(parsed.value);
 		setRecoveryInspection(null);
 		setDiagnostic(`Recovered last-good plan from ${result.data.modifiedAt}.`);
 	}
@@ -790,6 +1051,7 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 							draggable
 							key={entry.classId}
 							aria-label={`Drag resource ${entry.displayName}`}
+							onClick={() => addTemplateFromLibrary(entry.classId)}
 							onDragStart={(event) => {
 								event.dataTransfer.setData(DRAG_MIME, entry.classId);
 								event.dataTransfer.effectAllowed = "copy";
@@ -830,6 +1092,7 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 							draggable
 							key={entry.classId}
 							aria-label={`Drag ${entry.displayName}`}
+							onClick={() => addTemplateFromLibrary(entry.classId)}
 							onDragStart={(event) => {
 								event.dataTransfer.setData(DRAG_MIME, entry.classId);
 								event.dataTransfer.effectAllowed = "copy";
@@ -899,6 +1162,81 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 					}
 				}}
 			>
+				<nav className="workspace-toolbar" aria-label="Graph productivity tools">
+					<button
+						type="button"
+						onClick={undoPlan}
+						disabled={!historyState.canUndo}
+						aria-label={`Undo${historyState.undoLabel ? ` ${historyState.undoLabel}` : ""}`}
+					>
+						<span aria-hidden="true">↶</span> Undo
+					</button>
+					<button
+						type="button"
+						onClick={redoPlan}
+						disabled={!historyState.canRedo}
+						aria-label={`Redo${historyState.redoLabel ? ` ${historyState.redoLabel}` : ""}`}
+					>
+						<span aria-hidden="true">↷</span> Redo
+					</button>
+					<button
+						type="button"
+						onClick={() => void copySelection()}
+						disabled={selection.nodeIds.length === 0}
+					>
+						<span aria-hidden="true">⧉</span> Copy
+					</button>
+					<button type="button" onClick={() => void pasteSelection()}>
+						<span aria-hidden="true">▣</span> Paste
+					</button>
+					<button
+						type="button"
+						onClick={duplicateSelection}
+						disabled={selection.nodeIds.length === 0}
+					>
+						<span aria-hidden="true">⧉</span> Duplicate
+					</button>
+					<button type="button" onClick={applyAutoLayout} disabled={plan.nodes.length === 0}>
+						<span aria-hidden="true">⌗</span> Auto layout
+					</button>
+					<button type="button" onClick={groupSelection} disabled={selection.nodeIds.length === 0}>
+						<span aria-hidden="true">▱</span> Group
+					</button>
+					<button type="button" onClick={focusNextDiagnostic}>
+						<span aria-hidden="true">⚠</span> Next diagnostic
+					</button>
+					<button type="button" onClick={focusNextSloop}>
+						<span aria-hidden="true">◈</span> Next sloop
+					</button>
+					<button
+						type="button"
+						aria-label="Zoom in"
+						onClick={() => void flow.zoomIn({ duration: 0 })}
+					>
+						+
+					</button>
+					<button
+						type="button"
+						aria-label="Zoom out"
+						onClick={() => void flow.zoomOut({ duration: 0 })}
+					>
+						−
+					</button>
+					<label>
+						<span>Minimap</span>
+						<select
+							aria-label="Minimap filter"
+							value={minimapFilter}
+							onChange={(event) =>
+								setMinimapFilter(event.currentTarget.value as typeof minimapFilter)
+							}
+						>
+							<option value="all">All</option>
+							<option value="machine">Machines</option>
+							<option value="resource">Resources</option>
+						</select>
+					</label>
+				</nav>
 				<ReactFlow
 					nodes={flowNodes}
 					edges={flowEdges}
@@ -928,12 +1266,23 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 					onMoveEnd={(_event, viewport: Viewport) =>
 						setPlan((current) => setPlanViewport(current, viewport))
 					}
-					elementsSelectable={false}
+					elementsSelectable
 					deleteKeyCode={null}
 				>
 					<Background color="#273442" gap={24} />
 					<Controls showInteractive={false} />
-					<MiniMap pannable zoomable ariaLabel="Factory minimap" />
+					<MiniMap
+						pannable
+						zoomable
+						ariaLabel="Factory minimap"
+						nodeColor={(node) =>
+							minimapFilter === "all" || node.type === minimapFilter
+								? node.type === "resource"
+									? "#70b987"
+									: "#6db6e8"
+								: "transparent"
+						}
+					/>
 				</ReactFlow>
 				<div className="canvas-diagnostics" role="status" aria-live="polite">
 					<div>
@@ -1034,7 +1383,7 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 									<button
 										type="button"
 										onClick={() => {
-											setPlan(planImportPreview.plan);
+											resetPlan(planImportPreview.plan);
 											setPlanImportPreview(undefined);
 											setDiagnostic("Imported plan applied. Original file remains unchanged.");
 										}}
@@ -1119,7 +1468,7 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 									<button
 										type="button"
 										onClick={() => {
-											setPlan(upstreamPreview.plan);
+											resetPlan(upstreamPreview.plan);
 											setUpstreamPreview(undefined);
 											setDiagnostic(
 												"Upstream conversion applied. Original .fcs remains unchanged.",

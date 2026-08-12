@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import AxeBuilder from "@axe-core/playwright";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 
 async function dropCatalogEntry(page: Page, entry: Locator, position: { x: number; y: number }) {
@@ -52,8 +53,71 @@ test("renders the SatisPlanner graph shell and searchable fallback library", asy
 	await expect(matches.nth(0)).toContainText("Build_ConstructorMk1_C::Recipe_IronPlate_C");
 	await expect(matches.nth(1)).toContainText("Build_ConstructorMk1_C::Recipe_IronRod_C");
 	await expect(page.getByRole("status").first()).toContainText(
-		"Contract v2 · browser-mock · v0.12.0",
+		"Contract v2 · browser-mock · v0.13.0",
 	);
+});
+
+test("keyboard history, clipboard, grouping and explicit layout remain domain-backed", async ({
+	page,
+}) => {
+	const search = page.getByLabel("Search catalog");
+	await search.fill("iron ore");
+	await search.focus();
+	await page.keyboard.press("Tab");
+	await page.keyboard.press("Enter");
+	await expect(page.locator(".react-flow__node-resource")).toHaveCount(1);
+	await expect(page.getByLabel("Resource inspector")).toContainText("Iron Ore");
+	await page.keyboard.press("ControlOrMeta+d");
+	await expect(page.locator(".react-flow__node-resource")).toHaveCount(2);
+	await expect(page.getByRole("status").last()).toContainText("duplicated with new UUIDs");
+	await page.keyboard.press("ControlOrMeta+z");
+	await expect(page.locator(".react-flow__node-resource")).toHaveCount(1);
+
+	await page.keyboard.press("ControlOrMeta+a");
+	await page.keyboard.press("ControlOrMeta+c");
+	await page.keyboard.press("ControlOrMeta+v");
+	await expect(page.locator(".react-flow__node-resource")).toHaveCount(2);
+	const pastedIds = await page.evaluate(() => {
+		const plan = JSON.parse(localStorage.getItem("satisplanner.slice-07.factory-plan") ?? "{}") as {
+			nodes?: Array<{ id: string; ports: Array<{ id: string }> }>;
+		};
+		return plan.nodes?.flatMap((node) => [node.id, ...node.ports.map((port) => port.id)]) ?? [];
+	});
+	expect(new Set(pastedIds).size).toBe(4);
+
+	await page.keyboard.press("ControlOrMeta+z");
+	await expect(page.locator(".react-flow__node-resource")).toHaveCount(1);
+	await page.keyboard.press("ControlOrMeta+y");
+	await expect(page.locator(".react-flow__node-resource")).toHaveCount(2);
+
+	await page.keyboard.press("ControlOrMeta+a");
+	await expect(page.getByRole("status").last()).toContainText("2 nodes selected");
+	const powerBeforeGroup = await page.getByTestId("flow-engine-status").textContent();
+	await page.getByRole("button", { name: "Group", exact: true }).click();
+	await expect(page.getByRole("status").last()).toContainText("grouped without changing calculation");
+	await expect(page.getByTestId("flow-engine-status")).toHaveText(powerBeforeGroup ?? "");
+
+	const positionsBefore = await page.evaluate(() => {
+		const plan = JSON.parse(localStorage.getItem("satisplanner.slice-07.factory-plan") ?? "{}") as {
+			nodes?: Array<{ position: { x: number; y: number } }>;
+		};
+		return plan.nodes?.map((node) => node.position) ?? [];
+	});
+	await page.getByRole("button", { name: "Auto layout", exact: true }).click();
+	await expect(page.getByRole("status").last()).toContainText("auto-layout applied");
+	await page.getByRole("button", { name: /Undo Auto layout/ }).click();
+	await expect.poll(async () => page.evaluate(() => {
+		const plan = JSON.parse(localStorage.getItem("satisplanner.slice-07.factory-plan") ?? "{}") as { nodes?: Array<{ position: { x: number; y: number } }> };
+		return plan.nodes?.map((node) => node.position) ?? [];
+	})).toEqual(positionsBefore);
+});
+
+test("graph shell passes axe accessibility smoke", async ({ page }) => {
+	await page.getByLabel("Search catalog").fill("constructor");
+	const results = await new AxeBuilder({ page })
+		.withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+		.analyze();
+	expect(results.violations).toEqual([]);
 });
 
 test("drag/drop, connect validation, inspector commands and reload remain domain-backed", async ({
@@ -257,6 +321,12 @@ test("Coal Pure Mk.3 at 250% exposes and clears the Mk.5 transport bottleneck", 
 		"aria-label",
 		/Warning: transport capacity bottleneck/,
 	);
+	await expect(page.locator(".react-flow__node-resource")).toHaveAttribute(
+		"aria-label",
+		/Coal, resource source, pure purity, active/,
+	);
+	await page.keyboard.press("Alt+d");
+	await expect(page.getByRole("status").last()).toContainText("limits Desc_Coal_C");
 	await bottlenecks.getByRole("button", { name: /420\/min lost/ }).click();
 
 	const inspector = page.getByLabel("Connection inspector");

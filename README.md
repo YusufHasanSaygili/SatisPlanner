@@ -2,9 +2,9 @@
 
 Offline-first, graph-based desktop factory planner for Satisfactory 1.2.
 
-> **Development status:** Slice 11 Satisfactory 1.2 profiles and localization
-> are implemented on the `slice/11-v12-profiles-localization` branch. Versioned
-> game-mode multipliers and independent UI/game-data locales form `v0.12.0`.
+> **Development status:** Slice 12 productivity and accessibility polish is
+> implemented on the `slice/12-ux-polish` branch. Undo/redo, clipboard,
+> deterministic layout and keyboard navigation form `v0.13.0`.
 
 [![SatisPlanner Quality](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml/badge.svg)](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml)
 
@@ -26,19 +26,19 @@ SatisPlanner will let players model the factory they will actually build:
 The full scope and the 16-slice delivery roadmap are in the
 [development plan](SatisPlanner-development-plan/00-MASTER-PLAN.md).
 
-## Current milestone: v0.12.0
+## Current milestone: v0.13.0
 
-Slice 11 makes 1.2 game modes explicit and localization identity-safe:
+Slice 12 makes large graph workflows fast, reversible and accessible:
 
-- vanilla and custom Satisfactory 1.2 profiles persisted in FactoryPlan v5;
-- official recipe, power, Space Elevator, purity and randomization option matrices;
-- recipe-cost scaling on inputs and power scaling on consumption with provenance;
-- world seed retained as metadata without pretending to generate resource coordinates;
-- independent TR/EN UI and game-data locale selection;
-- locale fallback, stable class-id bindings and Turkish/English search aliases.
+- session-only command history with undo/redo and transaction grouping;
+- validated subgraph copy/paste with complete UUID remapping and internal edges;
+- explicit, deterministic and undoable layered auto-layout with locked-node support;
+- calculation-neutral group/note/color metadata and diagnostic/Somersloop navigation;
+- keyboard library insertion, graph shortcuts, accessible names and live diagnostics;
+- icon-plus-text states, labeled zoom controls, contrast checks and reduced motion.
 
-Profile and localization evidence is collected under
-[docs/game-profiles-localization](docs/game-profiles-localization). Persistence, logistics, calculation,
+UX and accessibility evidence is collected under
+[docs/ux-polish](docs/ux-polish). Profiles, persistence, logistics, calculation,
 machine instances, resource extraction, graph UX, local icons, game-data, domain,
 foundation and baseline evidence remain under their respective documentation directories.
 
@@ -65,6 +65,7 @@ docs/calculation-engine/         Slice 08 formula, flow and diagnostics evidence
 docs/logistics-bottlenecks/      Slice 09 transport capacity and UX evidence
 docs/persistence-migration/      Slice 10 save, recovery and import evidence
 docs/game-profiles-localization/ Slice 11 profiles, multiplier and locale evidence
+docs/ux-polish/                  Slice 12 productivity and accessibility evidence
 docs/baseline/                   Audits, measurements and verification records
 ```
 
