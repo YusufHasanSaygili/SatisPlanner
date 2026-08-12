@@ -36,5 +36,5 @@ Profile matrix, locale fallback, missing translation, snapshot switch E2E.
 - GitHub Release URL: https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v0.12.0 (Latest, non-draft, non-prerelease, 5 asset)
 - CI: PASS — branch https://github.com/YusufHasanSaygili/SatisPlanner/actions/runs/31549573750 ve main https://github.com/YusufHasanSaygili/SatisPlanner/actions/runs/31549909093 (`web-quality`, `rust-quality`, Linux/Windows/macOS `desktop-smoke`)
 - Codex notification: `SatisPlanner v0.12.0 yayımlandı. Slice 12/16 tamamlandı. Slice 12'ye devam edilsin mi?`
-- User approval: Bekleniyor; Slice 12 açık onay olmadan başlatılmayacak.
+- User approval: 2026-08-12 tarihinde kullanıcı `Devam` diyerek Slice 12 için açık onay verdi.
 - Tarih: 2026-08-12

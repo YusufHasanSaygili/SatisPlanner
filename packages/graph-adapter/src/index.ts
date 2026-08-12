@@ -1,6 +1,8 @@
 import type { FactoryPlanV3, PlanPortV3 } from "@satisplanner/domain";
 import type { Edge, Node } from "@xyflow/react";
 
+export * from "./layout";
+
 export interface MachineCanvasNodeData extends Record<string, unknown> {
 	readonly kind: "machine";
 	readonly label: string;
@@ -44,6 +46,7 @@ export function projectFactoryPlan(
 				return {
 					id: node.id,
 					type: "resource",
+					ariaLabel: `${node.displayName}, resource source, ${node.purity} purity, active`,
 					position: { ...node.position },
 					selected: selectedNodeIds.has(node.id),
 					data: {
@@ -60,6 +63,7 @@ export function projectFactoryPlan(
 			return {
 				id: node.id,
 				type: "machine",
+				ariaLabel: `${node.displayName}, production machine, ${node.standby ? "standby" : "active"}`,
 				position: { ...node.position },
 				selected: selectedNodeIds.has(node.id),
 				data: {
@@ -86,7 +90,7 @@ export function projectFactoryPlan(
 			targetHandle: edge.toPortId,
 			label: edge.itemOrFluidId,
 			selected: selectedEdgeIds.has(edge.id),
-			ariaLabel: `${edge.medium} carrying ${edge.itemOrFluidId}`,
+			ariaLabel: `${edge.medium} connection carrying ${edge.itemOrFluidId}, active`,
 		})),
 	};
 }
