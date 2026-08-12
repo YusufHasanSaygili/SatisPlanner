@@ -30,12 +30,16 @@ Keyboard E2E, clipboard round-trip, visual snapshots, axe/accessibility smoke.
 
 ## Delivery Record
 
-- Branch:
-- Closing SHA:
-- Remote SHA:
-- Tag:
-- GitHub Release URL:
-- CI:
-- Codex notification:
-- User approval:
-- Tarih:
+- Branch: `slice/12-ux-polish`
+- Closing SHA: `19afa8f18cca87f5dd9fe60125c7959483c692fe`
+- Remote SHA: Release öncesi doğrulanan branch ve `main` push SHA'sı
+  `19afa8f18cca87f5dd9fe60125c7959483c692fe`; sonraki commit yalnızca Delivery Record
+  metadata'sını günceller.
+- Tag: Annotated `v0.13.0`, target `19afa8f18cca87f5dd9fe60125c7959483c692fe`
+- GitHub Release URL: https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v0.13.0
+- CI: Branch [31552364961](https://github.com/YusufHasanSaygili/SatisPlanner/actions/runs/31552364961)
+  ve main [31552723723](https://github.com/YusufHasanSaygili/SatisPlanner/actions/runs/31552723723)
+  başarılı; web quality/E2E, Rust fmt/clippy/test ve Windows/macOS/Linux native build geçti.
+- Codex notification: `SatisPlanner v0.13.0 yayımlandı. Slice 13/16 tamamlandı. Slice 13'e devam edilsin mi?`
+- User approval: Bekleniyor.
+- Tarih: 2026-08-12
