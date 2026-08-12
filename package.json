@@ -1,6 +1,6 @@
 {
 	"name": "satisplanner",
-	"version": "0.13.0",
+	"version": "0.14.0",
 	"private": true,
 	"type": "module",
 	"packageManager": "pnpm@11.16.0",
@@ -22,7 +22,9 @@
 		"lint": "biome lint --error-on-warnings apps packages scripts playwright.config.ts",
 		"quality": "pnpm format:check && pnpm lint && pnpm check:boundaries && pnpm check:game-assets && pnpm verify:quality-failures && pnpm typecheck && pnpm test && pnpm build:web",
 		"test": "pnpm -r --if-present test",
+		"test:coverage": "pnpm --filter @satisplanner/calculation exec vitest run --coverage.enabled --coverage.provider=v8 --coverage.include=src/formula-engine.ts --coverage.reporter=text --coverage.reporter=json-summary --coverage.reportsDirectory=../../coverage/calculation --coverage.thresholds.branches=85",
 		"test:e2e": "playwright test",
+		"test:performance": "pnpm --filter @satisplanner/calculation exec vitest run src/performance.test.ts && pnpm --filter @satisplanner/graph-adapter exec vitest run src/performance.test.ts",
 		"typecheck": "pnpm -r --if-present typecheck",
 		"verify:quality-failures": "node scripts/verify-quality-failures.mjs"
 	},
@@ -35,6 +37,7 @@
 		"@types/react": "19.2.18",
 		"@types/react-dom": "19.2.4",
 		"@vitejs/plugin-react": "6.0.5",
+		"@vitest/coverage-v8": "4.1.10",
 		"typescript": "7.0.2",
 		"vite": "8.2.1",
 		"vitest": "4.1.10"

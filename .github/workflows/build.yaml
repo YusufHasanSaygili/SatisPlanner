@@ -32,7 +32,39 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm quality
+      - name: Record calculation coverage gate
+        run: pnpm test:coverage
+      - name: Record graph performance baseline
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          set -o pipefail
+          pnpm test:performance | tee artifacts/performance-baseline.txt
       - run: pnpm test:e2e
+
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: SatisPlanner-test-failure-diagnostics
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload coverage and performance evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: SatisPlanner-hardening-evidence
+          path: |
+            coverage/calculation
+            artifacts/performance-baseline.txt
+            artifacts/calculation-performance.json
+            artifacts/graph-performance.json
+          if-no-files-found: error
+          retention-days: 14
 
       - uses: actions/upload-artifact@v6
         with:
@@ -86,6 +118,15 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm desktop:build
+
+      - name: Smoke packaged binary version
+        shell: bash
+        run: |
+          if [[ "${RUNNER_OS}" == "Windows" ]]; then
+            ./src-tauri/target/release/satisplanner.exe --version
+          else
+            ./src-tauri/target/release/satisplanner --version
+          fi
 
       - uses: actions/upload-artifact@v6
         with:

@@ -180,4 +180,23 @@ describe("localized Docs importer", () => {
 		expect(first.catalog.recipes).toHaveLength(500);
 		expect(first.provenance.normalizedHash).toBe(second.provenance.normalizedHash);
 	});
+
+	it("returns diagnostics instead of crashing for deterministic malformed byte fuzz", async () => {
+		let seed = 0x13_00_f0_22;
+		const random = (): number => {
+			seed = (seed * 1_664_525 + 1_013_904_223) >>> 0;
+			return seed;
+		};
+		for (let sample = 0; sample < 128; sample += 1) {
+			const bytes = Uint8Array.from({ length: 1 + (random() % 2048) }, () => random() % 256);
+			const result = await importDocsSnapshot({
+				bytes,
+				fileName: "en-US.json",
+				sourceKind: "custom",
+				gameVersion: "1.2",
+			});
+			expect(result.ok, `seed=0x1300f022 sample=${sample}`).toBe(false);
+			if (!result.ok) expect(result.diagnostics.length).toBeGreaterThan(0);
+		}
+	});
 });

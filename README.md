@@ -2,9 +2,9 @@
 
 Offline-first, graph-based desktop factory planner for Satisfactory 1.2.
 
-> **Development status:** Slice 12 productivity and accessibility polish is
-> implemented on the `slice/12-ux-polish` branch. Undo/redo, clipboard,
-> deterministic layout and keyboard navigation form `v0.13.0`.
+> **Development status:** Slice 13 test hardening and performance work is
+> implemented on the `slice/13-hardening-performance` branch. Traceable golden/property tests,
+> parser fuzz safety and enforced graph budgets form `v0.14.0`.
 
 [![SatisPlanner Quality](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml/badge.svg)](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml)
 
@@ -26,19 +26,19 @@ SatisPlanner will let players model the factory they will actually build:
 The full scope and the 16-slice delivery roadmap are in the
 [development plan](SatisPlanner-development-plan/00-MASTER-PLAN.md).
 
-## Current milestone: v0.13.0
+## Current milestone: v0.14.0
 
-Slice 12 makes large graph workflows fast, reversible and accessible:
+Slice 13 turns release confidence and performance targets into executable CI gates:
 
-- session-only command history with undo/redo and transaction grouping;
-- validated subgraph copy/paste with complete UUID remapping and internal edges;
-- explicit, deterministic and undoable layered auto-layout with locked-node support;
-- calculation-neutral group/note/color metadata and diagnostic/Somersloop navigation;
-- keyboard library insertion, graph shortcuts, accessible names and live diagnostics;
-- icon-plus-text states, labeled zoom controls, contrast checks and reduced motion.
+- R-001–R-016 requirement-to-test traceability and formula branch coverage;
+- deterministic seeded calculation/import property and malformed-input fuzz suites;
+- 100/500/1000-node calculation, projection and layout performance baselines;
+- an enforced 500-node normal-edit p95 budget below 100 ms and memory-growth smoke;
+- failure screenshots, traces and attached save data with a zero-retry flaky-test policy;
+- packaged Windows, Linux and macOS binary version smoke checks.
 
-UX and accessibility evidence is collected under
-[docs/ux-polish](docs/ux-polish). Profiles, persistence, logistics, calculation,
+Hardening and performance evidence is collected under
+[docs/hardening-performance](docs/hardening-performance). UX, profiles, persistence, logistics, calculation,
 machine instances, resource extraction, graph UX, local icons, game-data, domain,
 foundation and baseline evidence remain under their respective documentation directories.
 
@@ -66,6 +66,7 @@ docs/logistics-bottlenecks/      Slice 09 transport capacity and UX evidence
 docs/persistence-migration/      Slice 10 save, recovery and import evidence
 docs/game-profiles-localization/ Slice 11 profiles, multiplier and locale evidence
 docs/ux-polish/                  Slice 12 productivity and accessibility evidence
+docs/hardening-performance/     Slice 13 traceability, resilience and performance evidence
 docs/baseline/                   Audits, measurements and verification records
 ```
 
