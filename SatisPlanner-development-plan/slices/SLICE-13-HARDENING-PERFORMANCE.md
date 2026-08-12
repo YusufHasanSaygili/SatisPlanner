@@ -29,12 +29,17 @@ Tam suite, sentetik graph benchmarks, fuzz/property runs, memory/leak smoke.
 
 ## Delivery Record
 
-- Branch:
-- Closing SHA:
-- Remote SHA:
-- Tag:
-- GitHub Release URL:
-- CI:
-- Codex notification:
-- User approval:
-- Tarih:
+- Branch: `slice/13-hardening-performance`
+- Closing SHA: `a51c80cd7201d48b71af0fcfbb93e18a83da16ff`
+- Remote SHA: Release öncesi doğrulanan branch ve `main` push SHA'sı
+  `a51c80cd7201d48b71af0fcfbb93e18a83da16ff`; sonraki commit yalnızca Delivery Record
+  metadata'sını günceller.
+- Tag: Annotated `v0.14.0`, target `a51c80cd7201d48b71af0fcfbb93e18a83da16ff`
+- GitHub Release URL: https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v0.14.0
+- CI: Branch [31569952482](https://github.com/YusufHasanSaygili/SatisPlanner/actions/runs/31569952482)
+  ve main [31570348877](https://github.com/YusufHasanSaygili/SatisPlanner/actions/runs/31570348877)
+  başarılı; coverage/performance evidence, sıfır-retry E2E, Rust fmt/clippy/test ve
+  Windows/macOS/Linux release-binary smoke geçti.
+- Codex notification: `SatisPlanner v0.14.0 yayımlandı. Slice 14/16 tamamlandı. Slice 14'e devam edilsin mi?`
+- User approval: Bekleniyor.
+- Tarih: 2026-08-12
