@@ -29,6 +29,8 @@ export interface MachineFormulaInput {
 	readonly somersloopCount: number;
 	readonly somersloopSlots: number;
 	readonly standby: boolean;
+	readonly recipePartsCostMultiplier?: RationalJson;
+	readonly powerConsumptionMultiplier?: RationalJson;
 }
 
 export interface MachineFormulaProvenance {
@@ -40,8 +42,11 @@ export interface MachineFormulaProvenance {
 	readonly sloopPowerMultiplier: RationalJson;
 	readonly basePowerMW: number;
 	readonly powerExponent: number;
-	readonly inputRule: "clock";
+	readonly recipePartsCostMultiplier: RationalJson;
+	readonly powerConsumptionMultiplier: RationalJson;
+	readonly inputRule: "clock-x-recipe-cost";
 	readonly outputRule: "clock-x-amplification";
+	readonly powerRule: "clock-exponent-x-amplification-x-profile";
 }
 
 export type FormulaDiagnosticCode =
@@ -167,12 +172,14 @@ export function createProductionFormulaStrategy(
 					calculateSomersloopMultiplier(input.somersloopCount, input.somersloopSlots),
 				);
 				const sloopPowerMultiplier = amplificationMultiplier.multiply(amplificationMultiplier);
+				const recipePartsCostMultiplier = Rational.parse(input.recipePartsCostMultiplier ?? "1");
+				const powerConsumptionMultiplier = Rational.parse(input.powerConsumptionMultiplier ?? "1");
 				const clockFactor = Number(clock.scaledValue) / 1_000_000;
 				return {
 					ok: true,
 					requiredInputs: input.standby
 						? scaleRates(descriptor.inputs, Rational.parse("0"))
-						: scaleRates(descriptor.inputs, clockMultiplier),
+						: scaleRates(descriptor.inputs, clockMultiplier.multiply(recipePartsCostMultiplier)),
 					potentialOutputs: input.standby
 						? scaleRates(descriptor.outputs, Rational.parse("0"))
 						: scaleRates(descriptor.outputs, clockMultiplier.multiply(amplificationMultiplier)),
@@ -180,7 +187,8 @@ export function createProductionFormulaStrategy(
 						? 0
 						: descriptor.basePowerMW *
 							clockFactor ** descriptor.powerExponent *
-							Number(sloopPowerMultiplier.toDecimal(12)),
+							Number(sloopPowerMultiplier.toDecimal(12)) *
+							Number(powerConsumptionMultiplier.toDecimal(12)),
 					provenance: {
 						strategyId: "production-machine",
 						formulaId: descriptor.id,
@@ -190,8 +198,11 @@ export function createProductionFormulaStrategy(
 						sloopPowerMultiplier: sloopPowerMultiplier.toJSON(),
 						basePowerMW: descriptor.basePowerMW,
 						powerExponent: descriptor.powerExponent,
-						inputRule: "clock",
+						recipePartsCostMultiplier: recipePartsCostMultiplier.toJSON(),
+						powerConsumptionMultiplier: powerConsumptionMultiplier.toJSON(),
+						inputRule: "clock-x-recipe-cost",
 						outputRule: "clock-x-amplification",
+						powerRule: "clock-exponent-x-amplification-x-profile",
 					},
 				};
 			} catch (error) {

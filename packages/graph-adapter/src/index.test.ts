@@ -1,15 +1,16 @@
-import type { FactoryPlanV3 } from "@satisplanner/domain";
+import { DEFAULT_SATISFACTORY_12_PROFILE, type FactoryPlanV3 } from "@satisplanner/domain";
 import { describe, expect, it } from "vitest";
 import { projectFactoryPlan } from "./index";
 
 const plan: FactoryPlanV3 = {
-	schemaVersion: 4,
+	schemaVersion: 5,
 	planId: "00000000-0000-4000-8000-000000000001",
 	name: "Projection test",
 	createdAt: "2026-08-11T00:00:00.000Z",
 	updatedAt: "2026-08-11T00:00:00.000Z",
 	gameDataSnapshotId: "fallback-graph-catalog-v1",
-	gameProfile: { id: "satisfactory", version: "1.2" },
+	gameProfile: DEFAULT_SATISFACTORY_12_PROFILE,
+	localization: { uiLocale: "en", gameDataLocale: "en-US", gameDataFallbackLocale: "en-US" },
 	nodes: [
 		{
 			kind: "machine",

@@ -31,6 +31,7 @@ export interface ExtractionInput {
 	readonly purity: ResourcePurity;
 	readonly clockPercent: string;
 	readonly powerShardCount: number;
+	readonly powerConsumptionMultiplier?: RationalJson;
 }
 
 export interface ExtractionProvenance {
@@ -41,6 +42,8 @@ export interface ExtractionProvenance {
 	readonly clockMultiplier: RationalJson;
 	readonly basePowerMW: number;
 	readonly powerExponent: number;
+	readonly powerConsumptionMultiplier: RationalJson;
+	readonly powerRule: "clock-exponent-x-profile";
 }
 
 export type ExtractionDiagnosticCode =
@@ -166,7 +169,10 @@ export function createLinearExtractionStrategy(
 				ok: true,
 				ratePerMinute: rate.toJSON(),
 				unit: descriptor.materialForm === "solid" ? "items/min" : "m³/min",
-				powerMW: validated.tier.basePowerMW * clockFactor ** validated.tier.powerExponent,
+				powerMW:
+					validated.tier.basePowerMW *
+					clockFactor ** validated.tier.powerExponent *
+					Number(Rational.parse(input.powerConsumptionMultiplier ?? "1").toDecimal(12)),
 				provenance: {
 					strategyId: descriptor.id,
 					tierId: validated.tier.id,
@@ -175,6 +181,10 @@ export function createLinearExtractionStrategy(
 					clockMultiplier: clockMultiplier.toJSON(),
 					basePowerMW: validated.tier.basePowerMW,
 					powerExponent: validated.tier.powerExponent,
+					powerConsumptionMultiplier: Rational.parse(
+						input.powerConsumptionMultiplier ?? "1",
+					).toJSON(),
+					powerRule: "clock-exponent-x-profile",
 				},
 			};
 		},

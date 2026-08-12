@@ -15,6 +15,7 @@ export function getDomainFoundationStatus(): DomainFoundationStatus {
 }
 
 export * from "./errors";
+export * from "./game-profile";
 export * from "./graph";
 export * from "./machine";
 export * from "./persistence";

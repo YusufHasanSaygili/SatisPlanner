@@ -52,7 +52,7 @@ test("renders the SatisPlanner graph shell and searchable fallback library", asy
 	await expect(matches.nth(0)).toContainText("Build_ConstructorMk1_C::Recipe_IronPlate_C");
 	await expect(matches.nth(1)).toContainText("Build_ConstructorMk1_C::Recipe_IronRod_C");
 	await expect(page.getByRole("status").first()).toContainText(
-		"Contract v2 · browser-mock · v0.11.0",
+		"Contract v2 · browser-mock · v0.12.0",
 	);
 });
 
@@ -297,8 +297,8 @@ test("plan migration and upstream FCS conversion stay previewable, cancellable a
 	await page.getByLabel("Import plan file").setInputFiles(legacyPlanPath);
 	await page.getByRole("button", { name: "Preview plan import" }).click();
 	const planReport = page.getByLabel("Plan migration report");
-	await expect(planReport).toContainText("Schema 1 → 4");
-	await expect(planReport).toContainText("1→2, 2→3, 3→4");
+	await expect(planReport).toContainText("Schema 1 → 5");
+	await expect(planReport).toContainText("1→2, 2→3, 3→4, 4→5");
 	await expect(planReport).toContainText("Snapshot mismatch");
 	await planReport.getByRole("button", { name: "Cancel import" }).click();
 	await expect(page.locator(".react-flow__node")).toHaveCount(0);
@@ -547,4 +547,37 @@ test("removed catalog entries remain unresolved without losing saved machine sta
 		return plan.nodes?.[0];
 	});
 	expect(persistedRecipe).toMatchObject({ recipeId: "Recipe_Removed_C", clockPercent: "150.0000" });
+});
+
+test("profile and independent UI/game locales survive snapshot reload", async ({ page }) => {
+	await dropCatalogEntry(page, page.getByLabel("Drag Constructor · Iron Plate"), {
+		x: 520,
+		y: 280,
+	});
+	await page
+		.locator(".react-flow__node-machine")
+		.getByText("Constructor · Iron Plate", { exact: true })
+		.click();
+	await expect(page.getByLabel("Machine calculation results")).toContainText("0 actual / 30 required");
+
+	await page.getByLabel("Recipe parts cost multiplier").selectOption("2");
+	await page.getByLabel("Power consumption multiplier").selectOption("5");
+	await expect(page.getByLabel("Machine calculation results")).toContainText("0 actual / 60 required");
+	await expect(page.getByLabel("Machine calculation results")).toContainText("20.00 MW");
+	await expect(page.getByTestId("game-profile-summary")).toContainText("recipe ×2 · power ×5");
+
+	await page.getByLabel("UI language").selectOption("tr");
+	await expect(page.getByLabel("Building library")).toContainText("Kütüphane");
+	await expect(page.getByLabel("Production catalog")).toContainText("Constructor · Iron Plate");
+	await page.getByLabel("Game data language").selectOption("tr");
+	await expect(page.getByLabel("Production catalog")).toContainText("İmalatçı · Demir Plaka");
+	await page.getByLabel("Search catalog").fill("DEMİR");
+	await expect(page.getByLabel("Production catalog").getByRole("button")).toHaveCount(4);
+
+	await expect(page.getByTestId("plan-persistence")).toContainText("Saved");
+	await page.reload();
+	await expect(page.getByLabel("UI language")).toHaveValue("tr");
+	await expect(page.getByLabel("Game data language")).toHaveValue("tr");
+	await expect(page.getByLabel("Recipe parts cost multiplier")).toHaveValue("2");
+	await expect(page.getByLabel("Power consumption multiplier")).toHaveValue("5");
 });

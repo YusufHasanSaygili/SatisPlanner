@@ -1,10 +1,20 @@
 import { DomainValidationError, type DomainErrorCode } from "./errors";
+import {
+	DEFAULT_SATISFACTORY_12_PROFILE,
+	POWER_CONSUMPTION_MULTIPLIERS,
+	RECIPE_COST_MULTIPLIERS,
+	RESOURCE_PURITY_MODES,
+	RESOURCE_RANDOMIZATION_MODES,
+	SATISFACTORY_12_SOURCE_URL,
+	SPACE_ELEVATOR_COST_MULTIPLIERS,
+	type Satisfactory12GameProfile,
+} from "./game-profile";
 import { parseUuid } from "./machine";
 import { Rational, type RationalJson } from "./rational";
 import { getTransportTier } from "./transport";
 import { ClockPercent } from "./units";
 
-export const FACTORY_PLAN_SCHEMA_VERSION = 4 as const;
+export const FACTORY_PLAN_SCHEMA_VERSION = 5 as const;
 
 export type JsonPrimitive = boolean | number | string | null;
 export type JsonValue = JsonPrimitive | JsonObject | readonly JsonValue[];
@@ -15,6 +25,12 @@ export interface JsonObject {
 export interface GameProfileV1 {
 	readonly id: string;
 	readonly version: string;
+}
+
+export interface PlanLocalizationV1 {
+	readonly uiLocale: "en" | "tr";
+	readonly gameDataLocale: string;
+	readonly gameDataFallbackLocale: string;
 }
 
 export interface PlanPortV3 {
@@ -66,14 +82,15 @@ export interface TransportEdgeV4 {
 	readonly actualRate: RationalJson;
 }
 
-export interface FactoryPlanV4 {
+export interface FactoryPlanV5 {
 	readonly schemaVersion: typeof FACTORY_PLAN_SCHEMA_VERSION;
 	readonly planId: string;
 	readonly name: string;
 	readonly createdAt: string;
 	readonly updatedAt: string;
 	readonly gameDataSnapshotId: string;
-	readonly gameProfile: GameProfileV1;
+	readonly gameProfile: Satisfactory12GameProfile;
+	readonly localization: PlanLocalizationV1;
 	readonly nodes: readonly PlanNodeV3[];
 	readonly edges: readonly TransportEdgeV4[];
 	readonly viewport: {
@@ -87,8 +104,11 @@ export interface FactoryPlanV4 {
 /** @deprecated Use TransportEdgeV4 for the current save schema. */
 export type TransportEdgeV3 = TransportEdgeV4;
 
-/** @deprecated Use FactoryPlanV4 for the current save schema. */
-export type FactoryPlanV3 = FactoryPlanV4;
+/** @deprecated Use FactoryPlanV5 for the current save schema. */
+export type FactoryPlanV4 = FactoryPlanV5;
+
+/** @deprecated Use FactoryPlanV5 for the current save schema. */
+export type FactoryPlanV3 = FactoryPlanV5;
 
 export interface PlanValidationIssue {
 	readonly code: DomainErrorCode;
@@ -97,7 +117,7 @@ export interface PlanValidationIssue {
 }
 
 export type ParseFactoryPlanResult =
-	| { readonly ok: true; readonly value: FactoryPlanV4 }
+	| { readonly ok: true; readonly value: FactoryPlanV5 }
 	| { readonly ok: false; readonly issues: readonly PlanValidationIssue[] };
 
 export interface PlanMigration {
@@ -505,8 +525,112 @@ function collectFactoryPlanIssues(value: JsonObject): readonly PlanValidationIss
 
 	const profile = requireRecord(value.gameProfile, "$.gameProfile", issues);
 	if (profile) {
-		requireString(profile.id, "$.gameProfile.id", issues);
-		requireString(profile.version, "$.gameProfile.version", issues);
+		if (profile.id !== "satisfactory-1.2-default" && profile.id !== "satisfactory-1.2-custom")
+			issue(
+				issues,
+				"INVALID_PLAN",
+				"$.gameProfile.id",
+				"Expected a supported Satisfactory 1.2 profile id.",
+			);
+		if (profile.version !== "1.2")
+			issue(
+				issues,
+				"INVALID_PLAN",
+				"$.gameProfile.version",
+				"Expected Satisfactory profile version 1.2.",
+			);
+		if (profile.kind !== "default" && profile.kind !== "custom")
+			issue(
+				issues,
+				"INVALID_PLAN",
+				"$.gameProfile.kind",
+				"Expected default or custom profile kind.",
+			);
+		if (!RECIPE_COST_MULTIPLIERS.includes(profile.recipePartsCostMultiplier as never))
+			issue(
+				issues,
+				"INVALID_PLAN",
+				"$.gameProfile.recipePartsCostMultiplier",
+				"Unsupported recipe parts cost multiplier.",
+			);
+		if (!POWER_CONSUMPTION_MULTIPLIERS.includes(profile.powerConsumptionMultiplier as never))
+			issue(
+				issues,
+				"INVALID_PLAN",
+				"$.gameProfile.powerConsumptionMultiplier",
+				"Unsupported power consumption multiplier.",
+			);
+		if (!SPACE_ELEVATOR_COST_MULTIPLIERS.includes(profile.spaceElevatorCostMultiplier as never))
+			issue(
+				issues,
+				"INVALID_PLAN",
+				"$.gameProfile.spaceElevatorCostMultiplier",
+				"Unsupported Space Elevator cost multiplier.",
+			);
+		if (!RESOURCE_RANDOMIZATION_MODES.includes(profile.resourceNodeRandomization as never))
+			issue(
+				issues,
+				"INVALID_PLAN",
+				"$.gameProfile.resourceNodeRandomization",
+				"Unsupported resource node randomization mode.",
+			);
+		if (!RESOURCE_PURITY_MODES.includes(profile.resourceNodePurity as never))
+			issue(
+				issues,
+				"INVALID_PLAN",
+				"$.gameProfile.resourceNodePurity",
+				"Unsupported resource node purity mode.",
+			);
+		if (typeof profile.worldSeed !== "string" || !/^\d+$/.test(profile.worldSeed))
+			issue(
+				issues,
+				"INVALID_PLAN",
+				"$.gameProfile.worldSeed",
+				"World seed must be an unsigned decimal string.",
+			);
+		const source = requireRecord(profile.source, "$.gameProfile.source", issues);
+		if (source) {
+			if (source.kind !== "official-1.2-patch-notes")
+				issue(
+					issues,
+					"INVALID_PLAN",
+					"$.gameProfile.source.kind",
+					"Expected official 1.2 patch-note provenance.",
+				);
+			if (source.url !== SATISFACTORY_12_SOURCE_URL)
+				issue(
+					issues,
+					"INVALID_PLAN",
+					"$.gameProfile.source.url",
+					"Expected the pinned official 1.2 source URL.",
+				);
+		}
+		const vanilla =
+			profile.recipePartsCostMultiplier === "1" &&
+			profile.powerConsumptionMultiplier === "1" &&
+			profile.spaceElevatorCostMultiplier === "1" &&
+			profile.resourceNodeRandomization === "default" &&
+			profile.resourceNodePurity === "default" &&
+			profile.worldSeed === "0";
+		if ((profile.kind === "default" || profile.id === "satisfactory-1.2-default") && !vanilla)
+			issue(
+				issues,
+				"INVALID_PLAN",
+				"$.gameProfile",
+				"The default profile must be byte-for-byte vanilla.",
+			);
+	}
+
+	const localization = requireRecord(value.localization, "$.localization", issues);
+	if (localization) {
+		if (localization.uiLocale !== "en" && localization.uiLocale !== "tr")
+			issue(issues, "INVALID_PLAN", "$.localization.uiLocale", "Expected en or tr UI locale.");
+		requireString(localization.gameDataLocale, "$.localization.gameDataLocale", issues);
+		requireString(
+			localization.gameDataFallbackLocale,
+			"$.localization.gameDataFallbackLocale",
+			issues,
+		);
 	}
 
 	const entityIds = new Set<string>();
@@ -681,6 +805,18 @@ export const planMigrationRegistry = new PlanMigrationRegistry()
 				: plan.edges;
 			return { ...plan, schemaVersion: 4, edges } as JsonObject;
 		},
+	})
+	.register({
+		fromVersion: 4,
+		toVersion: 5,
+		migrate(plan) {
+			return {
+				...plan,
+				schemaVersion: 5,
+				gameProfile: DEFAULT_SATISFACTORY_12_PROFILE,
+				localization: { uiLocale: "en", gameDataLocale: "en-US", gameDataFallbackLocale: "en-US" },
+			} as unknown as JsonObject;
+		},
 	});
 
 export function parseFactoryPlan(
@@ -719,10 +855,10 @@ export function parseFactoryPlan(
 	}
 	const issues = validateFactoryPlan(migrated);
 	if (issues.length > 0) return { ok: false, issues };
-	return { ok: true, value: cloneJson(migrated) as unknown as FactoryPlanV4 };
+	return { ok: true, value: cloneJson(migrated) as unknown as FactoryPlanV5 };
 }
 
-export function serializeFactoryPlan(plan: FactoryPlanV4): string {
+export function serializeFactoryPlan(plan: FactoryPlanV5): string {
 	const result = parseFactoryPlan(plan);
 	if (!result.ok) {
 		const first = result.issues[0];

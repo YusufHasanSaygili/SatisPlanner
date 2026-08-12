@@ -16,7 +16,9 @@ const fixtureJson = readFileSync(
 );
 
 function validFixture(): Record<string, unknown> {
-	return JSON.parse(fixtureJson) as Record<string, unknown>;
+	const parsed = parseFactoryPlan(fixtureJson);
+	if (!parsed.ok) throw new Error("The canonical fixture must migrate to the current schema.");
+	return JSON.parse(serializeFactoryPlan(parsed.value)) as Record<string, unknown>;
 }
 
 function firstNode(fixture: Record<string, unknown>): Record<string, unknown> {
@@ -27,14 +29,14 @@ function firstNode(fixture: Record<string, unknown>): Record<string, unknown> {
 	return node;
 }
 
-describe("FactoryPlan v4 schema", () => {
+describe("FactoryPlan v5 schema", () => {
 	it("ships a versioned JSON Schema artifact", () => {
 		const schema = JSON.parse(
-			readFileSync(new URL("../schema/factory-plan-v4.schema.json", import.meta.url), "utf8"),
+			readFileSync(new URL("../schema/factory-plan-v5.schema.json", import.meta.url), "utf8"),
 		) as Record<string, unknown>;
 		expect(schema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
-		expect(schema.$id).toBe("https://satisplanner.dev/schema/factory-plan-v4.schema.json");
-		expect(FACTORY_PLAN_SCHEMA_VERSION).toBe(4);
+		expect(schema.$id).toBe("https://satisplanner.dev/schema/factory-plan-v5.schema.json");
+		expect(FACTORY_PLAN_SCHEMA_VERSION).toBe(5);
 	});
 
 	it("round-trips to byte-stable canonical JSON and preserves unknown fields", () => {
@@ -116,7 +118,7 @@ describe("FactoryPlan v4 schema", () => {
 		});
 		for (const [version, code] of [
 			[0, "MISSING_MIGRATION"],
-			[5, "UNSUPPORTED_SCHEMA_VERSION"],
+			[6, "UNSUPPORTED_SCHEMA_VERSION"],
 		] as const) {
 			const fixture = validFixture();
 			fixture.schemaVersion = version;
@@ -134,7 +136,7 @@ describe("FactoryPlan v4 schema", () => {
 		const result = parseFactoryPlan(legacy);
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
-		expect(result.value.schemaVersion).toBe(4);
+		expect(result.value.schemaVersion).toBe(5);
 		expect(result.value.nodes[0]?.position).toEqual({ x: 80, y: 80 });
 		expect(result.value.nodes[0]?.ports[0]?.materialId).toBe("unresolved:input-0");
 	});
@@ -147,7 +149,7 @@ describe("FactoryPlan v4 schema", () => {
 		const result = parseFactoryPlan(legacy);
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
-		expect(result.value.schemaVersion).toBe(4);
+		expect(result.value.schemaVersion).toBe(5);
 		expect(result.value.nodes[0]).toMatchObject({
 			id: "00000000-0000-4000-8000-000000000002",
 			position: { x: 80, y: 80 },
@@ -188,6 +190,34 @@ describe("FactoryPlan v4 schema", () => {
 			powerShardCount: 3,
 		});
 		expect(parseFactoryPlan(serializeFactoryPlan(result.value))).toEqual(result);
+	});
+
+	it("persists a custom 1.2 profile and independent locales", () => {
+		const fixture = validFixture();
+		fixture.gameProfile = {
+			...(fixture.gameProfile as Record<string, unknown>),
+			id: "satisfactory-1.2-custom",
+			kind: "custom",
+			recipePartsCostMultiplier: "1.75",
+			powerConsumptionMultiplier: "5",
+			resourceNodeRandomization: "random",
+			resourceNodePurity: "mostly-pure",
+			worldSeed: "947221",
+		};
+		fixture.localization = {
+			uiLocale: "tr",
+			gameDataLocale: "en-US",
+			gameDataFallbackLocale: "en-US",
+		};
+		const parsed = parseFactoryPlan(fixture);
+		expect(parsed.ok).toBe(true);
+		if (!parsed.ok) return;
+		expect(parseFactoryPlan(serializeFactoryPlan(parsed.value))).toEqual(parsed);
+		expect(parsed.value.localization).toEqual({
+			uiLocale: "tr",
+			gameDataLocale: "en-US",
+			gameDataFallbackLocale: "en-US",
+		});
 	});
 
 	it("provides a sequential migration registry with fixture-friendly registration", () => {

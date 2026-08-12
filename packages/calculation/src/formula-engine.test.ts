@@ -6,6 +6,7 @@ import {
 	FormulaStrategyRegistry,
 	PRODUCTION_POWER_EXPONENT,
 } from "./formula-engine";
+import { POWER_CONSUMPTION_MULTIPLIERS, RECIPE_COST_MULTIPLIERS } from "@satisplanner/domain";
 
 function rate(
 	result: Extract<ReturnType<typeof calculateMachineFormula>, { readonly ok: true }>,
@@ -35,11 +36,70 @@ describe("machine formula strategies", () => {
 		expect(rate(result, "output", "output-0")).toBe("60");
 		expect(result.powerMW).toBeCloseTo(4 * 1.5 ** PRODUCTION_POWER_EXPONENT * 4, 10);
 		expect(result.provenance).toMatchObject({
-			inputRule: "clock",
+			inputRule: "clock-x-recipe-cost",
 			outputRule: "clock-x-amplification",
 			amplificationMultiplier: { numerator: "2", denominator: "1" },
 			sloopPowerMultiplier: { numerator: "4", denominator: "1" },
 		});
+	});
+
+	it("applies recipe cost to inputs and power multiplier once without changing outputs", () => {
+		const result = calculateMachineFormula({
+			buildingId: "Build_ConstructorMk1_C",
+			recipeId: "Recipe_IronPlate_C",
+			clockPercent: "100",
+			powerShardCount: 0,
+			somersloopCount: 0,
+			somersloopSlots: 1,
+			standby: false,
+			recipePartsCostMultiplier: { numerator: "7", denominator: "4" },
+			powerConsumptionMultiplier: { numerator: "5", denominator: "1" },
+		});
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		expect(rate(result, "input", "input-0")).toBe("105/2");
+		expect(rate(result, "output", "output-0")).toBe("20");
+		expect(result.powerMW).toBe(20);
+		expect(result.provenance).toMatchObject({
+			recipePartsCostMultiplier: { numerator: "7", denominator: "4" },
+			powerConsumptionMultiplier: { numerator: "5", denominator: "1" },
+		});
+	});
+
+	it("matches the complete supported 1.2 multiplier golden matrix", () => {
+		for (const recipeMultiplier of RECIPE_COST_MULTIPLIERS) {
+			const result = calculateMachineFormula({
+				buildingId: "Build_ConstructorMk1_C",
+				recipeId: "Recipe_IronPlate_C",
+				clockPercent: "100",
+				powerShardCount: 0,
+				somersloopCount: 0,
+				somersloopSlots: 1,
+				standby: false,
+				recipePartsCostMultiplier: Rational.parse(recipeMultiplier).toJSON(),
+			});
+			expect(result.ok, `recipe ×${recipeMultiplier}`).toBe(true);
+			if (!result.ok) continue;
+			expect(rate(result, "input", "input-0")).toBe(
+				Rational.parse("30").multiply(Rational.parse(recipeMultiplier)).toString(),
+			);
+			expect(rate(result, "output", "output-0")).toBe("20");
+		}
+		for (const powerMultiplier of POWER_CONSUMPTION_MULTIPLIERS) {
+			const result = calculateMachineFormula({
+				buildingId: "Build_ConstructorMk1_C",
+				recipeId: "Recipe_IronPlate_C",
+				clockPercent: "100",
+				powerShardCount: 0,
+				somersloopCount: 0,
+				somersloopSlots: 1,
+				standby: false,
+				powerConsumptionMultiplier: Rational.parse(powerMultiplier).toJSON(),
+			});
+			expect(result.ok, `power ×${powerMultiplier}`).toBe(true);
+			if (!result.ok) continue;
+			expect(result.powerMW).toBeCloseTo(4 * Number(powerMultiplier), 10);
+		}
 	});
 
 	it("matches Assembler, Manufacturer and Refinery multi-port golden fixtures", () => {

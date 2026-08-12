@@ -1,6 +1,6 @@
 {
 	"name": "@satisplanner/domain",
-	"version": "0.11.0",
+	"version": "0.12.0",
 	"private": true,
 	"type": "module",
 	"exports": {
@@ -8,7 +8,8 @@
 		"./schema/factory-plan-v1.schema.json": "./schema/factory-plan-v1.schema.json",
 		"./schema/factory-plan-v2.schema.json": "./schema/factory-plan-v2.schema.json",
 		"./schema/factory-plan-v3.schema.json": "./schema/factory-plan-v3.schema.json",
-		"./schema/factory-plan-v4.schema.json": "./schema/factory-plan-v4.schema.json"
+		"./schema/factory-plan-v4.schema.json": "./schema/factory-plan-v4.schema.json",
+		"./schema/factory-plan-v5.schema.json": "./schema/factory-plan-v5.schema.json"
 	},
 	"scripts": {
 		"build": "tsc --noEmit",

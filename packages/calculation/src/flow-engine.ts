@@ -6,6 +6,7 @@ import {
 	type PlanNodeV3,
 	Rational,
 	type RationalJson,
+	resolveGameProfileMultipliers,
 	type TransportEdgeV3,
 } from "@satisplanner/domain";
 import {
@@ -293,6 +294,7 @@ function buildModels(
 	const models = new Map<string, CalculationNodeModel>();
 	const formulaRegistry = options.formulaRegistry ?? formulaStrategyRegistry;
 	const extractionRegistry = options.extractionRegistry ?? extractionStrategyRegistry;
+	const profileMultipliers = resolveGameProfileMultipliers(plan.gameProfile);
 	const slotsByBuilding = options.somersloopSlotsByBuildingId ?? FALLBACK_SOMERSLOOP_SLOTS;
 	for (const node of [...plan.nodes].sort((left, right) => left.id.localeCompare(right.id))) {
 		if (node.kind === "resource") {
@@ -306,6 +308,7 @@ function buildModels(
 					purity: node.purity,
 					clockPercent: node.clockPercent,
 					powerShardCount: node.powerShardCount,
+					powerConsumptionMultiplier: profileMultipliers.powerConsumption,
 				},
 				extractionRegistry,
 			);
@@ -346,6 +349,8 @@ function buildModels(
 				somersloopCount: node.somersloopCount,
 				somersloopSlots: slotsByBuilding[node.buildingId] ?? 0,
 				standby: node.standby,
+				recipePartsCostMultiplier: profileMultipliers.recipePartsCost,
+				powerConsumptionMultiplier: profileMultipliers.powerConsumption,
 			},
 			formulaRegistry,
 		);
