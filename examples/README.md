@@ -1,4 +1,4 @@
-# SatisPlanner v1.0.3 Example Plans
+# SatisPlanner v1.0.4 Example Plans
 
 These canonical schema-v5 plans use only the versioned fallback catalog and original generic
 SatisPlanner icons. They contain no Satisfactory artwork, raw Docs data, save data or personal paths.

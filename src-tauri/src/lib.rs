@@ -416,7 +416,7 @@ mod tests {
         let response_json = serde_json::to_value(handle_native_request(request, &root))
             .expect("serialize response");
         assert_eq!(response_json["contractVersion"], 2);
-        assert_eq!(response_json["data"]["applicationVersion"], "1.0.3");
+        assert_eq!(response_json["data"]["applicationVersion"], "1.0.4");
         assert_eq!(response_json["data"]["runtime"], "desktop-native");
         let _ = fs::remove_dir_all(root);
     }
