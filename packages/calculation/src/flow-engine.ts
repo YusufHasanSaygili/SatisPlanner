@@ -81,6 +81,7 @@ export interface NodeFlowResult {
 	readonly actualInputs: readonly PortFlowResult[];
 	readonly potentialOutputs: readonly PortFlowResult[];
 	readonly actualOutputs: readonly PortFlowResult[];
+	readonly transportedOutputs: readonly PortFlowResult[];
 	readonly efficiency: RationalJson | null;
 	readonly powerMW: number;
 	readonly provenance?: MachineFormulaProvenance | ExtractionProvenance;
@@ -502,11 +503,17 @@ function requiredInputRates(
 						.filter((edge) => edge.fromPortId === output.id)
 						.map((edge) => {
 							const explicit = Rational.parse(edge.requestedRate);
-							if (explicit.compare(ZERO) > 0) return explicit;
 							const target = portOwner.get(edge.toPortId);
-							return target?.kind === "junction"
-								? junctionDemand(target)
-								: (result.get(edge.toPortId) ?? ZERO);
+							const downstreamDemand =
+								explicit.compare(ZERO) > 0
+									? explicit
+									: target?.kind === "junction"
+										? junctionDemand(target)
+										: (result.get(edge.toPortId) ?? ZERO);
+							const tierCapacity = getTransportTier(edge.transportTierId)?.capacityPerMinute;
+							return tierCapacity
+								? minimum(downstreamDemand, Rational.parse(tierCapacity))
+								: downstreamDemand;
 						}),
 				)
 			: ZERO;
@@ -704,6 +711,13 @@ export function calculateFactoryPlan(
 			});
 		}
 	}
+	const transportedByOutputPort = new Map<string, Rational>();
+	for (const edge of plan.edges) {
+		transportedByOutputPort.set(
+			edge.fromPortId,
+			(transportedByOutputPort.get(edge.fromPortId) ?? ZERO).add(state.edges.get(edge.id) ?? ZERO),
+		);
+	}
 	const nodes = [...built.models.values()]
 		.map((model): NodeFlowResult => {
 			const issue = !model.valid || unresolvedNodeIds.has(model.node.id);
@@ -734,6 +748,14 @@ export function calculateFactoryPlan(
 				),
 				potentialOutputs: toPortResults(model.node, nodePotentialOutputs),
 				actualOutputs: toPortResults(model.node, state.outputs),
+				transportedOutputs: toPortResults(
+					model.node,
+					new Map(
+						model.node.ports
+							.filter((port) => port.direction === "output")
+							.map((port) => [port.id, transportedByOutputPort.get(port.id) ?? ZERO] as const),
+					),
+				),
 				efficiency:
 					model.node.kind === "resource"
 						? ONE.toJSON()

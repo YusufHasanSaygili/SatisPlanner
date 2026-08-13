@@ -94,7 +94,7 @@ test("renders the SatisPlanner graph shell and searchable fallback library", asy
 	await expect(matches.first()).toContainText("Constructor");
 	await expect(matches.first()).toContainText("48 recipes");
 	await expect(page.getByRole("status").first()).toContainText(
-		"Contract v2 · browser-mock · v1.0.2",
+		"Contract v2 · browser-mock · v1.0.3",
 	);
 });
 
@@ -271,7 +271,7 @@ test("drag/drop, connect validation, inspector commands and reload remain domain
 	await connectHandles(page, "Output Desc_IronIngot_C", "Input Desc_IronIngot_C");
 	await expect(page.locator(".react-flow__edge")).toHaveCount(1);
 	await expect(page.getByTestId("plan-persistence")).toContainText("1 connections");
-	await page.locator(".react-flow__edge").click({ position: { x: 40, y: 4 } });
+	await page.locator(".react-flow__edge").click({ position: { x: 40, y: 4 }, force: true });
 	await expect(page.getByLabel("Connection inspector")).toContainText("conveyor");
 
 	const constructorNode = page.locator(".react-flow__node").filter({
@@ -298,6 +298,10 @@ test("drag/drop, connect validation, inspector commands and reload remain domain
 	await page.mouse.move(before.x + 100, before.y + 20);
 	await page.mouse.down();
 	await page.mouse.move(before.x + 160, before.y + 80, { steps: 8 });
+	const duringDrag = await constructorNode.boundingBox();
+	expect(duringDrag?.x).toBeGreaterThan(before.x + 30);
+	expect(duringDrag?.y).toBeGreaterThan(before.y + 30);
+	await expect(constructorNode).toHaveClass(/dragging/);
 	await page.mouse.up();
 	const savedPosition = await page.evaluate(() => {
 		const plan = JSON.parse(localStorage.getItem("satisplanner.slice-07.factory-plan") ?? "{}") as {
@@ -377,6 +381,7 @@ test("node cards expose per-minute rates and explicit splitter logistics conserv
 	await dropCatalogEntry(page, splitterEntry, { x: 540, y: 280 });
 	await dropCatalogEntry(page, page.getByLabel("Drag Smelter"), { x: 820, y: 180 });
 	await dropCatalogEntry(page, page.getByLabel("Drag Smelter"), { x: 820, y: 400 });
+	await dropCatalogEntry(page, page.getByLabel("Drag Smelter"), { x: 820, y: 510 });
 
 	await connectLocators(
 		page,
@@ -387,19 +392,59 @@ test("node cards expose per-minute rates and explicit splitter logistics conserv
 	const smelterInputs = page.getByLabel("Input Desc_OreIron_C");
 	await connectLocators(page, splitterOutput, smelterInputs.nth(0));
 	await connectLocators(page, splitterOutput, smelterInputs.nth(1));
+	await connectLocators(page, splitterOutput, smelterInputs.nth(2));
 
 	const resourceNode = page.locator(".react-flow__node-resource");
 	const junctionNode = page.locator(".react-flow__node-junction");
 	const smelterNodes = page.locator(".react-flow__node-machine");
-	await expect(resourceNode).toContainText("60/min");
-	await expect(junctionNode).toContainText("60/min in");
-	await expect(junctionNode).toContainText("60/min out");
-	await expect(smelterNodes.nth(0)).toContainText("30 / 30/min");
-	await expect(smelterNodes.nth(1)).toContainText("30 / 30/min");
+	await expect(resourceNode).toContainText("60 / 60/min used/max");
+	await expect(junctionNode).toContainText("60/min used");
+	await expect(junctionNode).toContainText("60/min sent");
+	await expect(smelterNodes.nth(0)).toContainText("20 / 30/min");
+	await expect(smelterNodes.nth(1)).toContainText("20 / 30/min");
+	await expect(smelterNodes.nth(2)).toContainText("20 / 30/min");
 	await junctionNode.getByText("Conveyor Splitter", { exact: true }).click();
-	await expect(page.getByLabel("Logistics junction inspector")).toContainText("60/min in");
-	await expect(page.getByLabel("Logistics junction inspector")).toContainText("60/min out");
-	await expect(page.getByTestId("flow-engine-status")).toContainText("4 nodes");
+	await expect(page.getByLabel("Logistics junction inspector")).toContainText("60/min used");
+	await expect(page.getByLabel("Logistics junction inspector")).toContainText("60/min sent");
+	await expect(page.getByTestId("flow-engine-status")).toContainText("5 nodes");
+
+	await page.evaluate(() => {
+		const key = "satisplanner.slice-07.factory-plan";
+		const plan = JSON.parse(localStorage.getItem(key) ?? "{}") as {
+			nodes: Array<{
+				kind: "resource" | "machine" | "junction";
+				purity?: string;
+				extractorTierId?: string;
+				clockPercent?: string;
+				powerShardCount?: number;
+			}>;
+			edges: Array<{ transportTierId: string }>;
+		};
+		for (const node of plan.nodes) {
+			if (node.kind === "resource") {
+				node.purity = "pure";
+				node.extractorTierId = "miner-mk3";
+			}
+			if (node.kind === "machine") {
+				node.clockPercent = "250.0000";
+				node.powerShardCount = 3;
+			}
+		}
+		for (const edge of plan.edges) edge.transportTierId = "conveyor-mk5";
+		localStorage.setItem(key, JSON.stringify(plan));
+	});
+	await page.reload();
+	await expect(page.locator(".react-flow__node-resource")).toContainText(
+		"225 / 480/min used/max",
+	);
+	await expect(page.locator(".react-flow__node-junction")).toContainText("225/min used");
+	await expect(page.locator(".react-flow__node-junction")).toContainText("225/min sent");
+	await expect(page.locator(".react-flow__node-machine").nth(0)).toContainText("75 / 75/min");
+	await expect(page.locator(".react-flow__node-machine").nth(1)).toContainText("75 / 75/min");
+	await expect(page.locator(".react-flow__node-machine").nth(2)).toContainText("75 / 75/min");
+	await expect(
+		page.locator(".react-flow__edge-text").filter({ hasText: "Mk.5" }),
+	).toHaveCount(4);
 });
 
 test("steady-state engine exposes actual, required, efficiency and edge rates", async ({

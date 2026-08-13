@@ -3,6 +3,17 @@
 All notable SatisPlanner changes are documented here. Versions follow Semantic Versioning while
 the application remains in published development.
 
+## [1.0.3] - 2026-08-13
+
+### Fixed
+
+- Distinguished transported resource flow from theoretical extraction capacity on graph cards.
+- Corrected junction demand propagation so downstream conveyor capacity cannot create an apparent
+  input/output mismatch.
+- Added conveyor/pipeline tier, actual flow and capacity directly to graph connection labels.
+- Restored continuous on-canvas movement while dragging existing resource, machine and logistics
+  nodes; positions remain persisted only when the pointer is released.
+
 ## [1.0.2] - 2026-08-13
 
 ### Fixed

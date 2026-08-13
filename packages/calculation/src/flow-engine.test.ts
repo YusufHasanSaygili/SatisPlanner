@@ -350,6 +350,75 @@ describe("deterministic material flow", () => {
 		);
 	});
 
+	it("separates a Pure Mk.3 source's 480/min capacity from splitter demand", () => {
+		const source: ResourcePlanNodeV3 = {
+			...resource("pure-mk3", "pure-mk3-out", "pure"),
+			extractorTierId: "miner-mk3",
+		};
+		const splitter = junction("mk5-splitter", "splitter", "mk5-splitter-in", "mk5-splitter-out");
+		const smelters = Array.from(
+			{ length: 3 },
+			(_, index): MachinePlanNodeV3 => ({
+				...machine(`overclocked-smelter-${index}`, "Build_SmelterMk1_C", "Recipe_IronIngot_C", [
+					port(`overclocked-smelter-${index}-in`, "input-0", "input", "Desc_OreIron_C"),
+					port(`overclocked-smelter-${index}-out`, "output-0", "output", "Desc_IronIngot_C"),
+				]),
+				clockPercent: "250.0000",
+				powerShardCount: 3,
+			}),
+		);
+		const mk5Edges: TransportEdgeV3[] = [
+			{
+				...connection("mk5-feed", "pure-mk3-out", "mk5-splitter-in", "Desc_OreIron_C"),
+				transportTierId: "conveyor-mk5",
+			},
+			...smelters.map(
+				(machineNode, index): TransportEdgeV3 => ({
+					...connection(
+						`mk5-branch-${index}`,
+						"mk5-splitter-out",
+						machineNode.ports[0]?.id ?? "",
+						"Desc_OreIron_C",
+					),
+					transportTierId: "conveyor-mk5",
+				}),
+			),
+		];
+
+		const result = calculateFactoryPlan(plan([source, splitter, ...smelters], mk5Edges));
+		const sourceFlow = result.nodes.find((node) => node.nodeId === source.id);
+		const splitterFlow = result.nodes.find((node) => node.nodeId === splitter.id);
+
+		expect(Rational.parse(sourceFlow?.potentialOutputs[0]?.ratePerMinute ?? "0").toString()).toBe(
+			"480",
+		);
+		expect(Rational.parse(sourceFlow?.transportedOutputs[0]?.ratePerMinute ?? "0").toString()).toBe(
+			"225",
+		);
+		expect(resultRate(result, "edge", "mk5-feed").toString()).toBe("225");
+		expect(
+			[0, 1, 2].map((index) => resultRate(result, "edge", `mk5-branch-${index}`).toString()),
+		).toEqual(["75", "75", "75"]);
+		expect(
+			Rational.parse(splitterFlow?.transportedOutputs[0]?.ratePerMinute ?? "0").toString(),
+		).toBe("225");
+
+		const mk1Branches = mk5Edges.map((edge) =>
+			edge.id.startsWith("mk5-branch") ? { ...edge, transportTierId: "conveyor-mk1" } : edge,
+		);
+		const constrained = calculateFactoryPlan(plan([source, splitter, ...smelters], mk1Branches));
+		expect(resultRate(constrained, "edge", "mk5-feed").toString()).toBe("180");
+		expect(
+			[0, 1, 2].map((index) => resultRate(constrained, "edge", `mk5-branch-${index}`).toString()),
+		).toEqual(["60", "60", "60"]);
+		expect(
+			Rational.parse(
+				constrained.nodes.find((node) => node.nodeId === splitter.id)?.transportedOutputs[0]
+					?.ratePerMinute ?? "0",
+			).toString(),
+		).toBe("180");
+	});
+
 	it("is invariant to node and edge input order", () => {
 		const chain = realIronChain("stable");
 		const forward = calculateFactoryPlan(plan(chain.nodes, chain.edges));

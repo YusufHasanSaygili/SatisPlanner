@@ -553,6 +553,13 @@ select:focus-visible {
 	box-shadow: none;
 }
 
+.react-flow__node.dragging {
+	z-index: 20;
+	cursor: grabbing;
+	filter: brightness(1.08);
+	opacity: 0.94;
+}
+
 .machine-node {
 	min-height: 118px;
 	padding: 14px;

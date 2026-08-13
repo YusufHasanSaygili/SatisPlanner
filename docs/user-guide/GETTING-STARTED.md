@@ -6,8 +6,8 @@ icon cache stay on your machine.
 
 ## Install and first launch
 
-1. Download `SatisPlanner-windows-x64-v1.0.2-setup.exe` from the
-   [v1.0.2 release](https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v1.0.2).
+1. Download `SatisPlanner-windows-x64-v1.0.3-setup.exe` from the
+   [v1.0.3 release](https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v1.0.3).
 2. The release is unsigned, so Windows may show a reputation warning. Download only from the
    official release; advanced users can verify GitHub provenance with `gh attestation verify`.
 3. Run the current-user installer. Administrator access is not required. WebView2 may be downloaded
