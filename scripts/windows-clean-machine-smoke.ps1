@@ -1,6 +1,8 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string]$InstallerPath
+    [string]$InstallerPath,
+
+    [string]$ExpectedVersion = ((Get-Content -LiteralPath (Join-Path $PSScriptRoot '..\package.json') -Raw | ConvertFrom-Json).version)
 )
 
 $ErrorActionPreference = 'Stop'
@@ -33,7 +35,8 @@ if (-not $app) {
 $installRoot = $app.DirectoryName
 
 $versionOutput = & $app.FullName --version
-if ($LASTEXITCODE -ne 0 -or $versionOutput -notmatch '^SatisPlanner 1\.0\.0$') {
+$expectedVersionOutput = "SatisPlanner $ExpectedVersion"
+if ($LASTEXITCODE -ne 0 -or $versionOutput -ne $expectedVersionOutput) {
     throw "Installed binary version smoke failed: $versionOutput"
 }
 
