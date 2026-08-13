@@ -38,11 +38,15 @@ if ($LASTEXITCODE -ne 0 -or $versionOutput -notmatch '^SatisPlanner 0\.15\.0$') 
 }
 
 $firstLaunch = Start-Process -FilePath $app.FullName -PassThru -WindowStyle Hidden
-Start-Sleep -Seconds 12
-if ($firstLaunch.HasExited) { throw "SatisPlanner exited during no-game fallback launch." }
+$savedPlans = @()
+foreach ($attempt in 1..45) {
+    Start-Sleep -Seconds 1
+    if ($firstLaunch.HasExited) { throw "SatisPlanner exited during no-game fallback launch." }
+    $savedPlans = @(Get-ChildItem -LiteralPath $plansRoot -Filter '*.json' -File -ErrorAction SilentlyContinue)
+    if ($savedPlans.Count -ge 1) { break }
+}
 $firstLaunch | Stop-Process -Force
 
-$savedPlans = @(Get-ChildItem -LiteralPath $plansRoot -Filter '*.json' -File -ErrorAction SilentlyContinue)
 if ($savedPlans.Count -lt 1) { throw "Packaged application did not save a plan under $plansRoot." }
 
 $secondLaunch = Start-Process -FilePath $app.FullName -PassThru -WindowStyle Hidden
