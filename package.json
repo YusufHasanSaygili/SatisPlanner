@@ -1,26 +1,28 @@
 {
 	"name": "satisplanner",
-	"version": "0.14.0",
+	"version": "0.15.0",
 	"private": true,
 	"type": "module",
 	"packageManager": "pnpm@11.16.0",
 	"engines": {
 		"node": ">=24.0.0",
-		"pnpm": "11.16.0"
+		"pnpm": ">=11.16.0 <12"
 	},
 	"scripts": {
 		"build": "pnpm -r --if-present build",
 		"build:web": "pnpm --filter @satisplanner/desktop-ui build",
 		"check:boundaries": "node scripts/check-boundaries.mjs",
 		"check:game-assets": "node scripts/check-game-assets.mjs",
+		"check:packaging": "node scripts/check-packaging.mjs",
 		"desktop:build": "tauri build --no-bundle",
+		"desktop:bundle:windows": "tauri build --bundles nsis",
 		"desktop:dev": "tauri dev",
 		"dev": "pnpm dev:web",
 		"dev:web": "pnpm --filter @satisplanner/desktop-ui dev",
 		"format": "biome format --write apps packages scripts playwright.config.ts package.json tsconfig.base.json",
 		"format:check": "biome format --error-on-warnings apps packages scripts playwright.config.ts package.json tsconfig.base.json",
 		"lint": "biome lint --error-on-warnings apps packages scripts playwright.config.ts",
-		"quality": "pnpm format:check && pnpm lint && pnpm check:boundaries && pnpm check:game-assets && pnpm verify:quality-failures && pnpm typecheck && pnpm test && pnpm build:web",
+		"quality": "pnpm format:check && pnpm lint && pnpm check:boundaries && pnpm check:game-assets && pnpm check:packaging && pnpm verify:quality-failures && pnpm typecheck && pnpm test && pnpm build:web",
 		"test": "pnpm -r --if-present test",
 		"test:coverage": "pnpm --filter @satisplanner/calculation exec vitest run --coverage.enabled --coverage.provider=v8 --coverage.include=src/formula-engine.ts --coverage.reporter=text --coverage.reporter=json-summary --coverage.reportsDirectory=../../coverage/calculation --coverage.thresholds.branches=85",
 		"test:e2e": "playwright test",

@@ -2,9 +2,9 @@
 
 Offline-first, graph-based desktop factory planner for Satisfactory 1.2.
 
-> **Development status:** Slice 13 test hardening and performance work is
-> implemented on the `slice/13-hardening-performance` branch. Traceable golden/property tests,
-> parser fuzz safety and enforced graph budgets form `v0.14.0`.
+> **Development status:** Slice 14 desktop packaging and verified release work is
+> implemented on the `slice/14-packaging-release` branch. Current-user Windows installation,
+> portable builds and verifiable supply-chain evidence form `v0.15.0`.
 
 [![SatisPlanner Quality](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml/badge.svg)](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml)
 
@@ -26,19 +26,19 @@ SatisPlanner will let players model the factory they will actually build:
 The full scope and the 16-slice delivery roadmap are in the
 [development plan](SatisPlanner-development-plan/00-MASTER-PLAN.md).
 
-## Current milestone: v0.14.0
+## Current milestone: v0.15.0
 
-Slice 13 turns release confidence and performance targets into executable CI gates:
+Slice 14 turns the tested application into installable and independently verifiable artifacts:
 
-- R-001–R-016 requirement-to-test traceability and formula branch coverage;
-- deterministic seeded calculation/import property and malformed-input fuzz suites;
-- 100/500/1000-node calculation, projection and layout performance baselines;
-- an enforced 500-node normal-edit p95 budget below 100 ms and memory-growth smoke;
-- failure screenshots, traces and attached save data with a zero-retry flaky-test policy;
-- packaged Windows, Linux and macOS binary version smoke checks.
+- a non-administrative, current-user Windows NSIS installer and Windows portable build;
+- portable Linux, macOS and web archives built on clean GitHub-hosted runners;
+- minimal `core:default` desktop capability scope with no broad filesystem, shell or network plugin;
+- SHA-256 checksums, SPDX JSON SBOM, third-party notices and GitHub/Sigstore attestations;
+- clean-machine install, no-game launch, autosave/reopen, uninstall and user-data retention smoke;
+- an opt-in read-only integration test against the user's own Satisfactory 1.2 Docs file.
 
-Hardening and performance evidence is collected under
-[docs/hardening-performance](docs/hardening-performance). UX, profiles, persistence, logistics, calculation,
+Packaging decisions and clean-machine evidence are collected under
+[docs/packaging-release](docs/packaging-release). Hardening, UX, profiles, persistence, logistics, calculation,
 machine instances, resource extraction, graph UX, local icons, game-data, domain,
 foundation and baseline evidence remain under their respective documentation directories.
 
@@ -67,6 +67,7 @@ docs/persistence-migration/      Slice 10 save, recovery and import evidence
 docs/game-profiles-localization/ Slice 11 profiles, multiplier and locale evidence
 docs/ux-polish/                  Slice 12 productivity and accessibility evidence
 docs/hardening-performance/     Slice 13 traceability, resilience and performance evidence
+docs/packaging-release/         Slice 14 packaging, capability and release evidence
 docs/baseline/                   Audits, measurements and verification records
 ```
 
@@ -77,7 +78,7 @@ from the attributed upstream commit and the immutable pre-cleanup Git history.
 
 ## Develop and verify
 
-Requirements: Node.js 24, pnpm 11.16.0 and the stable Rust toolchain. From the
+Requirements: Node.js 24, pnpm 11.16.0 or a newer pnpm 11 release, and the stable Rust toolchain. From the
 repository root:
 
 ```powershell
@@ -90,6 +91,7 @@ The full frontend/package quality gate is one command:
 ```powershell
 pnpm quality
 pnpm test:e2e
+pnpm desktop:bundle:windows
 ```
 
 Desktop-native checks and the release-mode shell build are:

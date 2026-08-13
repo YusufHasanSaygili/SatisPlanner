@@ -1,15 +1,18 @@
-name: SatisPlanner Manual Release
+name: SatisPlanner Verified Release
 
 on:
+  push:
+    tags:
+      - "v*.*.*"
   workflow_dispatch:
     inputs:
-      version:
-        description: "Existing annotated version tag without the v prefix"
+      tag:
+        description: "Existing annotated SemVer tag"
         required: true
-        default: "0.11.0"
+        default: "v0.15.0"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -18,17 +21,35 @@ jobs:
   release:
     runs-on: ubuntu-latest
     needs: build
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
-      - name: Verify annotated tag
+      - name: Verify annotated tag, pushed SHA and package version
+        id: metadata
         env:
-          VERSION: ${{ inputs.version }}
+          REQUESTED_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        shell: bash
         run: |
-          git cat-file -e "v${VERSION}^{tag}"
-          test "$(git rev-list -n 1 "v${VERSION}")" = "${GITHUB_SHA}"
+          set -euo pipefail
+          TAG="${REQUESTED_TAG}"
+          [[ "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          git cat-file -e "${TAG}^{tag}"
+          TAG_SHA="$(git rev-list -n 1 "${TAG}")"
+          test "${TAG_SHA}" = "${GITHUB_SHA}"
+          VERSION="${TAG#v}"
+          test "$(node -p "require('./package.json').version")" = "${VERSION}"
+          grep -Fq "version = \"${VERSION}\"" src-tauri/Cargo.toml
+          node scripts/check-packaging.mjs
+          echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "sha=${TAG_SHA}" >> "${GITHUB_OUTPUT}"
 
       - uses: actions/download-artifact@v8
         with:
@@ -50,24 +71,85 @@ jobs:
           name: SatisPlanner-web
           path: artifacts/web
 
-      - name: Package and checksum smoke artifacts
-        env:
-          VERSION: ${{ inputs.version }}
-        run: |
-          zip -j "SatisPlanner-windows-v${VERSION}.zip" artifacts/windows/*
-          zip -j "SatisPlanner-linux-v${VERSION}.zip" artifacts/linux/*
-          zip -j "SatisPlanner-macos-v${VERSION}.zip" artifacts/macos/*
-          (cd artifacts/web && zip -r "../../SatisPlanner-web-v${VERSION}.zip" .)
-          sha256sum SatisPlanner-*.zip > SHA256SUMS.txt
+      - name: Prepare release staging
+        run: mkdir -p dist
 
-      - name: Publish verified development release
+      - name: Generate SPDX JSON SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: spdx-json
+          output-file: dist/SatisPlanner-sbom.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Package branded release artifacts and checksums
+        env:
+          VERSION: ${{ steps.metadata.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x artifacts/linux/SatisPlanner artifacts/macos/SatisPlanner
+          cp artifacts/windows/SatisPlanner-setup.exe "dist/SatisPlanner-windows-x64-v${VERSION}-setup.exe"
+          zip -j "dist/SatisPlanner-windows-x64-portable-v${VERSION}.zip" \
+            artifacts/windows/SatisPlanner.exe LICENSE THIRD-PARTY-NOTICES.md
+          zip -j "dist/SatisPlanner-linux-x64-portable-v${VERSION}.zip" \
+            artifacts/linux/SatisPlanner LICENSE THIRD-PARTY-NOTICES.md
+          zip -j "dist/SatisPlanner-macos-portable-v${VERSION}.zip" \
+            artifacts/macos/SatisPlanner LICENSE THIRD-PARTY-NOTICES.md
+          (cd artifacts/web && zip -r "../../dist/SatisPlanner-web-v${VERSION}.zip" .)
+          cp THIRD-PARTY-NOTICES.md dist/
+          cp CHANGELOG.md dist/
+          if find dist -type f | grep -Eiq '\.(pak|utoc|ucas|uasset|uexp|sav)$'; then
+            echo 'Forbidden game asset found in release staging.' >&2
+            exit 1
+          fi
+          (cd dist && sha256sum SatisPlanner-* THIRD-PARTY-NOTICES.md CHANGELOG.md > SHA256SUMS.txt)
+          (cd dist && sha256sum --check SHA256SUMS.txt)
+
+      - name: Attest release build provenance
+        uses: actions/attest@v4
+        with:
+          subject-checksums: dist/SHA256SUMS.txt
+
+      - name: Attest release SBOM
+        uses: actions/attest@v4
+        with:
+          subject-checksums: dist/SHA256SUMS.txt
+          sbom-path: dist/SatisPlanner-sbom.spdx.json
+
+      - name: Publish verified unsigned development release
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ inputs.version }}
+          TAG: ${{ steps.metadata.outputs.tag }}
+          VERSION: ${{ steps.metadata.outputs.version }}
+          SHA: ${{ steps.metadata.outputs.sha }}
+        shell: bash
         run: |
-          gh release create "v${VERSION}" SatisPlanner-*.zip SHA256SUMS.txt \
+          gh release create "${TAG}" dist/* \
             --repo "${GITHUB_REPOSITORY}" \
             --verify-tag \
             --latest \
             --title "SatisPlanner v${VERSION}" \
-            --notes "Verified SatisPlanner smoke artifacts from commit ${GITHUB_SHA}. See the slice Delivery Record for acceptance results and known limitations."
+            --notes "Verified unsigned SatisPlanner development artifacts from ${SHA}. Includes current-user Windows installer, portable builds, SHA-256 checksums, SPDX SBOM, third-party notices and GitHub/Sigstore attestations."
+
+      - name: Verify Latest release and every checksum asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.metadata.outputs.tag }}
+        shell: bash
+        run: |
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)" = "${TAG}"
+          test "$(gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" --json isDraft --jq .isDraft)" = "false"
+          test "$(gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" --json isPrerelease --jq .isPrerelease)" = "false"
+          mkdir verify-download
+          gh release download "${TAG}" --repo "${GITHUB_REPOSITORY}" --dir verify-download
+          cp verify-download/SHA256SUMS.txt verify-download/SHA256SUMS.verify.txt
+          (cd verify-download && sha256sum --check SHA256SUMS.verify.txt)
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: SatisPlanner-release-${{ steps.metadata.outputs.version }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 30
