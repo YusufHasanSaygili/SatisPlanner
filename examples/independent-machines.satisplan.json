@@ -125,7 +125,7 @@
 		"expectedPlateOutputPerMinute": "20",
 		"expectedRodOutputPerMinute": "60",
 		"license": "MIT",
-		"satisPlannerVersion": "1.0.2"
+		"satisPlannerVersion": "1.0.3"
 	},
 	"viewport": { "x": 20, "y": 80, "zoom": 0.9 }
 }

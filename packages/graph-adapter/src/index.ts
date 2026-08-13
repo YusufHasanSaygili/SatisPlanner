@@ -47,6 +47,7 @@ export interface ProjectedNodeFlow {
 	readonly actualInputs: readonly ProjectedPortFlow[];
 	readonly potentialOutputs: readonly ProjectedPortFlow[];
 	readonly actualOutputs: readonly ProjectedPortFlow[];
+	readonly transportedOutputs: readonly ProjectedPortFlow[];
 }
 
 export type MachineCanvasNode = Node<MachineCanvasNodeData, "machine">;

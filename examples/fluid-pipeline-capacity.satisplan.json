@@ -101,7 +101,7 @@
 		"expectedLostPerMinute": "300",
 		"expectedSourcePerMinute": "600",
 		"license": "MIT",
-		"satisPlannerVersion": "1.0.2"
+		"satisPlannerVersion": "1.0.3"
 	},
 	"viewport": { "x": 40, "y": 40, "zoom": 1 }
 }

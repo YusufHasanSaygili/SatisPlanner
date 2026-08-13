@@ -7,47 +7,50 @@ import {
 	getCalculationFoundationStatus,
 } from "@satisplanner/calculation";
 import {
+	addJunctionNode,
 	addMachineNode,
 	addResourceNode,
-	addJunctionNode,
 	connectMachinePorts,
+	copyPlanSubgraph,
+	createPlanExportBundle,
 	createSatisfactory12Profile,
 	DEFAULT_SATISFACTORY_12_PROFILE,
-	FACTORY_PLAN_SCHEMA_VERSION,
-	createPlanExportBundle,
 	deletePlanEntities,
 	duplicateMachineNode,
 	duplicateMachineNodes,
+	FACTORY_PLAN_SCHEMA_VERSION,
 	type FactoryPlanV3,
-	type MachineSettingsPatch,
-	type MachineNodeTemplate,
+	getTransportTier,
 	type JunctionNodeTemplate,
+	type MachineNodeTemplate,
+	type MachineSettingsPatch,
 	movePlanNode,
-	parseFactoryPlan,
 	PlanCommandHistory,
-	copyPlanSubgraph,
+	POWER_CONSUMPTION_MULTIPLIERS,
+	parseFactoryPlan,
 	pastePlanSubgraph,
 	previewFactoryPlanImport,
 	Rational,
-	POWER_CONSUMPTION_MULTIPLIERS,
 	RECIPE_COST_MULTIPLIERS,
 	RESOURCE_PURITY_MODES,
 	RESOURCE_RANDOMIZATION_MODES,
-	type Satisfactory12GameProfile,
 	type ResourceSettingsPatch,
 	rebindMachineRecipe,
+	type Satisfactory12GameProfile,
 	serializeFactoryPlan,
 	serializePlanExportBundle,
 	setPlanViewport,
 	transportTiersForMedium,
-	updateTransportEdgeTier,
 	updateMachineNodeSettings,
 	updateResourceNodeSettings,
-	validateConnection,
+	updateTransportEdgeTier,
 	upsertWorkspaceGroup,
+	validateConnection,
 } from "@satisplanner/domain";
 import {
+	type AggregateExpansionStrategy,
 	BUNDLED_GRAPH_CATALOG,
+	type CatalogSnapshot,
 	createGraphCatalogBundle,
 	FALLBACK_GRAPH_CATALOG_VERSION,
 	FALLBACK_ICON_PATHS,
@@ -59,17 +62,15 @@ import {
 	NORMALIZED_SATISFACTORY_12_CATALOG,
 	previewUpstreamFcsImport,
 	serializeCatalogSnapshot,
-	type AggregateExpansionStrategy,
-	type CatalogSnapshot,
 	type UpstreamFcsPreview,
 	validateCatalogSnapshot,
 	verifyCatalogSnapshotIntegrity,
 } from "@satisplanner/game-data";
 import {
+	autoLayoutFactoryPlan,
 	type GraphCanvasNode,
 	type JunctionCanvasNode,
 	type MachineCanvasNode,
-	autoLayoutFactoryPlan,
 	projectFactoryPlan,
 	type ResourceCanvasNode,
 } from "@satisplanner/graph-adapter";
@@ -95,6 +96,7 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { translate } from "./localization";
 import type { NativeAdapter, RecoveryInspection, RuntimeInfoResult } from "./native/contracts";
 import {
 	NATIVE_CONTRACT_VERSION,
@@ -105,7 +107,6 @@ import {
 } from "./native/contracts";
 import { createMockNativeAdapter } from "./native/mock-adapter";
 import { createTauriNativeAdapter, isTauriRuntime } from "./native/tauri-adapter";
-import { translate } from "./localization";
 
 const PLAN_STORAGE_KEY = "satisplanner.slice-07.factory-plan";
 const LEGACY_PLAN_STORAGE_KEY = "satisplanner.slice-06.factory-plan";
@@ -299,6 +300,9 @@ function MachineNodeCard({ data, selected }: NodeProps<MachineCanvasNode>) {
 }
 
 function ResourceNodeCard({ data, selected }: NodeProps<ResourceCanvasNode>) {
+	const unit = document.documentElement.lang === "tr" ? "/dk" : "/min";
+	const used = data.flow ? rateForPort(data.flow.transportedOutputs, data.output.id) : "0";
+	const available = data.flow ? rateForPort(data.flow.potentialOutputs, data.output.id) : "0";
 	return (
 		<div className={selected ? "resource-node selected" : "resource-node"}>
 			<p className="resource-node-kind">Resource source</p>
@@ -310,10 +314,8 @@ function ResourceNodeCard({ data, selected }: NodeProps<ResourceCanvasNode>) {
 			</div>
 			<div className="port-row output resource-output">
 				<span>{formatMaterialId(data.output.materialId)}</span>
-				<small className="port-rate" title="Extraction per minute">
-					{data.flow
-						? `${rateForPort(data.flow.potentialOutputs, data.output.id)}${document.documentElement.lang === "tr" ? "/dk" : "/min"}`
-						: "—"}
+				<small className="port-rate" title="Used / available extraction per minute">
+					{data.flow ? `${used} / ${available}${unit} used/max` : "—"}
 				</small>
 				<Handle
 					id={data.output.id}
@@ -328,7 +330,9 @@ function ResourceNodeCard({ data, selected }: NodeProps<ResourceCanvasNode>) {
 
 function JunctionNodeCard({ data, selected }: NodeProps<JunctionCanvasNode>) {
 	const actualInput = data.flow ? rateForPort(data.flow.actualInputs, data.input.id) : "0";
-	const actualOutput = data.flow ? rateForPort(data.flow.actualOutputs, data.output.id) : "0";
+	const transportedOutput = data.flow
+		? rateForPort(data.flow.transportedOutputs, data.output.id)
+		: "0";
 	const unit = document.documentElement.lang === "tr" ? "/dk" : "/min";
 	return (
 		<div className={selected ? "junction-node selected" : "junction-node"}>
@@ -342,12 +346,12 @@ function JunctionNodeCard({ data, selected }: NodeProps<JunctionCanvasNode>) {
 			<div className="junction-flow">
 				<span>
 					{actualInput}
-					{unit} in
+					{unit} used
 				</span>
 				<strong>→</strong>
 				<span>
-					{actualOutput}
-					{unit} out
+					{transportedOutput}
+					{unit} sent
 				</span>
 			</div>
 			<Handle
@@ -389,6 +393,9 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 	);
 	const [, setHistoryRevision] = useState(0);
 	const [selection, setSelection] = useState<SelectionState>({ nodeIds: [], edgeIds: [] });
+	const [liveNodePositions, setLiveNodePositions] = useState<
+		ReadonlyMap<string, { readonly x: number; readonly y: number }>
+	>(new Map());
 	const [diagnosticCursor, setDiagnosticCursor] = useState(-1);
 	const [sloopCursor, setSloopCursor] = useState(-1);
 	const [minimapFilter, setMinimapFilter] = useState<"all" | "machine" | "resource" | "junction">(
@@ -475,21 +482,35 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 			),
 		[flowResult.nodes, plan, selection],
 	);
-	const flowNodes = useMemo(() => [...projection.nodes], [projection.nodes]);
+	const flowNodes = useMemo(
+		() =>
+			projection.nodes.map((node) => {
+				const livePosition = liveNodePositions.get(node.id);
+				return livePosition ? { ...node, position: { ...livePosition }, dragging: true } : node;
+			}),
+		[liveNodePositions, projection.nodes],
+	);
 	const flowEdges = useMemo(
 		() =>
 			projection.edges.map((edge) => {
 				const result = flowResult.edges.find((candidate) => candidate.edgeId === edge.id);
 				const bottleneck = result?.deficitReasons.includes("transport-capacity") ?? false;
+				const tier = result ? getTransportTier(result.transportTierId) : undefined;
+				const unit = uiLocale === "tr" ? "/dk" : "/min";
+				const actual = result ? formatFlowRate(result.actualRate) : "0";
+				const capacity = result?.capacityRate ? formatFlowRate(result.capacityRate) : "∞";
+				const tierAndRate = tier ? `${tier.label} · ${actual}/${capacity}${unit}` : undefined;
+				const shortTier = tier?.label.replace("Conveyor ", "").replace("Pipeline ", "Pipe ");
 				return {
 					...edge,
+					label: shortTier ? `${shortTier} · ${actual}/${capacity}${unit}` : edge.label,
 					className: bottleneck ? "transport-bottleneck" : undefined,
-					ariaLabel: bottleneck
-						? `${edge.ariaLabel}. Warning: transport capacity bottleneck.`
-						: edge.ariaLabel,
+					ariaLabel: `${edge.ariaLabel}.${tierAndRate ? ` ${tierAndRate}.` : ""}${
+						bottleneck ? " Warning: transport capacity bottleneck." : ""
+					}`,
 				};
 			}),
-		[flowResult.edges, projection.edges],
+		[flowResult.edges, projection.edges, uiLocale],
 	);
 	const filteredCatalog = useMemo(
 		() =>
@@ -1636,9 +1657,23 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 					defaultViewport={plan.viewport}
 					onConnect={connect}
 					isValidConnection={validatePreview}
-					onNodeDragStop={(_event, node) =>
-						setPlan((current) => movePlanNode(current, node.id, node.position))
+					onNodeDrag={(_event, node) =>
+						setLiveNodePositions((current) => {
+							const previous = current.get(node.id);
+							if (previous?.x === node.position.x && previous.y === node.position.y) return current;
+							const next = new Map(current);
+							next.set(node.id, { ...node.position });
+							return next;
+						})
 					}
+					onNodeDragStop={(_event, node) => {
+						setPlan((current) => movePlanNode(current, node.id, node.position), "Move node");
+						setLiveNodePositions((current) => {
+							const next = new Map(current);
+							next.delete(node.id);
+							return next;
+						});
+					}}
 					onNodeClick={(event, node) =>
 						setSelection((current) => {
 							if (!event.ctrlKey && !event.metaKey) return { nodeIds: [node.id], edgeIds: [] };
@@ -1945,13 +1980,16 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 								{selectedNodeFlow?.actualInputs[0]
 									? formatFlowRate(selectedNodeFlow.actualInputs[0].ratePerMinute)
 									: "0"}
-								/min in ·{" "}
-								{selectedNodeFlow?.actualOutputs[0]
-									? formatFlowRate(selectedNodeFlow.actualOutputs[0].ratePerMinute)
+								/min used ·{" "}
+								{selectedNodeFlow?.transportedOutputs[0]
+									? formatFlowRate(selectedNodeFlow.transportedOutputs[0].ratePerMinute)
 									: "0"}
-								/min out
+								/min sent
 							</p>
-							<small>Junctions never create or consume material.</small>
+							<small>
+								Steady-state throughput follows connected consumer demand and belt capacity; unused
+								upstream capacity remains available.
+							</small>
 						</section>
 					</section>
 				)}
@@ -2434,7 +2472,7 @@ export default function App() {
 						aria-modal="true"
 						aria-labelledby="onboarding-title"
 					>
-						<p className="eyebrow">SatisPlanner 1.0.2 · first run</p>
+						<p className="eyebrow">SatisPlanner 1.0.3 · first run</p>
 						<h2 id="onboarding-title">Build your first factory offline</h2>
 						<p>
 							No Satisfactory installation is required. The bundled catalog contains 13 extractable

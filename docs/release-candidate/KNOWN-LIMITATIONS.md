@@ -1,4 +1,4 @@
-# SatisPlanner v1.0.2 Known Limitations
+# SatisPlanner v1.0.3 Known Limitations
 
 - Windows artifacts are not Authenticode-signed. GitHub/Sigstore attestations are the provenance
   verification mechanism. macOS artifacts are not notarized.
