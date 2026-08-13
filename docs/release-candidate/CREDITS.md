@@ -2,7 +2,8 @@
 
 SatisPlanner is Copyright (c) 2026 Yusuf Hasan Saygili and contributors and is distributed under the
 [MIT License](../../LICENSE). It uses the open-source components summarized in
-[Third-Party Notices](../../THIRD-PARTY-NOTICES.md); the exact release inventory is the SPDX JSON SBOM.
+[Third-Party Notices](../../THIRD-PARTY-NOTICES.md). Release downloads are intentionally limited to
+the four platform packages; dependency and license records remain versioned in the repository.
 
 The controlled rewrite used [adepierre/ficsit-companion](https://github.com/adepierre/ficsit-companion)
 as an MIT-licensed behavior, architecture and migration reference at commit `d5c449a` / tag `v1.2.2`.

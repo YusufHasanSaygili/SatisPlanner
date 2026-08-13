@@ -4,7 +4,8 @@
 
 Windows receives a **current-user NSIS installer** and a portable executable. The installer needs no
 administrator rights and installs below `%LOCALAPPDATA%`. Linux and macOS remain portable development
-binaries until platform signing/notarization is available. Web is published as a static archive.
+binaries until platform signing/notarization is available. Web builds remain CI evidence rather than
+an additional user-facing Release download.
 The Windows installer uses Tauri's WebView2 download bootstrapper, so a missing WebView2 runtime is
 installed without requiring a developer toolchain; first installation may require network access.
 
@@ -24,10 +25,10 @@ the packaged app run when no Satisfactory installation exists.
 ## Signing and provenance
 
 `v1.0.0` is the first stable release and is **unsigned**: no Windows Authenticode,
-Apple Developer ID or notarization secret is configured. Users must verify `SHA256SUMS.txt` and the
-GitHub/Sigstore build attestation. The tag workflow builds on clean GitHub-hosted runners, enforces
-the frozen pnpm/Cargo lockfiles, emits SPDX JSON SBOM and notices, scans forbidden game artwork,
-attests release subjects and verifies tag, package version and pushed SHA equality.
+Apple Developer ID or notarization secret is configured. Users can verify the GitHub/Sigstore build
+attestation. The tag workflow builds on clean GitHub-hosted runners, enforces the frozen pnpm/Cargo
+lockfiles, scans forbidden game artwork, attests each platform package and verifies tag, package
+version, pushed SHA and downloaded artifact equality.
 
 The release job has `contents: write`, `id-token: write` and `attestations: write`; build/test jobs
 retain read-only repository access. No long-lived signing secret is used.
@@ -36,5 +37,5 @@ retain read-only repository access. No long-lived signing secret is used.
 
 Runtime components must use permissive licenses compatible with distribution. Pull requests run
 GitHub dependency review and block high-severity vulnerabilities and newly introduced GPL-3.0,
-AGPL-3.0 or SSPL-1.0 dependencies. `THIRD-PARTY-NOTICES.md` identifies primary shipped components;
-the exact transitive inventory is the release SBOM.
+AGPL-3.0 or SSPL-1.0 dependencies. `THIRD-PARTY-NOTICES.md` identifies primary shipped components and
+the lockfiles preserve the exact transitive dependency inventory.
