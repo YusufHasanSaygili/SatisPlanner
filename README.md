@@ -4,7 +4,7 @@ Offline-first, graph-based desktop factory planner for Satisfactory 1.2.
 
 > **Stable release candidate:** all 16 roadmap milestones are implemented on the
 > `slice/15-release-candidate` branch. First-run guidance, tested examples, final traceability and
-> user-ready release evidence form `v1.0.0`.
+> user-ready release evidence form `v1.0.1`.
 
 [![SatisPlanner Quality](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml/badge.svg)](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml)
 
@@ -26,7 +26,7 @@ SatisPlanner will let players model the factory they will actually build:
 The full scope and the 16-slice delivery roadmap are in the
 [development plan](SatisPlanner-development-plan/00-MASTER-PLAN.md).
 
-## Current milestone: v1.0.0
+## Current milestone: v1.0.1
 
 The first stable SatisPlanner release combines the complete MVP and release evidence:
 

@@ -9,7 +9,7 @@ on:
       tag:
         description: "Existing annotated SemVer tag"
         required: true
-        default: "v1.0.0"
+        default: "v1.0.1"
 
 permissions:
   contents: read
@@ -106,7 +106,7 @@ jobs:
             --verify-tag \
             --latest \
             --title "SatisPlanner v${VERSION}" \
-            --notes-file docs/release-candidate/RELEASE-NOTES-v1.0.0.md
+            --notes-file "docs/release-candidate/RELEASE-NOTES-v${VERSION}.md"
 
       - name: Verify Latest release and exact platform assets
         env:

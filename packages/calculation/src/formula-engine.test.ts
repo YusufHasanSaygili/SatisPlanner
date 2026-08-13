@@ -2,6 +2,7 @@ import { Rational } from "@satisplanner/domain";
 import { describe, expect, it } from "vitest";
 import {
 	calculateMachineFormula,
+	createFormulaRegistryFromCatalog,
 	createProductionFormulaStrategy,
 	FALLBACK_PRODUCTION_FORMULAS,
 	FormulaStrategyRegistry,
@@ -21,6 +22,55 @@ function rate(
 }
 
 describe("machine formula strategies", () => {
+	it("builds exact production formulas from a normalized game catalog", () => {
+		const registry = createFormulaRegistryFromCatalog(
+			{
+				buildings: [
+					{
+						id: "Build_AssemblerMk1_C",
+						displayName: "Assembler",
+						powerConsumptionMW: Rational.parse("15").toJSON(),
+					},
+				],
+				recipes: [
+					{
+						id: "Recipe_Test_C",
+						displayName: "Test Part",
+						producedIn: ["Build_AssemblerMk1_C"],
+						ingredients: [
+							{
+								itemId: "Desc_Input_C",
+								ratePerMinute: Rational.parse("12").toJSON(),
+							},
+						],
+						products: [
+							{
+								itemId: "Desc_Output_C",
+								ratePerMinute: Rational.parse("6").toJSON(),
+							},
+						],
+					},
+				],
+			},
+			"catalog-test-v1",
+		);
+		expect(registry.list()).toHaveLength(1);
+		const result = registry.calculate({
+			buildingId: "Build_AssemblerMk1_C",
+			recipeId: "Recipe_Test_C",
+			clockPercent: "100",
+			powerShardCount: 0,
+			somersloopCount: 0,
+			somersloopSlots: 2,
+			standby: false,
+		});
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		expect(Rational.parse(result.requiredInputs[0]?.ratePerMinute ?? "0").toString()).toBe("12");
+		expect(Rational.parse(result.potentialOutputs[0]?.ratePerMinute ?? "0").toString()).toBe("6");
+		expect(result.provenance.catalogVersion).toBe("catalog-test-v1");
+	});
+
 	it("matches Constructor clock, amplification and power golden values", () => {
 		const result = calculateMachineFormula({
 			buildingId: "Build_ConstructorMk1_C",

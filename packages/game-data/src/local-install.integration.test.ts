@@ -1,5 +1,13 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
+import {
+	existsSync,
+	readFileSync,
+	readdirSync,
+	realpathSync,
+	statSync,
+	writeFileSync,
+} from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { discoverDocsSources, type ReadOnlySourceFileSystem } from "./discovery";
 import { importDocsSnapshot } from "./snapshot";
@@ -51,6 +59,31 @@ localDescribe("installed Satisfactory Docs smoke", () => {
 			buildId: process.env.SATISPLANNER_LOCAL_BUILD_ID,
 		});
 		if (!result.ok) throw new Error(JSON.stringify(result.diagnostics.slice(0, 10)));
+		const normalizedOutput = process.env.SATISPLANNER_NORMALIZED_CATALOG_OUTPUT;
+		if (normalizedOutput) {
+			const catalog = result.snapshot.catalog;
+			writeFileSync(
+				resolve(normalizedOutput),
+				`${JSON.stringify(
+					{
+						catalogVersion: "satisfactory-1.2-normalized-v1",
+						gameVersion: result.snapshot.provenance.gameVersion,
+						locale: result.snapshot.provenance.locale,
+						items: catalog.items.map(({ id, displayName, form, materialForm }) => ({
+							id,
+							displayName,
+							form,
+							materialForm,
+						})),
+						buildings: catalog.buildings,
+						recipes: catalog.recipes,
+					},
+					null,
+					2,
+				)}\n`,
+				"utf8",
+			);
+		}
 		console.info(
 			"SatisPlanner real Docs smoke:",
 			JSON.stringify({

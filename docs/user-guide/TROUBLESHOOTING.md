@@ -2,15 +2,15 @@
 
 ## Windows warns about the installer
 
-v1.0.0 is unsigned because no commercial Authenticode certificate is configured. Download only from
+v1.0.1 is unsigned because no commercial Authenticode certificate is configured. Download only from
 the official release and optionally run `gh attestation verify <file> -R
 YusufHasanSaygili/SatisPlanner`. Do not bypass a warning if provenance verification fails.
 
 ## The game or icons are missing
 
-This is supported: use the fallback catalog and generic icons. For local Docs, select an official,
-unmodified locale JSON within the size limit. Icon sources must be an already extracted folder;
-automatic `.pak` extraction is intentionally unavailable.
+This is supported: use the complete bundled catalog and generic icons. For local Docs, open **Game
+data catalog** and select an official, unmodified locale JSON within the size limit. Icon sources must
+be an already extracted folder; automatic `.pak` extraction is intentionally unavailable.
 
 ## A plan is unresolved
 

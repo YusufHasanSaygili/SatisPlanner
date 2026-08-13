@@ -1,11 +1,11 @@
-# SatisPlanner v1.0.0 Artifact Manifest
+# SatisPlanner v1.0.1 Artifact Manifest
 
 | Asset | Purpose |
 | --- | --- |
-| `SatisPlanner-windows-x64-v1.0.0-setup.exe` | Current-user NSIS installer |
-| `SatisPlanner-windows-x64-portable-v1.0.0.zip` | Portable Windows executable, license and notices |
-| `SatisPlanner-linux-x64-portable-v1.0.0.zip` | Portable Linux executable, license and notices |
-| `SatisPlanner-macos-portable-v1.0.0.zip` | Portable macOS executable, license and notices |
+| `SatisPlanner-windows-x64-v1.0.1-setup.exe` | Current-user NSIS installer |
+| `SatisPlanner-windows-x64-portable-v1.0.1.zip` | Portable Windows executable, license and notices |
+| `SatisPlanner-linux-x64-portable-v1.0.1.zip` | Portable Linux executable, license and notices |
+| `SatisPlanner-macos-portable-v1.0.1.zip` | Portable macOS executable, license and notices |
 
 GitHub automatically adds source archives. Documentation, examples, changelog and notices remain in
 the repository instead of being duplicated in the user-facing release list. The verified release

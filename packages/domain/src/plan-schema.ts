@@ -839,6 +839,25 @@ export const planMigrationRegistry = new PlanMigrationRegistry()
 		},
 	});
 
+const LEGACY_RECIPE_ID_ALIASES: Readonly<Record<string, string>> = Object.freeze({
+	Recipe_IronIngot_C: "Recipe_IngotIron_C",
+});
+
+function normalizeLegacyCatalogIds(plan: JsonObject): JsonObject {
+	if (!Array.isArray(plan.nodes)) return plan;
+	let changed = false;
+	const nodes = plan.nodes.map((node) => {
+		if (!isRecord(node) || node.kind !== "machine" || typeof node.recipeId !== "string") {
+			return node;
+		}
+		const replacement = LEGACY_RECIPE_ID_ALIASES[node.recipeId];
+		if (!replacement) return node;
+		changed = true;
+		return { ...node, recipeId: replacement } as JsonObject;
+	});
+	return changed ? ({ ...plan, nodes } as JsonObject) : plan;
+}
+
 export function parseFactoryPlan(
 	input: string | unknown,
 	registry: PlanMigrationRegistry = planMigrationRegistry,
@@ -870,6 +889,7 @@ export function parseFactoryPlan(
 	let migrated: JsonObject;
 	try {
 		migrated = registry.migrate(raw as JsonObject);
+		migrated = normalizeLegacyCatalogIds(migrated);
 	} catch (error) {
 		if (error instanceof DomainValidationError) {
 			return {

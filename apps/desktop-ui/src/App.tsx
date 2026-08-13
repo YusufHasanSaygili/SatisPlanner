@@ -2,6 +2,7 @@ import {
 	calculateFactoryPlan,
 	calculateResourceExtraction,
 	calculateSomersloopMultiplier,
+	createFormulaRegistryFromCatalog,
 	extractionStrategyRegistry,
 	getCalculationFoundationStatus,
 } from "@satisplanner/calculation";
@@ -17,6 +18,7 @@ import {
 	duplicateMachineNodes,
 	type FactoryPlanV3,
 	type MachineSettingsPatch,
+	type MachineNodeTemplate,
 	movePlanNode,
 	parseFactoryPlan,
 	PlanCommandHistory,
@@ -42,18 +44,23 @@ import {
 	upsertWorkspaceGroup,
 } from "@satisplanner/domain";
 import {
-	FALLBACK_GRAPH_CATALOG,
+	BUNDLED_GRAPH_CATALOG,
+	createGraphCatalogBundle,
 	FALLBACK_GRAPH_CATALOG_VERSION,
 	FALLBACK_ICON_PATHS,
-	FALLBACK_MACHINE_BUILDINGS,
-	FALLBACK_RESOURCE_CATALOG,
 	fallbackLocalizedAliases,
 	fallbackLocalizedName,
 	getGameDataFoundationStatus,
+	importDocsSnapshot,
 	localizedSearchMatch,
+	NORMALIZED_SATISFACTORY_12_CATALOG,
 	previewUpstreamFcsImport,
+	serializeCatalogSnapshot,
 	type AggregateExpansionStrategy,
+	type CatalogSnapshot,
 	type UpstreamFcsPreview,
+	validateCatalogSnapshot,
+	verifyCatalogSnapshotIntegrity,
 } from "@satisplanner/game-data";
 import {
 	type GraphCanvasNode,
@@ -92,6 +99,7 @@ import { translate } from "./localization";
 const PLAN_STORAGE_KEY = "satisplanner.slice-07.factory-plan";
 const LEGACY_PLAN_STORAGE_KEY = "satisplanner.slice-06.factory-plan";
 const ONBOARDING_STORAGE_KEY = "satisplanner.onboarding.v1";
+const CATALOG_STORAGE_KEY = "satisplanner.catalog.snapshot.v1";
 const DRAG_MIME = "application/x-satisplanner-node-template";
 
 interface SelectionState {
@@ -123,6 +131,19 @@ function restorePlan(): FactoryPlanV3 {
 	if (!saved) return createEmptyPlan();
 	const result = parseFactoryPlan(saved);
 	return result.ok ? result.value : createEmptyPlan();
+}
+
+function restoreCatalogSnapshot(): CatalogSnapshot | undefined {
+	const saved = localStorage.getItem(CATALOG_STORAGE_KEY);
+	if (!saved) return undefined;
+	try {
+		const snapshot = JSON.parse(saved) as CatalogSnapshot;
+		return validateCatalogSnapshot(snapshot).some((diagnostic) => diagnostic.severity === "error")
+			? undefined
+			: snapshot;
+	} catch {
+		return undefined;
+	}
 }
 
 function formatMaterialId(materialId: string): string {
@@ -218,15 +239,25 @@ const nodeTypes = { machine: MachineNodeCard, resource: ResourceNodeCard };
 function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapter }) {
 	const flow = useReactFlow<GraphCanvasNode>();
 	const initialPlan = useMemo(restorePlan, []);
+	const initialCatalogSnapshot = useMemo(restoreCatalogSnapshot, []);
 	const history = useRef(new PlanCommandHistory(initialPlan));
 	const clipboardFallback = useRef("");
 	const [plan, setPlanState] = useState<FactoryPlanV3>(initialPlan);
+	const [catalogSnapshot, setCatalogSnapshot] = useState<CatalogSnapshot | undefined>(
+		initialCatalogSnapshot,
+	);
+	const [catalogStatus, setCatalogStatus] = useState(
+		initialCatalogSnapshot
+			? `Local ${initialCatalogSnapshot.provenance.locale} catalog loaded.`
+			: "Bundled complete Satisfactory 1.2 catalog loaded.",
+	);
 	const [, setHistoryRevision] = useState(0);
 	const [selection, setSelection] = useState<SelectionState>({ nodeIds: [], edgeIds: [] });
 	const [diagnosticCursor, setDiagnosticCursor] = useState(-1);
 	const [sloopCursor, setSloopCursor] = useState(-1);
 	const [minimapFilter, setMinimapFilter] = useState<"all" | "machine" | "resource">("all");
 	const [query, setQuery] = useState("");
+	const [libraryKind, setLibraryKind] = useState<"machines" | "resources">("machines");
 	const [machineRecipeQuery, setMachineRecipeQuery] = useState("");
 	const [machineError, setMachineError] = useState<string | null>(null);
 	const [diagnostic, setDiagnostic] = useState(
@@ -246,7 +277,23 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 	const [upstreamPreview, setUpstreamPreview] = useState<UpstreamFcsPreview | undefined>();
 	const uiLocale = plan.localization.uiLocale;
 	const t = (key: Parameters<typeof translate>[1]) => translate(uiLocale, key);
-	const flowResult = useMemo(() => calculateFactoryPlan(plan), [plan]);
+	const activeCatalogSource = catalogSnapshot?.catalog ?? NORMALIZED_SATISFACTORY_12_CATALOG;
+	const activeCatalogVersion = catalogSnapshot?.snapshotId ?? FALLBACK_GRAPH_CATALOG_VERSION;
+	const activeCatalog = useMemo(
+		() =>
+			catalogSnapshot
+				? createGraphCatalogBundle(catalogSnapshot.catalog, catalogSnapshot.snapshotId)
+				: BUNDLED_GRAPH_CATALOG,
+		[catalogSnapshot],
+	);
+	const formulaRegistry = useMemo(
+		() => createFormulaRegistryFromCatalog(activeCatalogSource, activeCatalogVersion),
+		[activeCatalogSource, activeCatalogVersion],
+	);
+	const flowResult = useMemo(
+		() => calculateFactoryPlan(plan, { formulaRegistry }),
+		[formulaRegistry, plan],
+	);
 	const historyState = history.current.state;
 
 	const setPlan = useCallback(
@@ -300,7 +347,7 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 	);
 	const filteredCatalog = useMemo(
 		() =>
-			FALLBACK_GRAPH_CATALOG.filter((entry) =>
+			activeCatalog.machineLibrary.filter((entry) =>
 				localizedSearchMatch(
 					query,
 					fallbackLocalizedAliases(entry.classId, entry.displayName, [
@@ -311,11 +358,11 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 					plan.localization.gameDataLocale,
 				),
 			),
-		[query, plan.localization.gameDataLocale],
+		[activeCatalog.machineLibrary, query, plan.localization.gameDataLocale],
 	);
 	const filteredResources = useMemo(
 		() =>
-			FALLBACK_RESOURCE_CATALOG.filter((entry) =>
+			activeCatalog.resources.filter((entry) =>
 				localizedSearchMatch(
 					query,
 					fallbackLocalizedAliases(entry.classId, entry.displayName, [
@@ -325,12 +372,26 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 					plan.localization.gameDataLocale,
 				),
 			),
-		[query, plan.localization.gameDataLocale],
+		[activeCatalog.resources, query, plan.localization.gameDataLocale],
 	);
 
 	useEffect(() => {
 		document.documentElement.lang = uiLocale;
 	}, [uiLocale]);
+
+	useEffect(() => {
+		if (!catalogSnapshot) return;
+		let cancelled = false;
+		void verifyCatalogSnapshotIntegrity(catalogSnapshot).then((diagnostics) => {
+			if (cancelled || !diagnostics.some((entry) => entry.severity === "error")) return;
+			localStorage.removeItem(CATALOG_STORAGE_KEY);
+			setCatalogSnapshot(undefined);
+			setCatalogStatus("Stored catalog failed its integrity check; bundled 1.2 data restored.");
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, [catalogSnapshot]);
 
 	function editGameProfile(
 		patch: Partial<Omit<Satisfactory12GameProfile, "id" | "version" | "kind" | "source">>,
@@ -574,7 +635,7 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 		const targets = plan.nodes.filter(
 			(node) =>
 				node.kind === "machine" &&
-				(FALLBACK_MACHINE_BUILDINGS.find((entry) => entry.buildingId === node.buildingId)
+				(activeCatalog.machineBuildings.find((entry) => entry.buildingId === node.buildingId)
 					?.somersloopSlots ?? 0) > 0,
 		);
 		if (targets.length === 0) {
@@ -585,12 +646,14 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 		setSloopCursor(next);
 		const target = targets[next];
 		if (target) focusNode(target.id, `${target.displayName} is Somersloop-capable.`);
-	}, [focusNode, plan.nodes, sloopCursor]);
+	}, [activeCatalog.machineBuildings, focusNode, plan.nodes, sloopCursor]);
 
 	const addTemplateFromLibrary = useCallback(
 		(classId: string) => {
-			const machineTemplate = FALLBACK_GRAPH_CATALOG.find((entry) => entry.classId === classId);
-			const resourceTemplate = FALLBACK_RESOURCE_CATALOG.find((entry) => entry.classId === classId);
+			const machineTemplate = activeCatalog.machineLibrary.find(
+				(entry) => entry.classId === classId,
+			);
+			const resourceTemplate = activeCatalog.resources.find((entry) => entry.classId === classId);
 			const nodeId = crypto.randomUUID();
 			const position = {
 				x: 120 + (plan.nodes.length % 4) * 280,
@@ -624,7 +687,7 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 				setDiagnostic(`${machineTemplate.displayName} added from the keyboard-accessible library.`);
 			}
 		},
-		[plan.nodes.length, setPlan],
+		[activeCatalog.machineLibrary, activeCatalog.resources, plan.nodes.length, setPlan],
 	);
 
 	useEffect(() => {
@@ -678,10 +741,12 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 	const selectedResource = selectedNode?.kind === "resource" ? selectedNode : undefined;
 	const selectedMachine = selectedNode?.kind === "machine" ? selectedNode : undefined;
 	const selectedMachineDefinition = selectedMachine
-		? FALLBACK_MACHINE_BUILDINGS.find((entry) => entry.buildingId === selectedMachine.buildingId)
+		? activeCatalog.machineBuildings.find(
+				(entry) => entry.buildingId === selectedMachine.buildingId,
+			)
 		: undefined;
 	const compatibleMachineRecipes = selectedMachineDefinition
-		? FALLBACK_GRAPH_CATALOG.filter(
+		? activeCatalog.machineRecipes.filter(
 				(entry) =>
 					entry.buildingId === selectedMachineDefinition.buildingId &&
 					selectedMachineDefinition.compatibleRecipeIds.includes(entry.recipeId),
@@ -810,7 +875,7 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 		}
 	}
 
-	function selectMachineRecipe(recipe: (typeof FALLBACK_GRAPH_CATALOG)[number]): void {
+	function selectMachineRecipe(recipe: MachineNodeTemplate): void {
 		if (!selectedMachine || !selectedMachineDefinition) return;
 		try {
 			const missingPortCount = recipe.ports.filter(
@@ -838,6 +903,45 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 		}
 	}
 
+	async function importLocalDocs(file: File | undefined): Promise<void> {
+		if (!file) return;
+		setCatalogStatus(`Importing ${file.name}…`);
+		const result = await importDocsSnapshot({
+			bytes: new Uint8Array(await file.arrayBuffer()),
+			fileName: file.name,
+			sourceKind: "custom",
+			gameVersion: "1.2",
+			locale: file.name.replace(/\.json$/i, ""),
+		});
+		if (!result.ok) {
+			setCatalogStatus(
+				result.diagnostics[0]?.message ?? "The selected Docs JSON could not be imported.",
+			);
+			return;
+		}
+		localStorage.setItem(CATALOG_STORAGE_KEY, serializeCatalogSnapshot(result.snapshot));
+		setCatalogSnapshot(result.snapshot);
+		setPlan((current) => ({
+			...current,
+			updatedAt: new Date().toISOString(),
+			gameDataSnapshotId: result.snapshot.snapshotId,
+		}));
+		setCatalogStatus(
+			`${result.snapshot.catalog.items.length} items · ${result.snapshot.catalog.buildings.length} buildings · ${result.snapshot.catalog.recipes.length} recipes imported from ${file.name}.`,
+		);
+	}
+
+	function useBundledCatalog(): void {
+		localStorage.removeItem(CATALOG_STORAGE_KEY);
+		setCatalogSnapshot(undefined);
+		setPlan((current) => ({
+			...current,
+			updatedAt: new Date().toISOString(),
+			gameDataSnapshotId: FALLBACK_GRAPH_CATALOG_VERSION,
+		}));
+		setCatalogStatus("Bundled complete Satisfactory 1.2 catalog loaded.");
+	}
+
 	function exportCurrentPlan(): void {
 		const bundle = createPlanExportBundle(plan);
 		const blob = new Blob([serializePlanExportBundle(bundle)], { type: "application/json" });
@@ -859,9 +963,9 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 	}
 
 	function previewPlanImport(): void {
-		const knownRecipeIds = new Set(FALLBACK_GRAPH_CATALOG.map((entry) => entry.recipeId));
+		const knownRecipeIds = new Set(activeCatalog.machineRecipes.map((entry) => entry.recipeId));
 		setPlanImportPreview(
-			previewFactoryPlanImport(planImportText, FALLBACK_GRAPH_CATALOG_VERSION, knownRecipeIds),
+			previewFactoryPlanImport(planImportText, activeCatalogVersion, knownRecipeIds),
 		);
 	}
 
@@ -893,7 +997,7 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 					<span>{t("library")}</span>
 					<kbd>⌘ K</kbd>
 				</div>
-				<details className="profile-panel" open>
+				<details className="profile-panel">
 					<summary>{t("profileSettings")}</summary>
 					<div className="profile-grid">
 						<label>
@@ -1032,19 +1136,67 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 						<small>{t("seedPolicy")}</small>
 					</p>
 				</details>
+				<details className="profile-panel catalog-source-panel">
+					<summary>Game data catalog</summary>
+					<p>
+						<strong>{activeCatalog.resources.length} resources</strong> ·{" "}
+						{activeCatalog.machineBuildings.length}
+						{" buildings · "}
+						{activeCatalog.machineRecipes.length} recipes
+					</p>
+					<label>
+						<span>Update from local CommunityResources/Docs JSON</span>
+						<input
+							type="file"
+							accept=".json,application/json"
+							aria-label="Import Satisfactory Docs JSON"
+							onChange={(event) => {
+								const file = event.currentTarget.files?.[0];
+								void importLocalDocs(file);
+								event.currentTarget.value = "";
+							}}
+						/>
+					</label>
+					<button type="button" onClick={useBundledCatalog} disabled={!catalogSnapshot}>
+						Use bundled 1.2 catalog
+					</button>
+					<small role="status">{catalogStatus}</small>
+				</details>
 				<input
 					aria-label="Search catalog"
 					placeholder={t("searchPlaceholder")}
 					value={query}
 					onChange={(event) => setQuery(event.currentTarget.value)}
 				/>
-				<div className="catalog-meta">
+				<fieldset className="catalog-kind-switch" aria-label="Catalog section">
+					<button
+						type="button"
+						aria-label="Show machines"
+						aria-pressed={libraryKind === "machines"}
+						onClick={() => setLibraryKind("machines")}
+					>
+						Machines ({activeCatalog.machineBuildings.length})
+					</button>
+					<button
+						type="button"
+						aria-label="Show resources"
+						aria-pressed={libraryKind === "resources"}
+						onClick={() => setLibraryKind("resources")}
+					>
+						Resources ({activeCatalog.resources.length})
+					</button>
+				</fieldset>
+				<div className="catalog-meta" hidden={libraryKind !== "resources"}>
 					<span>{t("resources")}</span>
 					<small>
 						{filteredResources.length} {t("entries")}
 					</small>
 				</div>
-				<section className="catalog-list" aria-label="Resource catalog">
+				<section
+					className="catalog-list"
+					aria-label="Resource catalog"
+					hidden={libraryKind !== "resources"}
+				>
 					{filteredResources.map((entry) => (
 						<button
 							className="catalog-entry resource-entry"
@@ -1079,39 +1231,49 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 						</button>
 					))}
 				</section>
-				<div className="catalog-meta">
+				<div className="catalog-meta" hidden={libraryKind !== "machines"}>
 					<span>{t("production")}</span>
 					<small>
 						{filteredCatalog.length} {t("entries")}
 					</small>
 				</div>
-				<section className="catalog-list" aria-label="Production catalog">
-					{filteredCatalog.map((entry) => (
-						<button
-							className="catalog-entry"
-							type="button"
-							draggable
-							key={entry.classId}
-							aria-label={`Drag ${entry.displayName}`}
-							onClick={() => addTemplateFromLibrary(entry.classId)}
-							onDragStart={(event) => {
-								event.dataTransfer.setData(DRAG_MIME, entry.classId);
-								event.dataTransfer.effectAllowed = "copy";
-							}}
-						>
-							<img src={`/${FALLBACK_ICON_PATHS.building}`} alt="" />
-							<span>
-								<strong>
-									{fallbackLocalizedName(
-										entry.classId,
-										entry.displayName,
-										plan.localization.gameDataLocale,
-									)}
-								</strong>
-								<small>{entry.classId}</small>
-							</span>
-						</button>
-					))}
+				<section
+					className="catalog-list"
+					aria-label="Production catalog"
+					hidden={libraryKind !== "machines"}
+				>
+					{filteredCatalog.map((entry) => {
+						const definition = activeCatalog.machineBuildings.find(
+							(candidate) => candidate.buildingId === entry.buildingId,
+						);
+						const buildingName = definition?.displayName ?? entry.displayName;
+						return (
+							<button
+								className="catalog-entry"
+								type="button"
+								draggable
+								key={entry.classId}
+								aria-label={`Drag ${buildingName}`}
+								onClick={() => addTemplateFromLibrary(entry.classId)}
+								onDragStart={(event) => {
+									event.dataTransfer.setData(DRAG_MIME, entry.classId);
+									event.dataTransfer.effectAllowed = "copy";
+								}}
+							>
+								<img src={`/${FALLBACK_ICON_PATHS.building}`} alt="" />
+								<span>
+									<strong>
+										{fallbackLocalizedName(
+											entry.classId,
+											buildingName,
+											plan.localization.gameDataLocale,
+										)}
+									</strong>
+									<small>{definition?.compatibleRecipeIds.length ?? 0} recipes</small>
+								</span>
+							</button>
+						);
+					})}
 					{filteredCatalog.length === 0 && (
 						<div className="empty-state">
 							<strong>{t("noCatalogMatch")}</strong>
@@ -1119,7 +1281,7 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 					)}
 				</section>
 				<p className="catalog-policy">
-					Versioned fallback catalog · local snapshots replace it after import.
+					Complete normalized Satisfactory 1.2 catalog · local Docs snapshots can replace it.
 				</p>
 			</aside>
 
@@ -1133,8 +1295,10 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 				onDrop={(event) => {
 					event.preventDefault();
 					const classId = event.dataTransfer.getData(DRAG_MIME);
-					const machineTemplate = FALLBACK_GRAPH_CATALOG.find((entry) => entry.classId === classId);
-					const resourceTemplate = FALLBACK_RESOURCE_CATALOG.find(
+					const machineTemplate = activeCatalog.machineLibrary.find(
+						(entry) => entry.classId === classId,
+					);
+					const resourceTemplate = activeCatalog.resources.find(
 						(entry) => entry.classId === classId,
 					);
 					if (!machineTemplate && !resourceTemplate) {
@@ -2007,18 +2171,17 @@ export default function App() {
 						aria-modal="true"
 						aria-labelledby="onboarding-title"
 					>
-						<p className="eyebrow">SatisPlanner 1.0 · first run</p>
+						<p className="eyebrow">SatisPlanner 1.0.1 · first run</p>
 						<h2 id="onboarding-title">Build your first factory offline</h2>
 						<p>
-							No Satisfactory installation is required. Start with the versioned fallback catalog
-							and original generic icons, then optionally use your own local game data.
+							No Satisfactory installation is required. The bundled catalog contains 13 extractable
+							resources, 11 production buildings and 291 recipes with original generic icons.
 						</p>
 						<ol>
 							<li>
-								<strong>Optional data:</strong> the read-only importer supports your own
-								Satisfactory 1.2 localized file from <code>CommunityResources/Docs</code> and
-								records build, locale, importer version and SHA-256 provenance. Native folder-picker
-								activation is not in v1.0.
+								<strong>Optional data update:</strong> open <em>Game data catalog</em> and select
+								your own Satisfactory 1.2 localized JSON from <code>CommunityResources/Docs</code>.
+								The read-only importer records locale, importer version and SHA-256 provenance.
 							</li>
 							<li>
 								<strong>Optional icons:</strong> the cache engine accepts an extracted local icon

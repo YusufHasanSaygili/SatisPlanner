@@ -6,21 +6,22 @@ icon cache stay on your machine.
 
 ## Install and first launch
 
-1. Download `SatisPlanner-windows-x64-v1.0.0-setup.exe` from the
-   [v1.0.0 release](https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v1.0.0).
+1. Download `SatisPlanner-windows-x64-v1.0.1-setup.exe` from the
+   [v1.0.1 release](https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v1.0.1).
 2. The release is unsigned, so Windows may show a reputation warning. Download only from the
    official release; advanced users can verify GitHub provenance with `gh attestation verify`.
 3. Run the current-user installer. Administrator access is not required. WebView2 may be downloaded
    on first installation if Windows does not already provide it.
 4. Read the first-run guide and choose **Start planning**.
 
-Satisfactory does not need to be installed. The fallback catalog and original generic icons are
-enough to open all three [example plans](../../examples/README.md).
+Satisfactory does not need to be installed. The complete normalized 1.2 catalog and original generic
+icons are enough to plan with 13 extractable resources, 11 production buildings and 291 recipes and
+to open all three [example plans](../../examples/README.md).
 
 ## First graph
 
 1. Search the left library for `Iron Ore` and add it to the canvas.
-2. Add **Smelter · Iron Ingot**, then **Constructor · Iron Plate**.
+2. Add **Smelter** and **Constructor**, then choose Iron Ingot and Iron Plate in their inspectors.
 3. Connect output handles to matching input handles.
 4. Select a node and edit purity, extractor tier, clock, Power Shards or Somersloops in the inspector.
 5. Read requested, actual, surplus/deficit, efficiency and power values in the inspector.

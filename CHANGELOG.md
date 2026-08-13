@@ -3,6 +3,22 @@
 All notable SatisPlanner changes are documented here. Versions follow Semantic Versioning while
 the application remains in published development.
 
+## [1.0.1] - 2026-08-13
+
+### Fixed
+
+- Replaced the six-resource/ten-recipe test fallback with a sanitized complete Satisfactory 1.2
+  catalog containing 195 items, 11 production buildings and 291 recipes.
+- Added Caterium, Sulfur, Raw Quartz, Bauxite, Uranium, SAM and Nitrogen Gas to the 13 extractable
+  resource sources.
+- Changed the production library from repeated machine/recipe cards to one clear card per building,
+  ordered from Smelter through Quantum Encoder; recipes are selected in the machine inspector.
+- Connected normalized recipe rates and building power metadata to the calculation registry so all
+  bundled recipes calculate instead of only the original test fixtures.
+- Added a read-only local Docs JSON selector and persistent normalized snapshots without retaining
+  the raw source file, personal paths, descriptions or game artwork.
+- Preserved v1.0 plans by normalizing the legacy Iron Ingot recipe identity on load.
+
 ## [1.0.0] - 2026-08-13
 
 ### Stable release
@@ -12,8 +28,8 @@ the application remains in published development.
 - Added three versioned canonical example plans with calculation goldens for Coal, independent
   machine settings and fluid capacity.
 - Completed R-001–R-018 traceability, Definition of Done and historical Delivery Record audits.
-- Promoted the verified Windows installer and portable Windows/Linux/macOS/web artifacts to the
-  first stable release with SHA-256, SPDX SBOM and GitHub/Sigstore attestations.
+- Promoted the verified Windows installer and portable Windows/Linux/macOS packages to the first
+  stable release with GitHub/Sigstore provenance.
 
 ## [0.15.0] - 2026-08-13
 

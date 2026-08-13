@@ -1,10 +1,15 @@
 export interface GameDataFoundationStatus {
 	readonly kind: "game-data-foundation";
-	readonly catalogLoaded: false;
+	readonly catalogLoaded: true;
+	readonly catalogVersion: "satisfactory-1.2-normalized-v1";
 }
 
 export function getGameDataFoundationStatus(): GameDataFoundationStatus {
-	return { kind: "game-data-foundation", catalogLoaded: false };
+	return {
+		kind: "game-data-foundation",
+		catalogLoaded: true,
+		catalogVersion: "satisfactory-1.2-normalized-v1",
+	};
 }
 
 export * from "./catalog";

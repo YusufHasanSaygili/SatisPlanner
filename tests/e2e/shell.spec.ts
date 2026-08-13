@@ -4,6 +4,12 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 
 async function dropCatalogEntry(page: Page, entry: Locator, position: { x: number; y: number }) {
+	if (!(await entry.isVisible())) {
+		const label = await entry.getAttribute("aria-label");
+		await page
+			.getByLabel(label?.startsWith("Drag resource") ? "Show resources" : "Show machines")
+			.click();
+	}
 	const dataTransfer = await page.evaluateHandle(() => new DataTransfer());
 	await entry.dispatchEvent("dragstart", { dataTransfer });
 	const canvas = page.getByLabel("Factory canvas");
@@ -64,16 +70,37 @@ test("renders the SatisPlanner graph shell and searchable fallback library", asy
 	await expect(page.getByLabel("Building library")).toBeVisible();
 	await expect(page.getByLabel("Factory canvas")).toBeVisible();
 	await expect(page.getByLabel("Inspector")).toContainText("Nothing selected");
-	await expect(page.getByLabel("Production catalog").getByRole("button")).toHaveCount(10);
+	await page.getByLabel("Show resources").click();
+	await expect(page.getByLabel("Resource catalog").getByRole("button")).toHaveCount(13);
+	await page.getByLabel("Show machines").click();
+	await expect(page.getByLabel("Production catalog").getByRole("button")).toHaveCount(11);
 
 	await page.getByLabel("Search catalog").fill("constructor");
 	const matches = page.getByLabel("Production catalog").getByRole("button");
-	await expect(matches).toHaveCount(2);
-	await expect(matches.nth(0)).toContainText("Build_ConstructorMk1_C::Recipe_IronPlate_C");
-	await expect(matches.nth(1)).toContainText("Build_ConstructorMk1_C::Recipe_IronRod_C");
+	await expect(matches).toHaveCount(1);
+	await expect(matches.first()).toContainText("Constructor");
+	await expect(matches.first()).toContainText("48 recipes");
 	await expect(page.getByRole("status").first()).toContainText(
-		"Contract v2 · browser-mock · v1.0.0",
+		"Contract v2 · browser-mock · v1.0.1",
 	);
+});
+
+test("imports a local Docs JSON snapshot without retaining the raw source", async ({ page }) => {
+	const catalogPanel = page.getByText("Game data catalog", { exact: true });
+	await catalogPanel.click();
+	await page
+		.getByLabel("Import Satisfactory Docs JSON")
+		.setInputFiles(path.resolve("packages/game-data/src/fixtures/en-US.json"));
+	await expect(page.getByRole("status").filter({ hasText: "3 items" })).toContainText(
+		"1 buildings · 1 recipes",
+	);
+	await expect(page.getByLabel("Production catalog")).toContainText("Synthetic Maker");
+	await page.getByRole("button", { name: "Use bundled 1.2 catalog" }).click();
+	await expect(page.getByRole("status").filter({ hasText: "Bundled complete" })).toBeVisible();
+	await page.getByLabel("Show resources").click();
+	await expect(page.getByLabel("Resource catalog").getByRole("button")).toHaveCount(13);
+	await page.getByLabel("Show machines").click();
+	await expect(page.getByLabel("Production catalog").getByRole("button")).toHaveCount(11);
 });
 
 test("first-run guide explains offline data, icons and core planning without game files", async ({
@@ -140,6 +167,9 @@ test("keyboard history, clipboard, grouping and explicit layout remain domain-ba
 	await search.fill("iron ore");
 	await search.focus();
 	await page.keyboard.press("Tab");
+	await page.keyboard.press("Tab");
+	await page.keyboard.press("Enter");
+	await page.keyboard.press("Tab");
 	await page.keyboard.press("Enter");
 	await expect(page.locator(".react-flow__node-resource")).toHaveCount(1);
 	await expect(page.getByLabel("Resource inspector")).toContainText("Iron Ore");
@@ -199,15 +229,15 @@ test("graph shell passes axe accessibility smoke", async ({ page }) => {
 test("drag/drop, connect validation, inspector commands and reload remain domain-backed", async ({
 	page,
 }) => {
-	await dropCatalogEntry(page, page.getByLabel("Drag Smelter · Iron Ingot"), {
+	await dropCatalogEntry(page, page.getByLabel("Drag Smelter"), {
 		x: 390,
 		y: 260,
 	});
-	await dropCatalogEntry(page, page.getByLabel("Drag Constructor · Iron Plate"), {
+	await dropCatalogEntry(page, page.getByLabel("Drag Constructor"), {
 		x: 690,
 		y: 260,
 	});
-	await dropCatalogEntry(page, page.getByLabel("Drag Refinery · Fuel"), {
+	await dropCatalogEntry(page, page.getByLabel("Drag Refinery"), {
 		x: 690,
 		y: 480,
 	});
@@ -325,11 +355,11 @@ test("steady-state engine exposes actual, required, efficiency and edge rates", 
 		x: 300,
 		y: 240,
 	});
-	await dropCatalogEntry(page, page.getByLabel("Drag Smelter · Iron Ingot"), {
+	await dropCatalogEntry(page, page.getByLabel("Drag Smelter"), {
 		x: 570,
 		y: 240,
 	});
-	await dropCatalogEntry(page, page.getByLabel("Drag Constructor · Iron Plate"), {
+	await dropCatalogEntry(page, page.getByLabel("Drag Constructor"), {
 		x: 850,
 		y: 240,
 	});
@@ -363,7 +393,7 @@ test("Coal Pure Mk.3 at 250% exposes and clears the Mk.5 transport bottleneck", 
 	page,
 }) => {
 	await dropCatalogEntry(page, page.getByLabel("Drag resource Coal"), { x: 320, y: 250 });
-	await dropCatalogEntry(page, page.getByLabel("Drag Foundry · Steel Ingot"), { x: 720, y: 250 });
+	await dropCatalogEntry(page, page.getByLabel("Drag Foundry"), { x: 720, y: 250 });
 
 	await page.locator(".react-flow__node-resource .machine-node-title").getByText("Coal", { exact: true }).click();
 	await page.getByLabel("Set purity pure").click();
@@ -491,19 +521,19 @@ test("plan migration and upstream FCS conversion stay previewable, cancellable a
 test("machine inspector exposes the exact Constructor, Assembler and Manufacturer sloop matrices", async ({
 	page,
 }) => {
-	await dropCatalogEntry(page, page.getByLabel("Drag Constructor · Iron Plate"), {
+	await dropCatalogEntry(page, page.getByLabel("Drag Constructor"), {
 		x: 380,
 		y: 220,
 	});
-	await dropCatalogEntry(page, page.getByLabel("Drag Assembler · Reinforced Iron Plate"), {
+	await dropCatalogEntry(page, page.getByLabel("Drag Assembler"), {
 		x: 650,
 		y: 350,
 	});
-	await dropCatalogEntry(page, page.getByLabel("Drag Manufacturer · Computer"), {
+	await dropCatalogEntry(page, page.getByLabel("Drag Manufacturer"), {
 		x: 910,
 		y: 480,
 	});
-	await dropCatalogEntry(page, page.getByLabel("Drag Smelter · Iron Ingot"), {
+	await dropCatalogEntry(page, page.getByLabel("Drag Smelter"), {
 		x: 520,
 		y: 560,
 	});
@@ -545,7 +575,7 @@ test("machine inspector exposes the exact Constructor, Assembler and Manufacture
 test("three Assembler instances keep recipe, clock, shard and sloop state isolated through reload", async ({
 	page,
 }) => {
-	await dropCatalogEntry(page, page.getByLabel("Drag Assembler · Reinforced Iron Plate"), {
+	await dropCatalogEntry(page, page.getByLabel("Drag Assembler"), {
 		x: 420,
 		y: 260,
 	});
@@ -566,7 +596,6 @@ test("three Assembler instances keep recipe, clock, shard and sloop state isolat
 	await page.getByLabel("Machine clock percent").blur();
 	await page.getByLabel("Set 1 Somersloops, 1.5 times multiplier").click();
 	await page.getByLabel("Search compatible recipes").fill("rotor");
-	await expect(page.getByLabel("Compatible recipes").getByRole("button")).toHaveCount(1);
 	await page
 		.getByLabel("Compatible recipes")
 		.getByRole("button", { name: /Assembler · Rotor/ })
@@ -705,7 +734,7 @@ test("removed catalog entries remain unresolved without losing saved machine sta
 });
 
 test("profile and independent UI/game locales survive snapshot reload", async ({ page }) => {
-	await dropCatalogEntry(page, page.getByLabel("Drag Constructor · Iron Plate"), {
+	await dropCatalogEntry(page, page.getByLabel("Drag Constructor"), {
 		x: 520,
 		y: 280,
 	});
@@ -715,6 +744,7 @@ test("profile and independent UI/game locales survive snapshot reload", async ({
 		.click();
 	await expect(page.getByLabel("Machine calculation results")).toContainText("0 actual / 30 required");
 
+	await page.getByText("Game profile & language", { exact: true }).click();
 	await page.getByLabel("Recipe parts cost multiplier").selectOption("2");
 	await page.getByLabel("Power consumption multiplier").selectOption("5");
 	await expect(page.getByLabel("Machine calculation results")).toContainText("0 actual / 60 required");
@@ -723,14 +753,15 @@ test("profile and independent UI/game locales survive snapshot reload", async ({
 
 	await page.getByLabel("UI language").selectOption("tr");
 	await expect(page.getByLabel("Building library")).toContainText("Kütüphane");
-	await expect(page.getByLabel("Production catalog")).toContainText("Constructor · Iron Plate");
+	await expect(page.getByLabel("Production catalog")).toContainText("Constructor");
 	await page.getByLabel("Game data language").selectOption("tr");
-	await expect(page.getByLabel("Production catalog")).toContainText("İmalatçı · Demir Plaka");
-	await page.getByLabel("Search catalog").fill("DEMİR");
-	await expect(page.getByLabel("Production catalog").getByRole("button")).toHaveCount(4);
+	await expect(page.getByLabel("Production catalog")).toContainText("İmalatçı");
+	await page.getByLabel("Search catalog").fill("İMALATÇI");
+	await expect(page.getByLabel("Production catalog").getByRole("button")).toHaveCount(1);
 
 	await expect(page.getByTestId("plan-persistence")).toContainText("Saved");
 	await page.reload();
+	await page.getByText("Oyun profili ve dil", { exact: true }).click();
 	await expect(page.getByLabel("UI language")).toHaveValue("tr");
 	await expect(page.getByLabel("Game data language")).toHaveValue("tr");
 	await expect(page.getByLabel("Recipe parts cost multiplier")).toHaveValue("2");
