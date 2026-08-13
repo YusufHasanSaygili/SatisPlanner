@@ -26,7 +26,7 @@ const requiredDocs = [
 	"docs/release-candidate/KNOWN-LIMITATIONS.md",
 	"docs/release-candidate/CREDITS.md",
 	"docs/release-candidate/ROLLBACK.md",
-	"docs/release-candidate/RELEASE-NOTES-v1.0.0.md",
+	"docs/release-candidate/RELEASE-NOTES-v1.0.1.md",
 	"docs/release-candidate/UAT.md",
 	"docs/release-candidate/ARTIFACT-MANIFEST.md",
 ];
@@ -62,8 +62,8 @@ for (const path of exampleFiles) {
 	if (plan.gameDataSnapshotId !== "fallback-graph-catalog-v3") {
 		errors.push(`${path} does not use the redistribution-safe fallback catalog.`);
 	}
-	if (plan.gameProfile?.version !== "1.2" || plan.userMetadata?.satisPlannerVersion !== "1.0.0") {
-		errors.push(`${path} is missing Satisfactory 1.2 / SatisPlanner 1.0 provenance.`);
+	if (plan.gameProfile?.version !== "1.2" || plan.userMetadata?.satisPlannerVersion !== "1.0.1") {
+		errors.push(`${path} is missing Satisfactory 1.2 / SatisPlanner 1.0.1 provenance.`);
 	}
 	if (/communityresources|[a-z]:\\users\\|steamapps|\.pak\b|\.sav\b/i.test(source)) {
 		errors.push(`${path} contains a game source, personal path or forbidden asset reference.`);

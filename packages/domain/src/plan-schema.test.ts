@@ -221,6 +221,16 @@ describe("FactoryPlan v5 schema", () => {
 		expect(parseFactoryPlan(serializeFactoryPlan(result.value))).toEqual(result);
 	});
 
+	it("normalizes the legacy v1.0 Iron Ingot recipe identity", () => {
+		const fixture = validFixture();
+		firstNode(fixture).recipeId = "Recipe_IronIngot_C";
+		const parsed = parseFactoryPlan(fixture);
+		expect(parsed.ok).toBe(true);
+		if (!parsed.ok) return;
+		const machine = parsed.value.nodes.find((node) => node.kind === "machine");
+		expect(machine?.kind === "machine" ? machine.recipeId : undefined).toBe("Recipe_IngotIron_C");
+	});
+
 	it("persists a custom 1.2 profile and independent locales", () => {
 		const fixture = validFixture();
 		fixture.gameProfile = {

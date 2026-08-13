@@ -12,6 +12,7 @@ export interface FormulaMaterialRate {
 
 export interface ProductionFormulaDescriptor {
 	readonly id: string;
+	readonly catalogVersion?: string;
 	readonly buildingId: string;
 	readonly recipeId: string;
 	readonly displayName: string;
@@ -192,7 +193,7 @@ export function createProductionFormulaStrategy(
 					provenance: {
 						strategyId: "production-machine",
 						formulaId: descriptor.id,
-						catalogVersion: FALLBACK_FORMULA_CATALOG_VERSION,
+						catalogVersion: descriptor.catalogVersion ?? FALLBACK_FORMULA_CATALOG_VERSION,
 						clockMultiplier: clockMultiplier.toJSON(),
 						amplificationMultiplier: amplificationMultiplier.toJSON(),
 						sloopPowerMultiplier: sloopPowerMultiplier.toJSON(),
@@ -256,6 +257,61 @@ export class FormulaStrategyRegistry {
 	list(): readonly MachineFormulaStrategy[] {
 		return [...this.#strategies.values()].sort((left, right) => left.id.localeCompare(right.id));
 	}
+}
+
+export interface NormalizedFormulaCatalog {
+	readonly buildings: readonly {
+		readonly id: string;
+		readonly displayName: string;
+		readonly powerConsumptionMW: RationalJson;
+	}[];
+	readonly recipes: readonly {
+		readonly id: string;
+		readonly displayName: string;
+		readonly producedIn: readonly string[];
+		readonly ingredients: readonly {
+			readonly itemId: string;
+			readonly ratePerMinute: RationalJson;
+		}[];
+		readonly products: readonly {
+			readonly itemId: string;
+			readonly ratePerMinute: RationalJson;
+		}[];
+	}[];
+}
+
+export function createFormulaRegistryFromCatalog(
+	catalog: NormalizedFormulaCatalog,
+	catalogVersion: string,
+): FormulaStrategyRegistry {
+	const buildings = new Map(catalog.buildings.map((building) => [building.id, building]));
+	const registry = new FormulaStrategyRegistry();
+	for (const recipe of catalog.recipes) {
+		for (const buildingId of recipe.producedIn) {
+			const building = buildings.get(buildingId);
+			if (!building) continue;
+			registry.register({
+				id: `${catalogVersion}:${buildingId}:${recipe.id}`,
+				catalogVersion,
+				buildingId,
+				recipeId: recipe.id,
+				displayName: recipe.displayName,
+				basePowerMW: Number(Rational.parse(building.powerConsumptionMW).toDecimal(12)),
+				powerExponent: PRODUCTION_POWER_EXPONENT,
+				inputs: recipe.ingredients.map((amount, index) => ({
+					portKey: `input-${index}`,
+					materialId: amount.itemId,
+					ratePerMinute: amount.ratePerMinute,
+				})),
+				outputs: recipe.products.map((amount, index) => ({
+					portKey: `output-${index}`,
+					materialId: amount.itemId,
+					ratePerMinute: amount.ratePerMinute,
+				})),
+			});
+		}
+	}
+	return registry;
 }
 
 function rate(portKey: string, materialId: string, value: string): FormulaMaterialRate {
