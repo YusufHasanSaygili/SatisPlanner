@@ -41,5 +41,5 @@ Tam suite, sentetik graph benchmarks, fuzz/property runs, memory/leak smoke.
   başarılı; coverage/performance evidence, sıfır-retry E2E, Rust fmt/clippy/test ve
   Windows/macOS/Linux release-binary smoke geçti.
 - Codex notification: `SatisPlanner v0.14.0 yayımlandı. Slice 14/16 tamamlandı. Slice 14'e devam edilsin mi?`
-- User approval: Bekleniyor.
+- User approval: 2026-08-13 tarihinde kullanıcı `Devam` diyerek Slice 14 için açık onay verdi.
 - Tarih: 2026-08-12

@@ -71,7 +71,7 @@ test("renders the SatisPlanner graph shell and searchable fallback library", asy
 	await expect(matches.nth(0)).toContainText("Build_ConstructorMk1_C::Recipe_IronPlate_C");
 	await expect(matches.nth(1)).toContainText("Build_ConstructorMk1_C::Recipe_IronRod_C");
 	await expect(page.getByRole("status").first()).toContainText(
-		"Contract v2 · browser-mock · v0.14.0",
+		"Contract v2 · browser-mock · v0.15.0",
 	);
 });
 

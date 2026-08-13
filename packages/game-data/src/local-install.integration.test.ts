@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { discoverDocsSources, type ReadOnlySourceFileSystem } from "./discovery";
@@ -50,6 +51,16 @@ localDescribe("installed Satisfactory Docs smoke", () => {
 			buildId: process.env.SATISPLANNER_LOCAL_BUILD_ID,
 		});
 		if (!result.ok) throw new Error(JSON.stringify(result.diagnostics.slice(0, 10)));
+		console.info(
+			"SatisPlanner real Docs smoke:",
+			JSON.stringify({
+				sourceBytes: before.byteLength,
+				sourceSha256: createHash("sha256").update(before).digest("hex"),
+				items: result.snapshot.catalog.items.length,
+				buildings: result.snapshot.catalog.buildings.length,
+				recipes: result.snapshot.catalog.recipes.length,
+			}),
+		);
 		expect(result.ok).toBe(true);
 		expect(result.snapshot.catalog.items.length).toBeGreaterThan(100);
 		expect(result.snapshot.catalog.buildings.length).toBeGreaterThan(5);

@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "SatisPlanner",
-	"version": "0.14.0",
+  "version": "0.15.0",
   "identifier": "dev.satisplanner.desktop",
   "build": {
     "beforeDevCommand": "pnpm dev:web",
@@ -25,13 +25,29 @@
     }
   },
   "bundle": {
-    "active": false,
+    "active": true,
+    "targets": ["nsis"],
+    "publisher": "Yusuf Hasan Saygili",
+    "copyright": "Copyright (c) 2026 Yusuf Hasan Saygili and contributors",
+    "shortDescription": "Offline-first Satisfactory 1.2 factory planner",
+    "longDescription": "SatisPlanner is an offline-first graph-based desktop factory planner for Satisfactory 1.2.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "installerIcon": "icons/icon.ico",
+        "displayLanguageSelector": false
+      }
+    }
   }
 }
