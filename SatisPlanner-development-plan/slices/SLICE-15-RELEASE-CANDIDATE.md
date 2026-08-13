@@ -30,12 +30,12 @@ RC full regression, docs link check, artifact content scan, user acceptance walk
 
 ## Delivery Record
 
-- Branch:
-- Closing SHA:
-- Remote SHA:
-- Tag:
-- GitHub Release URL:
-- CI:
-- Codex notification:
-- User approval:
-- Tarih:
+- Branch: `slice/15-release-candidate`
+- Closing SHA: `b5ded6ed80752057d3b64eb1698e05dda74e5ce0`
+- Remote SHA: `b5ded6ed80752057d3b64eb1698e05dda74e5ce0` (`origin/slice/15-release-candidate` ve `origin/main`)
+- Tag: `v1.0.0` (annotated tag object `b485217efb14944f9eedba182e75e2f78bc56bba`, target `b5ded6ed80752057d3b64eb1698e05dda74e5ce0`)
+- GitHub Release URL: https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v1.0.0
+- CI: [branch quality](https://github.com/YusufHasanSaygili/SatisPlanner/actions/runs/31679181775), [main quality](https://github.com/YusufHasanSaygili/SatisPlanner/actions/runs/31679728283), [verified release](https://github.com/YusufHasanSaygili/SatisPlanner/actions/runs/31680296982)
+- Codex notification: `SatisPlanner v1.0.0 yayımlandı. Slice 16/16 tamamlandı. Release kabul edilsin ve geliştirme görevi tamamlandı olarak kapatılsın mı?`
+- User approval: Bekleniyor
+- Tarih: 2026-08-13
