@@ -29,12 +29,12 @@ Packaged app E2E, install/uninstall, no-game fallback, real-game import smoke.
 
 ## Delivery Record
 
-- Branch:
-- Closing SHA:
-- Remote SHA:
-- Tag:
-- GitHub Release URL:
-- CI:
-- Codex notification:
-- User approval:
-- Tarih:
+- Branch: `slice/14-packaging-release`
+- Closing SHA: `ed08120c404e6846dcf6afe2d8b6c257b605d10c`
+- Remote SHA: `ed08120c404e6846dcf6afe2d8b6c257b605d10c`
+- Tag: `v0.15.0` (annotated, target `ed08120c404e6846dcf6afe2d8b6c257b605d10c`)
+- GitHub Release URL: https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v0.15.0
+- CI: main quality https://github.com/YusufHasanSaygili/SatisPlanner/actions/runs/31674323977; verified release https://github.com/YusufHasanSaygili/SatisPlanner/actions/runs/31674862542
+- Codex notification: `SatisPlanner v0.15.0 yayımlandı. Slice 15/16 tamamlandı. Slice 15'e devam edilsin mi?`
+- User approval: Bekleniyor.
+- Tarih: 2026-08-13
