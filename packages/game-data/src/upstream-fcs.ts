@@ -268,7 +268,7 @@ export function previewUpstreamFcsImport(
 	}
 	const now = "2026-08-11T00:00:00.000Z";
 	const plan: FactoryPlanV4 = {
-		schemaVersion: 5,
+		schemaVersion: 6,
 		planId,
 		name: "Imported upstream factory",
 		createdAt: now,

@@ -14,7 +14,7 @@ import { Rational, type RationalJson } from "./rational";
 import { getTransportTier } from "./transport";
 import { ClockPercent } from "./units";
 
-export const FACTORY_PLAN_SCHEMA_VERSION = 5 as const;
+export const FACTORY_PLAN_SCHEMA_VERSION = 6 as const;
 export const MAX_FACTORY_PLAN_JSON_BYTES = 8 * 1024 * 1024;
 export const MAX_FACTORY_PLAN_JSON_DEPTH = 128;
 export const MAX_FACTORY_PLAN_JSON_VALUES = 250_000;
@@ -72,7 +72,16 @@ export interface ResourcePlanNodeV3 {
 	readonly ports: readonly PlanPortV3[];
 }
 
-export type PlanNodeV3 = MachinePlanNodeV3 | ResourcePlanNodeV3;
+export interface JunctionPlanNodeV3 {
+	readonly kind: "junction";
+	readonly id: string;
+	readonly junctionType: "splitter" | "merger";
+	readonly displayName: string;
+	readonly position: { readonly x: number; readonly y: number };
+	readonly ports: readonly [PlanPortV3, PlanPortV3];
+}
+
+export type PlanNodeV3 = MachinePlanNodeV3 | ResourcePlanNodeV3 | JunctionPlanNodeV3;
 
 export interface TransportEdgeV4 {
 	readonly id: string;
@@ -477,6 +486,70 @@ function validateResourceNode(
 	}
 }
 
+function validateJunctionNode(
+	value: unknown,
+	index: number,
+	issues: PlanValidationIssue[],
+	entityIds: Set<string>,
+	portIds: Set<string>,
+): void {
+	const path = `$.nodes[${index}]`;
+	const node = requireRecord(value, path, issues);
+	if (!node) return;
+	if (node.kind !== "junction") issue(issues, "INVALID_PLAN", `${path}.kind`, "Expected junction.");
+	if (requireUuid(node.id, `${path}.id`, issues)) {
+		if (entityIds.has(node.id) || portIds.has(node.id))
+			issue(issues, "INVALID_PLAN", `${path}.id`, "Duplicate plan UUID.");
+		entityIds.add(node.id);
+	}
+	if (node.junctionType !== "splitter" && node.junctionType !== "merger") {
+		issue(issues, "INVALID_PLAN", `${path}.junctionType`, "Expected splitter or merger.");
+	}
+	requireString(node.displayName, `${path}.displayName`, issues);
+	const position = requireRecord(node.position, `${path}.position`, issues);
+	if (position) {
+		requireFiniteNumber(position.x, `${path}.position.x`, issues);
+		requireFiniteNumber(position.y, `${path}.position.y`, issues);
+	}
+	if (!Array.isArray(node.ports) || node.ports.length !== 2) {
+		issue(
+			issues,
+			"INVALID_PLAN",
+			`${path}.ports`,
+			"Junction nodes require one input and one output port.",
+		);
+		return;
+	}
+	for (const [portIndex, direction] of ["input", "output"].entries()) {
+		const portPath = `${path}.ports[${portIndex}]`;
+		const port = requireRecord(node.ports[portIndex], portPath, issues);
+		if (!port) continue;
+		if (requireUuid(port.id, `${portPath}.id`, issues)) {
+			if (portIds.has(port.id) || entityIds.has(port.id))
+				issue(issues, "INVALID_PLAN", `${portPath}.id`, "Duplicate plan UUID.");
+			portIds.add(port.id);
+		}
+		if (port.key !== `${direction}-0`)
+			issue(issues, "INVALID_PLAN", `${portPath}.key`, `Expected ${direction}-0.`);
+		if (port.direction !== direction)
+			issue(issues, "INVALID_PLAN", `${portPath}.direction`, `Expected ${direction}.`);
+		if (port.materialForm !== "solid")
+			issue(
+				issues,
+				"INVALID_PLAN",
+				`${portPath}.materialForm`,
+				"Splitter and merger ports require solid materials.",
+			);
+		if (port.materialId !== "*")
+			issue(
+				issues,
+				"INVALID_PLAN",
+				`${portPath}.materialId`,
+				"Junction material binding must remain automatic.",
+			);
+	}
+}
+
 function validateEdge(
 	value: unknown,
 	index: number,
@@ -662,6 +735,8 @@ function collectFactoryPlanIssues(value: JsonObject): readonly PlanValidationIss
 		for (const [index, node] of value.nodes.entries()) {
 			if (isRecord(node) && node.kind === "resource") {
 				validateResourceNode(node, index, issues, entityIds, portIds);
+			} else if (isRecord(node) && node.kind === "junction") {
+				validateJunctionNode(node, index, issues, entityIds, portIds);
 			} else {
 				validateMachineNode(node, index, issues, entityIds, portIds);
 			}
@@ -836,6 +911,13 @@ export const planMigrationRegistry = new PlanMigrationRegistry()
 				gameProfile: DEFAULT_SATISFACTORY_12_PROFILE,
 				localization: { uiLocale: "en", gameDataLocale: "en-US", gameDataFallbackLocale: "en-US" },
 			} as unknown as JsonObject;
+		},
+	})
+	.register({
+		fromVersion: 5,
+		toVersion: 6,
+		migrate(plan) {
+			return { ...plan, schemaVersion: 6 } as JsonObject;
 		},
 	});
 

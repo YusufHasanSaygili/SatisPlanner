@@ -17,7 +17,7 @@ describe("plan import/export and migration reports", () => {
 		const bundle = createPlanExportBundle(parsed.value, "2026-08-11T20:00:00.000Z");
 		expect(bundle.manifest).toMatchObject({
 			formatVersion: 1,
-			planSchemaVersion: 5,
+			planSchemaVersion: 6,
 			gameDataSnapshotId: "fallback-graph-catalog-v2",
 		});
 		const preview = previewFactoryPlanImport(
@@ -29,8 +29,8 @@ describe("plan import/export and migration reports", () => {
 		if (!preview.ok) return;
 		expect(serializeFactoryPlan(preview.plan)).toBe(serializeFactoryPlan(parsed.value));
 		expect(preview.report).toMatchObject({
-			sourceSchemaVersion: 5,
-			targetSchemaVersion: 5,
+			sourceSchemaVersion: 6,
+			targetSchemaVersion: 6,
 			appliedVersions: [],
 			snapshotStatus: "match",
 			unresolvedRecipeIds: [],
@@ -46,8 +46,8 @@ describe("plan import/export and migration reports", () => {
 			const preview = previewFactoryPlanImport(original, "different-snapshot");
 			expect(preview.ok, `v${version}`).toBe(true);
 			if (!preview.ok) continue;
-			expect(preview.plan.schemaVersion).toBe(5);
-			expect(preview.report.appliedVersions).toHaveLength(5 - version);
+			expect(preview.plan.schemaVersion).toBe(6);
+			expect(preview.report.appliedVersions).toHaveLength(6 - version);
 			expect(preview.report.snapshotStatus).toBe("mismatch");
 			expect(preview.originalText).toBe(original);
 		}

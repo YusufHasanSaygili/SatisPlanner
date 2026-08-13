@@ -93,7 +93,7 @@
 		}
 	],
 	"planId": "10000000-0000-4000-8000-000000000000",
-	"schemaVersion": 5,
+	"schemaVersion": 6,
 	"updatedAt": "2026-08-13T00:00:00.000Z",
 	"userMetadata": {
 		"exampleId": "coal-mk5-bottleneck",
@@ -101,7 +101,7 @@
 		"expectedLostPerMinute": "420",
 		"expectedSourcePerMinute": "1200",
 		"license": "MIT",
-		"satisPlannerVersion": "1.0.1"
+		"satisPlannerVersion": "1.0.2"
 	},
 	"viewport": { "x": 40, "y": 40, "zoom": 1 }
 }

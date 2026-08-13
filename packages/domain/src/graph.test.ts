@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	DEFAULT_SATISFACTORY_12_PROFILE,
+	addJunctionNode,
 	addMachineNode,
 	addResourceNode,
 	connectMachinePorts,
@@ -22,7 +23,7 @@ const baseTime = "2026-08-11T00:00:00.000Z";
 
 function emptyPlan(): FactoryPlanV3 {
 	return {
-		schemaVersion: 5,
+		schemaVersion: 6,
 		planId: "00000000-0000-4000-8000-000000000001",
 		name: "Graph command test",
 		createdAt: baseTime,
@@ -68,6 +69,63 @@ function ids(seed: number) {
 }
 
 describe("domain-backed graph commands", () => {
+	it("creates material-bound splitter junctions and enforces their 1-to-3 connection limit", () => {
+		let plan = addMachineNode(
+			emptyPlan(),
+			template("Producer", { form: "solid", id: "Ore" }, { form: "solid", id: "Ingot" }),
+			{ x: 0, y: 0 },
+			ids(10),
+		);
+		plan = addJunctionNode(
+			plan,
+			{
+				classId: "junction:splitter",
+				displayName: "Conveyor Splitter",
+				category: "Logistics",
+				junctionType: "splitter",
+				aliases: [],
+			},
+			{ x: 300, y: 0 },
+			ids(20),
+		);
+		for (const seed of [30, 40, 50, 60]) {
+			plan = addMachineNode(
+				plan,
+				template(`Consumer-${seed}`, { form: "solid", id: "Ingot" }, { form: "solid", id: "Part" }),
+				{ x: 600, y: seed },
+				ids(seed),
+			);
+		}
+		const feed = connectMachinePorts(plan, {
+			edgeId: "00000000-0000-4000-8000-000000000101",
+			sourceNodeId: ids(10).nodeId,
+			sourcePortId: ids(10).portIds[1] as string,
+			targetNodeId: ids(20).nodeId,
+			targetPortId: ids(20).portIds[0] as string,
+		});
+		expect(feed.validation).toMatchObject({ ok: true, materialId: "Ingot" });
+		plan = feed.plan;
+		for (const [index, seed] of [30, 40, 50].entries()) {
+			const branch = connectMachinePorts(plan, {
+				edgeId: `00000000-0000-4000-8000-${String(110 + index).padStart(12, "0")}`,
+				sourceNodeId: ids(20).nodeId,
+				sourcePortId: ids(20).portIds[1] as string,
+				targetNodeId: ids(seed).nodeId,
+				targetPortId: ids(seed).portIds[0] as string,
+			});
+			expect(branch.validation.ok).toBe(true);
+			plan = branch.plan;
+		}
+		expect(
+			validateConnection(plan, {
+				sourceNodeId: ids(20).nodeId,
+				sourcePortId: ids(20).portIds[1] as string,
+				targetNodeId: ids(60).nodeId,
+				targetPortId: ids(60).portIds[0] as string,
+			}),
+		).toMatchObject({ ok: false, diagnostic: { code: "JUNCTION_PORT_LIMIT" } });
+	});
+
 	it("creates stable instances and persists position plus viewport without mutating input", () => {
 		const original = emptyPlan();
 		const added = addMachineNode(

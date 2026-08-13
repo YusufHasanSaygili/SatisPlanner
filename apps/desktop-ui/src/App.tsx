@@ -9,9 +9,11 @@ import {
 import {
 	addMachineNode,
 	addResourceNode,
+	addJunctionNode,
 	connectMachinePorts,
 	createSatisfactory12Profile,
 	DEFAULT_SATISFACTORY_12_PROFILE,
+	FACTORY_PLAN_SCHEMA_VERSION,
 	createPlanExportBundle,
 	deletePlanEntities,
 	duplicateMachineNode,
@@ -19,6 +21,7 @@ import {
 	type FactoryPlanV3,
 	type MachineSettingsPatch,
 	type MachineNodeTemplate,
+	type JunctionNodeTemplate,
 	movePlanNode,
 	parseFactoryPlan,
 	PlanCommandHistory,
@@ -64,6 +67,7 @@ import {
 } from "@satisplanner/game-data";
 import {
 	type GraphCanvasNode,
+	type JunctionCanvasNode,
 	type MachineCanvasNode,
 	autoLayoutFactoryPlan,
 	projectFactoryPlan,
@@ -83,7 +87,14 @@ import {
 	useReactFlow,
 	type Viewport,
 } from "@xyflow/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	type DragEvent as ReactDragEvent,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import type { NativeAdapter, RecoveryInspection, RuntimeInfoResult } from "./native/contracts";
 import {
 	NATIVE_CONTRACT_VERSION,
@@ -102,6 +113,23 @@ const ONBOARDING_STORAGE_KEY = "satisplanner.onboarding.v1";
 const CATALOG_STORAGE_KEY = "satisplanner.catalog.snapshot.v1";
 const DRAG_MIME = "application/x-satisplanner-node-template";
 
+const JUNCTION_LIBRARY: readonly JunctionNodeTemplate[] = Object.freeze([
+	{
+		classId: "junction:splitter",
+		displayName: "Conveyor Splitter",
+		category: "Logistics",
+		junctionType: "splitter",
+		aliases: ["splitter", "ayırıcı", "bölücü", "1 to 3"],
+	},
+	{
+		classId: "junction:merger",
+		displayName: "Conveyor Merger",
+		category: "Logistics",
+		junctionType: "merger",
+		aliases: ["merger", "birleştirici", "3 to 1"],
+	},
+]);
+
 interface SelectionState {
 	readonly nodeIds: readonly string[];
 	readonly edgeIds: readonly string[];
@@ -110,7 +138,7 @@ interface SelectionState {
 function createEmptyPlan(): FactoryPlanV3 {
 	const now = new Date().toISOString();
 	return {
-		schemaVersion: 5,
+		schemaVersion: FACTORY_PLAN_SCHEMA_VERSION,
 		planId: crypto.randomUUID(),
 		name: "My factory plan",
 		createdAt: now,
@@ -159,6 +187,58 @@ function formatFlowRate(rate: {
 	}).format(Number(Rational.parse(rate).toDecimal(4)));
 }
 
+function rateForPort(
+	rates: readonly {
+		readonly portId: string;
+		readonly ratePerMinute: { readonly numerator: string; readonly denominator: string };
+	}[],
+	portId: string,
+): string {
+	return formatFlowRate(
+		rates.find((entry) => entry.portId === portId)?.ratePerMinute ?? {
+			numerator: "0",
+			denominator: "1",
+		},
+	);
+}
+
+function flowPair(
+	actual: readonly {
+		readonly portId: string;
+		readonly ratePerMinute: { readonly numerator: string; readonly denominator: string };
+	}[],
+	capacity: readonly {
+		readonly portId: string;
+		readonly ratePerMinute: { readonly numerator: string; readonly denominator: string };
+	}[],
+	portId: string,
+): string {
+	return `${rateForPort(actual, portId)} / ${rateForPort(capacity, portId)}${document.documentElement.lang === "tr" ? "/dk" : "/min"}`;
+}
+
+function startLibraryDrag(
+	event: ReactDragEvent<HTMLButtonElement>,
+	classId: string,
+	label: string,
+	kind: "machine" | "resource" | "junction",
+): void {
+	event.dataTransfer.setData(DRAG_MIME, classId);
+	event.dataTransfer.effectAllowed = "copy";
+	event.currentTarget.classList.add("dragging");
+	const preview = document.createElement("div");
+	preview.className = `catalog-drag-preview ${kind}`;
+	preview.innerHTML = `<span aria-hidden="true">${kind === "resource" ? "◆" : kind === "junction" ? "⇄" : "▣"}</span><strong></strong>`;
+	const strong = preview.querySelector("strong");
+	if (strong) strong.textContent = label;
+	document.body.append(preview);
+	event.dataTransfer.setDragImage(preview, 28, 24);
+	setTimeout(() => preview.remove(), 0);
+}
+
+function endLibraryDrag(event: ReactDragEvent<HTMLButtonElement>): void {
+	event.currentTarget.classList.remove("dragging");
+}
+
 function formatEfficiency(
 	rate: { readonly numerator: string; readonly denominator: string } | null,
 ): string {
@@ -187,7 +267,11 @@ function MachineNodeCard({ data, selected }: NodeProps<MachineCanvasNode>) {
 							aria-label={`Input ${port.materialId}`}
 						/>
 						<span>{formatMaterialId(port.materialId)}</span>
-						<small>{port.materialForm}</small>
+						<small className="port-rate" title="Actual / required per minute">
+							{data.flow
+								? flowPair(data.flow.actualInputs, data.flow.requiredInputs, port.id)
+								: "—"}
+						</small>
 					</div>
 				))}
 			</section>
@@ -195,7 +279,11 @@ function MachineNodeCard({ data, selected }: NodeProps<MachineCanvasNode>) {
 				{data.outputs.map((port, index) => (
 					<div className="port-row output" key={port.id}>
 						<span>{formatMaterialId(port.materialId)}</span>
-						<small>{port.materialForm}</small>
+						<small className="port-rate" title="Actual / maximum per minute">
+							{data.flow
+								? flowPair(data.flow.actualOutputs, data.flow.potentialOutputs, port.id)
+								: "—"}
+						</small>
 						<Handle
 							id={port.id}
 							type="source"
@@ -222,7 +310,11 @@ function ResourceNodeCard({ data, selected }: NodeProps<ResourceCanvasNode>) {
 			</div>
 			<div className="port-row output resource-output">
 				<span>{formatMaterialId(data.output.materialId)}</span>
-				<small>{data.output.materialForm}</small>
+				<small className="port-rate" title="Extraction per minute">
+					{data.flow
+						? `${rateForPort(data.flow.potentialOutputs, data.output.id)}${document.documentElement.lang === "tr" ? "/dk" : "/min"}`
+						: "—"}
+				</small>
 				<Handle
 					id={data.output.id}
 					type="source"
@@ -234,7 +326,51 @@ function ResourceNodeCard({ data, selected }: NodeProps<ResourceCanvasNode>) {
 	);
 }
 
-const nodeTypes = { machine: MachineNodeCard, resource: ResourceNodeCard };
+function JunctionNodeCard({ data, selected }: NodeProps<JunctionCanvasNode>) {
+	const actualInput = data.flow ? rateForPort(data.flow.actualInputs, data.input.id) : "0";
+	const actualOutput = data.flow ? rateForPort(data.flow.actualOutputs, data.output.id) : "0";
+	const unit = document.documentElement.lang === "tr" ? "/dk" : "/min";
+	return (
+		<div className={selected ? "junction-node selected" : "junction-node"}>
+			<p className="junction-node-kind">Logistics</p>
+			<div className="machine-node-title">{data.label}</div>
+			<div className="junction-node-summary">
+				{data.junctionType === "splitter"
+					? "1 input → up to 3 outputs"
+					: "Up to 3 inputs → 1 output"}
+			</div>
+			<div className="junction-flow">
+				<span>
+					{actualInput}
+					{unit} in
+				</span>
+				<strong>→</strong>
+				<span>
+					{actualOutput}
+					{unit} out
+				</span>
+			</div>
+			<Handle
+				id={data.input.id}
+				type="target"
+				position={Position.Left}
+				aria-label="Junction input"
+			/>
+			<Handle
+				id={data.output.id}
+				type="source"
+				position={Position.Right}
+				aria-label="Junction output"
+			/>
+		</div>
+	);
+}
+
+const nodeTypes = {
+	machine: MachineNodeCard,
+	resource: ResourceNodeCard,
+	junction: JunctionNodeCard,
+};
 
 function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapter }) {
 	const flow = useReactFlow<GraphCanvasNode>();
@@ -255,9 +391,13 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 	const [selection, setSelection] = useState<SelectionState>({ nodeIds: [], edgeIds: [] });
 	const [diagnosticCursor, setDiagnosticCursor] = useState(-1);
 	const [sloopCursor, setSloopCursor] = useState(-1);
-	const [minimapFilter, setMinimapFilter] = useState<"all" | "machine" | "resource">("all");
+	const [minimapFilter, setMinimapFilter] = useState<"all" | "machine" | "resource" | "junction">(
+		"all",
+	);
 	const [query, setQuery] = useState("");
-	const [libraryKind, setLibraryKind] = useState<"machines" | "resources">("machines");
+	const [libraryKind, setLibraryKind] = useState<"machines" | "resources" | "logistics">(
+		"machines",
+	);
 	const [machineRecipeQuery, setMachineRecipeQuery] = useState("");
 	const [machineError, setMachineError] = useState<string | null>(null);
 	const [diagnostic, setDiagnostic] = useState(
@@ -326,8 +466,14 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 	}, []);
 
 	const projection = useMemo(
-		() => projectFactoryPlan(plan, new Set(selection.nodeIds), new Set(selection.edgeIds)),
-		[plan, selection],
+		() =>
+			projectFactoryPlan(
+				plan,
+				new Set(selection.nodeIds),
+				new Set(selection.edgeIds),
+				new Map(flowResult.nodes.map((entry) => [entry.nodeId, entry])),
+			),
+		[flowResult.nodes, plan, selection],
 	);
 	const flowNodes = useMemo(() => [...projection.nodes], [projection.nodes]);
 	const flowEdges = useMemo(
@@ -373,6 +519,16 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 				),
 			),
 		[activeCatalog.resources, query, plan.localization.gameDataLocale],
+	);
+	const filteredJunctions = useMemo(
+		() =>
+			JUNCTION_LIBRARY.filter((entry) =>
+				[entry.displayName, entry.classId, ...entry.aliases]
+					.join(" ")
+					.toLocaleLowerCase()
+					.includes(query.trim().toLocaleLowerCase()),
+			),
+		[query],
 	);
 
 	useEffect(() => {
@@ -654,6 +810,7 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 				(entry) => entry.classId === classId,
 			);
 			const resourceTemplate = activeCatalog.resources.find((entry) => entry.classId === classId);
+			const junctionTemplate = JUNCTION_LIBRARY.find((entry) => entry.classId === classId);
 			const nodeId = crypto.randomUUID();
 			const position = {
 				x: 120 + (plan.nodes.length % 4) * 280,
@@ -672,6 +829,19 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 				setDiagnostic(
 					`${resourceTemplate.displayName} added from the keyboard-accessible library.`,
 				);
+				return;
+			}
+			if (junctionTemplate) {
+				setPlan(
+					(current) =>
+						addJunctionNode(current, junctionTemplate, position, {
+							nodeId,
+							portIds: [crypto.randomUUID(), crypto.randomUUID()],
+						}),
+					"Add logistics junction from library",
+				);
+				setSelection({ nodeIds: [nodeId], edgeIds: [] });
+				setDiagnostic(`${junctionTemplate.displayName} added from the logistics library.`);
 				return;
 			}
 			if (machineTemplate) {
@@ -740,6 +910,7 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 	]);
 	const selectedResource = selectedNode?.kind === "resource" ? selectedNode : undefined;
 	const selectedMachine = selectedNode?.kind === "machine" ? selectedNode : undefined;
+	const selectedJunction = selectedNode?.kind === "junction" ? selectedNode : undefined;
 	const selectedMachineDefinition = selectedMachine
 		? activeCatalog.machineBuildings.find(
 				(entry) => entry.buildingId === selectedMachine.buildingId,
@@ -1185,6 +1356,14 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 					>
 						Resources ({activeCatalog.resources.length})
 					</button>
+					<button
+						type="button"
+						aria-label="Show logistics"
+						aria-pressed={libraryKind === "logistics"}
+						onClick={() => setLibraryKind("logistics")}
+					>
+						Logistics ({JUNCTION_LIBRARY.length})
+					</button>
 				</fieldset>
 				<div className="catalog-meta" hidden={libraryKind !== "resources"}>
 					<span>{t("resources")}</span>
@@ -1205,10 +1384,10 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 							key={entry.classId}
 							aria-label={`Drag resource ${entry.displayName}`}
 							onClick={() => addTemplateFromLibrary(entry.classId)}
-							onDragStart={(event) => {
-								event.dataTransfer.setData(DRAG_MIME, entry.classId);
-								event.dataTransfer.effectAllowed = "copy";
-							}}
+							onDragStart={(event) =>
+								startLibraryDrag(event, entry.classId, entry.displayName, "resource")
+							}
+							onDragEnd={endLibraryDrag}
 						>
 							<img
 								src={`/${
@@ -1255,10 +1434,10 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 								key={entry.classId}
 								aria-label={`Drag ${buildingName}`}
 								onClick={() => addTemplateFromLibrary(entry.classId)}
-								onDragStart={(event) => {
-									event.dataTransfer.setData(DRAG_MIME, entry.classId);
-									event.dataTransfer.effectAllowed = "copy";
-								}}
+								onDragStart={(event) =>
+									startLibraryDrag(event, entry.classId, buildingName, "machine")
+								}
+								onDragEnd={endLibraryDrag}
 							>
 								<img src={`/${FALLBACK_ICON_PATHS.building}`} alt="" />
 								<span>
@@ -1279,6 +1458,42 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 							<strong>{t("noCatalogMatch")}</strong>
 						</div>
 					)}
+				</section>
+				<div className="catalog-meta" hidden={libraryKind !== "logistics"}>
+					<span>Logistics</span>
+					<small>{filteredJunctions.length} entries</small>
+				</div>
+				<section
+					className="catalog-list"
+					aria-label="Logistics catalog"
+					hidden={libraryKind !== "logistics"}
+				>
+					{filteredJunctions.map((entry) => (
+						<button
+							className="catalog-entry junction-entry"
+							type="button"
+							draggable
+							key={entry.classId}
+							aria-label={`Drag ${entry.displayName}`}
+							onClick={() => addTemplateFromLibrary(entry.classId)}
+							onDragStart={(event) =>
+								startLibraryDrag(event, entry.classId, entry.displayName, "junction")
+							}
+							onDragEnd={endLibraryDrag}
+						>
+							<span className="junction-library-icon" aria-hidden="true">
+								{entry.junctionType === "splitter" ? "1→3" : "3→1"}
+							</span>
+							<span>
+								<strong>{entry.displayName}</strong>
+								<small>
+									{entry.junctionType === "splitter"
+										? "1 input · up to 3 outputs"
+										: "Up to 3 inputs · 1 output"}
+								</small>
+							</span>
+						</button>
+					))}
 				</section>
 				<p className="catalog-policy">
 					Complete normalized Satisfactory 1.2 catalog · local Docs snapshots can replace it.
@@ -1301,7 +1516,8 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 					const resourceTemplate = activeCatalog.resources.find(
 						(entry) => entry.classId === classId,
 					);
-					if (!machineTemplate && !resourceTemplate) {
+					const junctionTemplate = JUNCTION_LIBRARY.find((entry) => entry.classId === classId);
+					if (!machineTemplate && !resourceTemplate && !junctionTemplate) {
 						setDiagnostic("The dropped library payload is not recognized.");
 						return;
 					}
@@ -1314,6 +1530,16 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 							}),
 						);
 						setDiagnostic(`${resourceTemplate.displayName} added as a resource instance.`);
+						return;
+					}
+					if (junctionTemplate) {
+						setPlan((current) =>
+							addJunctionNode(current, junctionTemplate, position, {
+								nodeId: crypto.randomUUID(),
+								portIds: [crypto.randomUUID(), crypto.randomUUID()],
+							}),
+						);
+						setDiagnostic(`${junctionTemplate.displayName} added as a logistics junction.`);
 						return;
 					}
 					if (machineTemplate) {
@@ -1399,6 +1625,7 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 							<option value="all">All</option>
 							<option value="machine">Machines</option>
 							<option value="resource">Resources</option>
+							<option value="junction">Logistics</option>
 						</select>
 					</label>
 				</nav>
@@ -1444,7 +1671,9 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 							minimapFilter === "all" || node.type === minimapFilter
 								? node.type === "resource"
 									? "#70b987"
-									: "#6db6e8"
+									: node.type === "junction"
+										? "#d6a654"
+										: "#6db6e8"
 								: "transparent"
 						}
 					/>
@@ -1682,7 +1911,7 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 				{selectionCount === 0 && (
 					<div className="empty-state">
 						<strong>Nothing selected</strong>
-						<p>Select a machine or connection to inspect its domain instance.</p>
+						<p>Select a resource, machine, logistics junction or connection to inspect it.</p>
 					</div>
 				)}
 				{selectionCount > 1 && (
@@ -1690,6 +1919,40 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 						<p className="eyebrow">Multiple selection</p>
 						<h2>{selectionCount} graph entities</h2>
 						<p>Bulk editing arrives in a later UX slice. Delete is available now.</p>
+					</section>
+				)}
+				{selectedJunction && (
+					<section className="inspector-card" aria-label="Logistics junction inspector">
+						<p className="eyebrow">Logistics junction</p>
+						<h2>{selectedJunction.displayName}</h2>
+						<dl>
+							<div>
+								<dt>UUID</dt>
+								<dd>{selectedJunction.id}</dd>
+							</div>
+							<div>
+								<dt>Topology</dt>
+								<dd>
+									{selectedJunction.junctionType === "splitter"
+										? "1 input → up to 3 equal-demand outputs"
+										: "Up to 3 inputs → 1 conserved output"}
+								</dd>
+							</div>
+						</dl>
+						<section className="calculation-card" aria-label="Junction calculation results">
+							<strong>Live throughput</strong>
+							<p>
+								{selectedNodeFlow?.actualInputs[0]
+									? formatFlowRate(selectedNodeFlow.actualInputs[0].ratePerMinute)
+									: "0"}
+								/min in ·{" "}
+								{selectedNodeFlow?.actualOutputs[0]
+									? formatFlowRate(selectedNodeFlow.actualOutputs[0].ratePerMinute)
+									: "0"}
+								/min out
+							</p>
+							<small>Junctions never create or consume material.</small>
+						</section>
 					</section>
 				)}
 				{selectedMachine && (
@@ -2171,7 +2434,7 @@ export default function App() {
 						aria-modal="true"
 						aria-labelledby="onboarding-title"
 					>
-						<p className="eyebrow">SatisPlanner 1.0.1 · first run</p>
+						<p className="eyebrow">SatisPlanner 1.0.2 · first run</p>
 						<h2 id="onboarding-title">Build your first factory offline</h2>
 						<p>
 							No Satisfactory installation is required. The bundled catalog contains 13 extractable
@@ -2189,8 +2452,9 @@ export default function App() {
 								activation is not in v1.0; game artwork is never bundled.
 							</li>
 							<li>
-								<strong>Plan:</strong> drag a resource or machine from the library, connect matching
-								ports, then edit clock, Power Shards and Somersloops in the inspector.
+								<strong>Plan:</strong> drag a resource, machine or Logistics junction from the
+								library, connect matching ports, then read per-minute rates on the cards and edit
+								clock, Power Shards and Somersloops in the inspector.
 							</li>
 						</ol>
 						<p className="onboarding-note">

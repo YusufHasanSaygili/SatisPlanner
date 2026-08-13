@@ -31,7 +31,7 @@ export function createMockNativeAdapter(options: MockNativeOptions = {}): Native
 			if (request.command.type === "system.runtime-info") {
 				return success({
 					applicationName: "SatisPlanner",
-					applicationVersion: "1.0.1",
+					applicationVersion: "1.0.2",
 					runtime: "browser-mock",
 				});
 			}

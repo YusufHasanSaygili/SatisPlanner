@@ -2,6 +2,7 @@ import { DomainValidationError } from "./errors";
 import { ClockPercent } from "./units";
 import type {
 	FactoryPlanV3,
+	JunctionPlanNodeV3,
 	MachinePlanNodeV3,
 	PlanNodeV3,
 	PlanPortV3,
@@ -51,6 +52,14 @@ export interface ResourceNodeTemplate {
 	readonly aliases: readonly string[];
 }
 
+export interface JunctionNodeTemplate {
+	readonly classId: "junction:splitter" | "junction:merger";
+	readonly displayName: "Conveyor Splitter" | "Conveyor Merger";
+	readonly category: "Logistics";
+	readonly junctionType: "splitter" | "merger";
+	readonly aliases: readonly string[];
+}
+
 export interface NodeIdentitySet {
 	readonly nodeId: string;
 	readonly portIds: readonly string[];
@@ -75,7 +84,8 @@ export type GraphDiagnosticCode =
 	| "MATERIAL_FORM_MISMATCH"
 	| "MATERIAL_ID_MISMATCH"
 	| "MEDIUM_MISMATCH"
-	| "DUPLICATE_CONNECTION";
+	| "DUPLICATE_CONNECTION"
+	| "JUNCTION_PORT_LIMIT";
 
 export interface GraphDiagnostic {
 	readonly code: GraphDiagnosticCode;
@@ -174,6 +184,41 @@ export function addResourceNode(
 	return { ...withUpdatedAt(plan), nodes: [...plan.nodes, node] };
 }
 
+export function addJunctionNode(
+	plan: FactoryPlanV3,
+	template: JunctionNodeTemplate,
+	position: CanvasPosition,
+	identities: NodeIdentitySet,
+): FactoryPlanV3 {
+	if (identities.portIds.length !== 2) {
+		throw new Error("A junction graph node requires stable input and output UUIDs.");
+	}
+	const node: JunctionPlanNodeV3 = {
+		kind: "junction",
+		id: identities.nodeId,
+		junctionType: template.junctionType,
+		displayName: template.displayName,
+		position: { ...position },
+		ports: [
+			{
+				id: identities.portIds[0] as string,
+				key: "input-0",
+				direction: "input",
+				materialForm: "solid",
+				materialId: "*",
+			},
+			{
+				id: identities.portIds[1] as string,
+				key: "output-0",
+				direction: "output",
+				materialForm: "solid",
+				materialId: "*",
+			},
+		],
+	};
+	return { ...withUpdatedAt(plan), nodes: [...plan.nodes, node] };
+}
+
 export function movePlanNode(
 	plan: FactoryPlanV3,
 	nodeId: string,
@@ -192,6 +237,41 @@ export function setPlanViewport(
 	viewport: FactoryPlanV3["viewport"],
 ): FactoryPlanV3 {
 	return { ...withUpdatedAt(plan), viewport: { ...viewport } };
+}
+
+function junctionMaterial(plan: FactoryPlanV3, node: PlanNodeV3): string | undefined {
+	if (node.kind !== "junction") return undefined;
+	const portIds = new Set(node.ports.map((port) => port.id));
+	return plan.edges.find((edge) => portIds.has(edge.fromPortId) || portIds.has(edge.toPortId))
+		?.itemOrFluidId;
+}
+
+function junctionLimitDiagnostic(
+	plan: FactoryPlanV3,
+	source: { readonly node: PlanNodeV3; readonly port: PlanPortV3 },
+	target: { readonly node: PlanNodeV3; readonly port: PlanPortV3 },
+): GraphDiagnostic | undefined {
+	if (source.node.kind === "junction") {
+		const outgoing = plan.edges.filter((edge) => edge.fromPortId === source.port.id).length;
+		const limit = source.node.junctionType === "splitter" ? 3 : 1;
+		if (outgoing >= limit) {
+			return {
+				code: "JUNCTION_PORT_LIMIT",
+				message: `${source.node.displayName} supports at most ${limit} outgoing connection${limit === 1 ? "" : "s"}.`,
+			};
+		}
+	}
+	if (target.node.kind === "junction") {
+		const incoming = plan.edges.filter((edge) => edge.toPortId === target.port.id).length;
+		const limit = target.node.junctionType === "merger" ? 3 : 1;
+		if (incoming >= limit) {
+			return {
+				code: "JUNCTION_PORT_LIMIT",
+				message: `${target.node.displayName} supports at most ${limit} incoming connection${limit === 1 ? "" : "s"}.`,
+			};
+		}
+	}
+	return undefined;
 }
 
 export function validateConnection(
@@ -218,9 +298,11 @@ export function validateConnection(
 	if (source.node.id === target.node.id) {
 		return {
 			ok: false,
-			diagnostic: { code: "SELF_CONNECTION", message: "A machine cannot connect to itself." },
+			diagnostic: { code: "SELF_CONNECTION", message: "A node cannot connect to itself." },
 		};
 	}
+	const junctionLimit = junctionLimitDiagnostic(plan, source, target);
+	if (junctionLimit) return { ok: false, diagnostic: junctionLimit };
 	if (source.port.materialForm !== target.port.materialForm) {
 		return {
 			ok: false,
@@ -230,12 +312,26 @@ export function validateConnection(
 			},
 		};
 	}
-	if (source.port.materialId !== target.port.materialId) {
+	const sourceMaterial =
+		source.port.materialId === "*" ? junctionMaterial(plan, source.node) : source.port.materialId;
+	const targetMaterial =
+		target.port.materialId === "*" ? junctionMaterial(plan, target.node) : target.port.materialId;
+	if (!sourceMaterial && !targetMaterial) {
 		return {
 			ok: false,
 			diagnostic: {
 				code: "MATERIAL_ID_MISMATCH",
-				message: `Material mismatch: ${source.port.materialId} cannot feed ${target.port.materialId}.`,
+				message:
+					"Connect at least one junction to a material-producing or material-consuming node first.",
+			},
+		};
+	}
+	if (sourceMaterial && targetMaterial && sourceMaterial !== targetMaterial) {
+		return {
+			ok: false,
+			diagnostic: {
+				code: "MATERIAL_ID_MISMATCH",
+				message: `Material mismatch: ${sourceMaterial} cannot feed ${targetMaterial}.`,
 			},
 		};
 	}
@@ -266,7 +362,7 @@ export function validateConnection(
 			},
 		};
 	}
-	return { ok: true, medium, materialId: source.port.materialId };
+	return { ok: true, medium, materialId: sourceMaterial ?? (targetMaterial as string) };
 }
 
 export function connectMachinePorts(

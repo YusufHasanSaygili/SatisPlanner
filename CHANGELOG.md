@@ -3,6 +3,18 @@
 All notable SatisPlanner changes are documented here. Versions follow Semantic Versioning while
 the application remains in published development.
 
+## [1.0.2] - 2026-08-13
+
+### Fixed
+
+- Added actual/required input and actual/maximum output rates per minute directly to resource and
+  production graph cards.
+- Restored a visible, styled card preview while dragging Resources, Machines and Logistics entries.
+- Added persistent Conveyor Splitter and Conveyor Merger nodes with live conserved throughput,
+  material binding and vanilla 1-to-3 / 3-to-1 connection limits.
+- Added schema v6 migration so v1.0.0/v1.0.1 plans load unchanged while logistics nodes serialize
+  and round-trip safely.
+
 ## [1.0.1] - 2026-08-13
 
 ### Fixed

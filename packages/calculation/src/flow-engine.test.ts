@@ -1,6 +1,7 @@
 import {
 	DEFAULT_SATISFACTORY_12_PROFILE,
 	type FactoryPlanV3,
+	type JunctionPlanNodeV3,
 	type MachinePlanNodeV3,
 	type PlanNodeV3,
 	type PlanPortV3,
@@ -62,6 +63,25 @@ function machine(
 	};
 }
 
+function junction(
+	id: string,
+	junctionType: "splitter" | "merger",
+	inputPortId: string,
+	outputPortId: string,
+): JunctionPlanNodeV3 {
+	return {
+		kind: "junction",
+		id,
+		junctionType,
+		displayName: junctionType === "splitter" ? "Conveyor Splitter" : "Conveyor Merger",
+		position: { x: 0, y: 0 },
+		ports: [
+			port(inputPortId, "input-0", "input", "*"),
+			port(outputPortId, "output-0", "output", "*"),
+		],
+	};
+}
+
 function connection(
 	id: string,
 	fromPortId: string,
@@ -82,7 +102,7 @@ function connection(
 
 function plan(nodes: readonly PlanNodeV3[], edges: readonly TransportEdgeV3[]): FactoryPlanV3 {
 	return {
-		schemaVersion: 5,
+		schemaVersion: 6,
 		planId: "flow-test",
 		name: "Flow test",
 		createdAt: "2026-08-11T00:00:00.000Z",
@@ -269,6 +289,65 @@ describe("deterministic material flow", () => {
 		).toBe("30");
 		expect(resultRate(result, "node-input", "target-in").toString()).toBe("30");
 		expect(resultRate(result, "node-output", "target-out").toString()).toBe("30");
+	});
+
+	it("routes live rates through explicit splitter and merger junction nodes", () => {
+		const source = resource("junction-source", "junction-source-out");
+		const splitter = junction("splitter", "splitter", "splitter-in", "splitter-out");
+		const left = machine("split-left", "Build_SmelterMk1_C", "Recipe_IronIngot_C", [
+			port("split-left-in", "input-0", "input", "Desc_OreIron_C"),
+			port("split-left-out", "output-0", "output", "Desc_IronIngot_C"),
+		]);
+		const right = machine("split-right", "Build_SmelterMk1_C", "Recipe_IronIngot_C", [
+			port("split-right-in", "input-0", "input", "Desc_OreIron_C"),
+			port("split-right-out", "output-0", "output", "Desc_IronIngot_C"),
+		]);
+		const splitResult = calculateFactoryPlan(
+			plan(
+				[source, splitter, left, right],
+				[
+					connection("split-feed", "junction-source-out", "splitter-in", "Desc_OreIron_C"),
+					connection("split-left-edge", "splitter-out", "split-left-in", "Desc_OreIron_C"),
+					connection("split-right-edge", "splitter-out", "split-right-in", "Desc_OreIron_C"),
+				],
+			),
+		);
+		expect(resultRate(splitResult, "edge", "split-feed").toString()).toBe("60");
+		expect(resultRate(splitResult, "edge", "split-left-edge").toString()).toBe("30");
+		expect(resultRate(splitResult, "edge", "split-right-edge").toString()).toBe("30");
+		expect(resultRate(splitResult, "node-output", "splitter-out").toString()).toBe("60");
+
+		const merger = junction("merger", "merger", "merger-in", "merger-out");
+		const target = machine("merge-target", "Build_SmelterMk1_C", "Recipe_IronIngot_C", [
+			port("merge-target-in", "input-0", "input", "Desc_OreIron_C"),
+			port("merge-target-out", "output-0", "output", "Desc_IronIngot_C"),
+		]);
+		const mergerResult = calculateFactoryPlan(
+			plan(
+				[
+					resource("merge-left", "merge-left-out", "impure"),
+					resource("merge-right", "merge-right-out", "impure"),
+					merger,
+					target,
+				],
+				[
+					connection("merge-left-edge", "merge-left-out", "merger-in", "Desc_OreIron_C"),
+					connection("merge-right-edge", "merge-right-out", "merger-in", "Desc_OreIron_C"),
+					connection("merge-output-edge", "merger-out", "merge-target-in", "Desc_OreIron_C"),
+				],
+			),
+		);
+		expect(
+			["merge-left-edge", "merge-right-edge"]
+				.map((id) => resultRate(mergerResult, "edge", id))
+				.reduce((total, rate) => total.add(rate), Rational.parse("0"))
+				.toString(),
+		).toBe("30");
+		expect(resultRate(mergerResult, "edge", "merge-output-edge").toString()).toBe("30");
+		expect(resultRate(mergerResult, "node-output", "merger-out").toString()).toBe("30");
+		expect(mergerResult.diagnostics.some((entry) => entry.code === "CONSERVATION_VIOLATION")).toBe(
+			false,
+		);
 	});
 
 	it("is invariant to node and edge input order", () => {

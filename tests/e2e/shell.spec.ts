@@ -6,8 +6,13 @@ import { expect, type Locator, type Page, test } from "@playwright/test";
 async function dropCatalogEntry(page: Page, entry: Locator, position: { x: number; y: number }) {
 	if (!(await entry.isVisible())) {
 		const label = await entry.getAttribute("aria-label");
+		const section = label?.startsWith("Drag resource")
+			? "Show resources"
+			: label?.includes("Conveyor Splitter") || label?.includes("Conveyor Merger")
+				? "Show logistics"
+				: "Show machines";
 		await page
-			.getByLabel(label?.startsWith("Drag resource") ? "Show resources" : "Show machines")
+			.getByLabel(section)
 			.click();
 	}
 	const dataTransfer = await page.evaluateHandle(() => new DataTransfer());
@@ -19,11 +24,10 @@ async function dropCatalogEntry(page: Page, entry: Locator, position: { x: numbe
 		clientY: position.y,
 	});
 	await canvas.dispatchEvent("drop", { dataTransfer, clientX: position.x, clientY: position.y });
+	await entry.dispatchEvent("dragend", { dataTransfer });
 }
 
-async function connectHandles(page: Page, sourceLabel: string, targetLabel: string) {
-	const source = page.getByLabel(sourceLabel);
-	const target = page.getByLabel(targetLabel);
+async function connectLocators(page: Page, source: Locator, target: Locator) {
 	const sourceBox = await source.boundingBox();
 	const targetBox = await target.boundingBox();
 	if (!sourceBox || !targetBox) throw new Error("Expected visible source and target handles.");
@@ -36,6 +40,10 @@ async function connectHandles(page: Page, sourceLabel: string, targetLabel: stri
 	await page.keyboard.press("Escape");
 	await page.mouse.move(320, 120);
 	await page.waitForTimeout(50);
+}
+
+async function connectHandles(page: Page, sourceLabel: string, targetLabel: string) {
+	await connectLocators(page, page.getByLabel(sourceLabel), page.getByLabel(targetLabel));
 }
 
 test.beforeEach(async ({ page }) => {
@@ -74,6 +82,11 @@ test("renders the SatisPlanner graph shell and searchable fallback library", asy
 	await expect(page.getByLabel("Resource catalog").getByRole("button")).toHaveCount(13);
 	await page.getByLabel("Show machines").click();
 	await expect(page.getByLabel("Production catalog").getByRole("button")).toHaveCount(11);
+	await page.getByLabel("Show logistics").click();
+	await expect(page.getByLabel("Logistics catalog").getByRole("button")).toHaveCount(2);
+	await expect(page.getByLabel("Drag Conveyor Splitter")).toContainText("1 input");
+	await expect(page.getByLabel("Drag Conveyor Merger")).toContainText("3 inputs");
+	await page.getByLabel("Show machines").click();
 
 	await page.getByLabel("Search catalog").fill("constructor");
 	const matches = page.getByLabel("Production catalog").getByRole("button");
@@ -81,7 +94,7 @@ test("renders the SatisPlanner graph shell and searchable fallback library", asy
 	await expect(matches.first()).toContainText("Constructor");
 	await expect(matches.first()).toContainText("48 recipes");
 	await expect(page.getByRole("status").first()).toContainText(
-		"Contract v2 · browser-mock · v1.0.1",
+		"Contract v2 · browser-mock · v1.0.2",
 	);
 });
 
@@ -169,6 +182,7 @@ test("keyboard history, clipboard, grouping and explicit layout remain domain-ba
 	await page.keyboard.press("Tab");
 	await page.keyboard.press("Tab");
 	await page.keyboard.press("Enter");
+	await page.keyboard.press("Tab");
 	await page.keyboard.press("Tab");
 	await page.keyboard.press("Enter");
 	await expect(page.locator(".react-flow__node-resource")).toHaveCount(1);
@@ -348,6 +362,46 @@ test("resource drag/drop keeps purity, tier, shards and golden output instance-l
 	await expect(page.getByLabel("Extraction results")).toContainText("1,200 items/min");
 });
 
+test("node cards expose per-minute rates and explicit splitter logistics conserve flow", async ({
+	page,
+}) => {
+	const splitterEntry = page.getByLabel("Drag Conveyor Splitter");
+	await page.getByLabel("Show logistics").click();
+	const dataTransfer = await page.evaluateHandle(() => new DataTransfer());
+	await splitterEntry.dispatchEvent("dragstart", { dataTransfer });
+	await expect(splitterEntry).toHaveClass(/dragging/);
+	await splitterEntry.dispatchEvent("dragend", { dataTransfer });
+	await expect(splitterEntry).not.toHaveClass(/dragging/);
+
+	await dropCatalogEntry(page, page.getByLabel("Drag resource Iron Ore"), { x: 270, y: 280 });
+	await dropCatalogEntry(page, splitterEntry, { x: 540, y: 280 });
+	await dropCatalogEntry(page, page.getByLabel("Drag Smelter"), { x: 820, y: 180 });
+	await dropCatalogEntry(page, page.getByLabel("Drag Smelter"), { x: 820, y: 400 });
+
+	await connectLocators(
+		page,
+		page.getByLabel("Output Desc_OreIron_C"),
+		page.getByLabel("Junction input"),
+	);
+	const splitterOutput = page.getByLabel("Junction output");
+	const smelterInputs = page.getByLabel("Input Desc_OreIron_C");
+	await connectLocators(page, splitterOutput, smelterInputs.nth(0));
+	await connectLocators(page, splitterOutput, smelterInputs.nth(1));
+
+	const resourceNode = page.locator(".react-flow__node-resource");
+	const junctionNode = page.locator(".react-flow__node-junction");
+	const smelterNodes = page.locator(".react-flow__node-machine");
+	await expect(resourceNode).toContainText("60/min");
+	await expect(junctionNode).toContainText("60/min in");
+	await expect(junctionNode).toContainText("60/min out");
+	await expect(smelterNodes.nth(0)).toContainText("30 / 30/min");
+	await expect(smelterNodes.nth(1)).toContainText("30 / 30/min");
+	await junctionNode.getByText("Conveyor Splitter", { exact: true }).click();
+	await expect(page.getByLabel("Logistics junction inspector")).toContainText("60/min in");
+	await expect(page.getByLabel("Logistics junction inspector")).toContainText("60/min out");
+	await expect(page.getByTestId("flow-engine-status")).toContainText("4 nodes");
+});
+
 test("steady-state engine exposes actual, required, efficiency and edge rates", async ({
 	page,
 }) => {
@@ -482,8 +536,8 @@ test("plan migration and upstream FCS conversion stay previewable, cancellable a
 	await page.getByLabel("Import plan file").setInputFiles(legacyPlanPath);
 	await page.getByRole("button", { name: "Preview plan import" }).click();
 	const planReport = page.getByLabel("Plan migration report");
-	await expect(planReport).toContainText("Schema 1 → 5");
-	await expect(planReport).toContainText("1→2, 2→3, 3→4, 4→5");
+	await expect(planReport).toContainText("Schema 1 → 6");
+	await expect(planReport).toContainText("1→2, 2→3, 3→4, 4→5, 5→6");
 	await expect(planReport).toContainText("Snapshot mismatch");
 	await planReport.getByRole("button", { name: "Cancel import" }).click();
 	await expect(page.locator(".react-flow__node")).toHaveCount(0);

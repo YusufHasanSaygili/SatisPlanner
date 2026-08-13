@@ -93,7 +93,7 @@ function fixture(
 	return {
 		registry,
 		plan: {
-			schemaVersion: 5,
+			schemaVersion: 6,
 			planId: "capacity-plan",
 			name: "Capacity fixture",
 			createdAt: "2026-08-11T00:00:00.000Z",
