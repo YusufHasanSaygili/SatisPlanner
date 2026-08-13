@@ -2,7 +2,7 @@
 
 ## Windows warns about the installer
 
-v1.0.1 is unsigned because no commercial Authenticode certificate is configured. Download only from
+v1.0.2 is unsigned because no commercial Authenticode certificate is configured. Download only from
 the official release and optionally run `gh attestation verify <file> -R
 YusufHasanSaygili/SatisPlanner`. Do not bypass a warning if provenance verification fails.
 

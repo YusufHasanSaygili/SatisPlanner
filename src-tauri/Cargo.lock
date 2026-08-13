@@ -2527,7 +2527,7 @@ dependencies = [
 
 [[package]]
 name = "satisplanner"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "serde",
  "serde_json",

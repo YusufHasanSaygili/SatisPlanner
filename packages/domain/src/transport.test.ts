@@ -12,7 +12,7 @@ import {
 
 function transportPlan(): FactoryPlanV3 {
 	return {
-		schemaVersion: 5,
+		schemaVersion: 6,
 		planId: "00000000-0000-4000-8000-000000000001",
 		name: "Transport test",
 		createdAt: "2026-08-11T00:00:00.000Z",

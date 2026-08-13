@@ -18,7 +18,7 @@ function decimal(value: { readonly numerator: string; readonly denominator: stri
 	return Rational.parse(value).toDecimal(4);
 }
 
-describe("SatisPlanner v1.0.1 canonical examples", () => {
+describe("SatisPlanner v1.0.2 canonical examples", () => {
 	it("keeps the Coal Mk.5 1200→780 bottleneck golden", () => {
 		const { plan, result } = loadExample("coal-mk5-bottleneck.satisplan.json");
 		expect(plan.gameDataSnapshotId).toBe("fallback-graph-catalog-v3");

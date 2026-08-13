@@ -71,7 +71,11 @@ describe("upstream .fcs import preview", () => {
 		expect(preview.ok).toBe(true);
 		if (preview.ok) {
 			expect(preview.report.generatedPhysicalInstances).toBe(2);
-			expect(preview.plan.nodes.every((node) => node.clockPercent === "200.0000")).toBe(true);
+			expect(
+				preview.plan.nodes.every(
+					(node) => node.kind === "junction" || node.clockPercent === "200.0000",
+				),
+			).toBe(true);
 		}
 		const future = JSON.parse(v7Fixture) as Record<string, unknown>;
 		future.save_version = 8;

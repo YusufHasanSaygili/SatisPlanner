@@ -91,7 +91,7 @@ function syntheticPlan(nodeCount: number, edgeCount: number): FactoryPlanV3 {
 		};
 	});
 	return {
-		schemaVersion: 5,
+		schemaVersion: 6,
 		planId: "graph-performance",
 		name: `Graph ${nodeCount}/${edgeCount}`,
 		createdAt: "2026-08-12T00:00:00.000Z",

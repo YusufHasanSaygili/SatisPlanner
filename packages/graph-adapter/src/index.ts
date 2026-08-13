@@ -1,4 +1,4 @@
-import type { FactoryPlanV3, PlanPortV3 } from "@satisplanner/domain";
+import type { FactoryPlanV3, PlanPortV3, RationalJson } from "@satisplanner/domain";
 import type { Edge, Node } from "@xyflow/react";
 
 export * from "./layout";
@@ -14,6 +14,7 @@ export interface MachineCanvasNodeData extends Record<string, unknown> {
 	readonly standby: boolean;
 	readonly inputs: readonly PlanPortV3[];
 	readonly outputs: readonly PlanPortV3[];
+	readonly flow?: ProjectedNodeFlow;
 }
 
 export interface ResourceCanvasNodeData extends Record<string, unknown> {
@@ -24,11 +25,34 @@ export interface ResourceCanvasNodeData extends Record<string, unknown> {
 	readonly extractorTierId: string;
 	readonly clockPercent: string;
 	readonly output: PlanPortV3;
+	readonly flow?: ProjectedNodeFlow;
+}
+
+export interface JunctionCanvasNodeData extends Record<string, unknown> {
+	readonly kind: "junction";
+	readonly label: string;
+	readonly junctionType: "splitter" | "merger";
+	readonly input: PlanPortV3;
+	readonly output: PlanPortV3;
+	readonly flow?: ProjectedNodeFlow;
+}
+
+export interface ProjectedPortFlow {
+	readonly portId: string;
+	readonly ratePerMinute: RationalJson;
+}
+
+export interface ProjectedNodeFlow {
+	readonly requiredInputs: readonly ProjectedPortFlow[];
+	readonly actualInputs: readonly ProjectedPortFlow[];
+	readonly potentialOutputs: readonly ProjectedPortFlow[];
+	readonly actualOutputs: readonly ProjectedPortFlow[];
 }
 
 export type MachineCanvasNode = Node<MachineCanvasNodeData, "machine">;
 export type ResourceCanvasNode = Node<ResourceCanvasNodeData, "resource">;
-export type GraphCanvasNode = MachineCanvasNode | ResourceCanvasNode;
+export type JunctionCanvasNode = Node<JunctionCanvasNodeData, "junction">;
+export type GraphCanvasNode = MachineCanvasNode | ResourceCanvasNode | JunctionCanvasNode;
 
 export interface GraphProjection {
 	readonly nodes: readonly GraphCanvasNode[];
@@ -39,6 +63,7 @@ export function projectFactoryPlan(
 	plan: FactoryPlanV3,
 	selectedNodeIds: ReadonlySet<string> = new Set(),
 	selectedEdgeIds: ReadonlySet<string> = new Set(),
+	flowByNodeId: ReadonlyMap<string, ProjectedNodeFlow> = new Map(),
 ): GraphProjection {
 	return {
 		nodes: plan.nodes.map((node): GraphCanvasNode => {
@@ -57,6 +82,24 @@ export function projectFactoryPlan(
 						extractorTierId: node.extractorTierId,
 						clockPercent: node.clockPercent,
 						output: node.ports[0] as PlanPortV3,
+						flow: flowByNodeId.get(node.id),
+					},
+				};
+			}
+			if (node.kind === "junction") {
+				return {
+					id: node.id,
+					type: "junction",
+					ariaLabel: `${node.displayName}, ${node.junctionType}, active`,
+					position: { ...node.position },
+					selected: selectedNodeIds.has(node.id),
+					data: {
+						kind: "junction",
+						label: node.displayName,
+						junctionType: node.junctionType,
+						input: node.ports[0] as PlanPortV3,
+						output: node.ports[1] as PlanPortV3,
+						flow: flowByNodeId.get(node.id),
 					},
 				};
 			}
@@ -77,6 +120,7 @@ export function projectFactoryPlan(
 					standby: node.standby,
 					inputs: node.ports.filter((port) => port.direction === "input"),
 					outputs: node.ports.filter((port) => port.direction === "output"),
+					flow: flowByNodeId.get(node.id),
 				},
 			};
 		}),

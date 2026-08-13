@@ -1,4 +1,4 @@
-# SatisPlanner v1.0.1 Known Limitations
+# SatisPlanner v1.0.2 Known Limitations
 
 - Windows artifacts are not Authenticode-signed. GitHub/Sigstore attestations are the provenance
   verification mechanism. macOS artifacts are not notarized.
@@ -12,6 +12,8 @@
   recipes remain searchable.
 - Nitrogen Gas is listed as a Resource Well source, but exact output requires a pressure-well context
   that the current steady-state graph does not model.
+- Conveyor Splitter and Merger junctions support solid items with the vanilla 1-to-3 and 3-to-1
+  connection limits. Pipeline Junction Cross routing is not yet modeled.
 - Automatic `.pak` extraction, world-map coordinates/seed simulation, transient fluid simulation,
   cloud collaboration and PNG/SVG/PDF plan export are outside v1.0.
 - Imported upstream `.fcs` aggregates require an explicit expansion strategy and may report loss or

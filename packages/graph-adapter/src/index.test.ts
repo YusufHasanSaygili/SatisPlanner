@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { projectFactoryPlan } from "./index";
 
 const plan: FactoryPlanV3 = {
-	schemaVersion: 5,
+	schemaVersion: 6,
 	planId: "00000000-0000-4000-8000-000000000001",
 	name: "Projection test",
 	createdAt: "2026-08-11T00:00:00.000Z",
@@ -54,6 +54,29 @@ const plan: FactoryPlanV3 = {
 				},
 			],
 		},
+		{
+			kind: "junction",
+			id: "00000000-0000-4000-8000-000000000030",
+			junctionType: "splitter",
+			displayName: "Conveyor Splitter",
+			position: { x: 640, y: 80 },
+			ports: [
+				{
+					id: "00000000-0000-4000-8000-000000000031",
+					key: "input-0",
+					direction: "input",
+					materialForm: "solid",
+					materialId: "*",
+				},
+				{
+					id: "00000000-0000-4000-8000-000000000032",
+					key: "output-0",
+					direction: "output",
+					materialForm: "solid",
+					materialId: "*",
+				},
+			],
+		},
 	],
 	edges: [],
 	viewport: { x: 0, y: 0, zoom: 1 },
@@ -63,7 +86,7 @@ const plan: FactoryPlanV3 = {
 describe("graph adapter", () => {
 	it("projects immutable domain graph state without becoming the source of truth", () => {
 		const projection = projectFactoryPlan(plan, new Set([plan.nodes[0]?.id as string]));
-		expect(projection.nodes).toHaveLength(2);
+		expect(projection.nodes).toHaveLength(3);
 		expect(projection.nodes[0]).toMatchObject({
 			id: plan.nodes[0]?.id,
 			type: "machine",
@@ -76,6 +99,10 @@ describe("graph adapter", () => {
 		expect(projection.nodes[1]).toMatchObject({
 			type: "resource",
 			data: { purity: "pure", extractorTierId: "miner-mk3" },
+		});
+		expect(projection.nodes[2]).toMatchObject({
+			type: "junction",
+			data: { junctionType: "splitter" },
 		});
 	});
 });

@@ -4,7 +4,7 @@ import { autoLayoutFactoryPlan } from "./layout";
 
 function plan(size: number): FactoryPlanV3 {
 	return {
-		schemaVersion: 5,
+		schemaVersion: 6,
 		planId: "00000000-0000-4000-8000-000000000001",
 		name: "Layout fixture",
 		createdAt: "2026-08-12T00:00:00.000Z",

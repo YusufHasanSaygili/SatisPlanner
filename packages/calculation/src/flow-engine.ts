@@ -340,6 +340,17 @@ function buildModels(
 			});
 			continue;
 		}
+		if (node.kind === "junction") {
+			const output = node.ports.find((port) => port.direction === "output");
+			models.set(node.id, {
+				node,
+				requiredInputs: new Map(),
+				potentialOutputs: output ? new Map([[output.id, ZERO]]) : new Map(),
+				powerMW: 0,
+				valid: output !== undefined,
+			});
+			continue;
+		}
 		const formula = calculateMachineFormula(
 			{
 				buildingId: node.buildingId,
@@ -466,18 +477,71 @@ function machineEfficiency(
 	return efficiency;
 }
 
+function requiredInputRates(
+	plan: FactoryPlanV3,
+	models: ReadonlyMap<string, CalculationNodeModel>,
+): ReadonlyMap<string, Rational> {
+	const result = new Map<string, Rational>();
+	for (const model of models.values()) {
+		for (const [portId, demand] of model.requiredInputs) result.set(portId, demand);
+	}
+	const portOwner = new Map<string, PlanNodeV3>();
+	for (const node of plan.nodes) for (const port of node.ports) portOwner.set(port.id, node);
+	const memo = new Map<string, Rational>();
+	const visiting = new Set<string>();
+	const junctionDemand = (node: PlanNodeV3): Rational => {
+		if (node.kind !== "junction") return ZERO;
+		const cached = memo.get(node.id);
+		if (cached) return cached;
+		if (visiting.has(node.id)) return ZERO;
+		visiting.add(node.id);
+		const output = node.ports.find((port) => port.direction === "output");
+		const demand = output
+			? sum(
+					plan.edges
+						.filter((edge) => edge.fromPortId === output.id)
+						.map((edge) => {
+							const explicit = Rational.parse(edge.requestedRate);
+							if (explicit.compare(ZERO) > 0) return explicit;
+							const target = portOwner.get(edge.toPortId);
+							return target?.kind === "junction"
+								? junctionDemand(target)
+								: (result.get(edge.toPortId) ?? ZERO);
+						}),
+				)
+			: ZERO;
+		visiting.delete(node.id);
+		memo.set(node.id, demand);
+		const input = node.ports.find((port) => port.direction === "input");
+		if (input) result.set(input.id, demand);
+		return demand;
+	};
+	for (const node of plan.nodes) if (node.kind === "junction") junctionDemand(node);
+	return result;
+}
+
+function junctionEfficiency(
+	model: CalculationNodeModel,
+	requiredInputs: ReadonlyMap<string, Rational>,
+	inputs: ReadonlyMap<string, Rational>,
+): Rational {
+	const required = sum(model.node.ports.map((port) => requiredInputs.get(port.id) ?? ZERO));
+	if (required.equals(ZERO)) return ONE;
+	const actual = sum(model.node.ports.map((port) => inputs.get(port.id) ?? ZERO));
+	return minimum(ONE, actual.divide(required));
+}
+
 function runIteration(
 	plan: FactoryPlanV3,
 	models: ReadonlyMap<string, CalculationNodeModel>,
 	previousOutputs: ReadonlyMap<string, Rational>,
+	requiredInputs: ReadonlyMap<string, Rational>,
 	options: FlowSolverOptions,
 ): IterationState {
 	const edgeRates = new Map(plan.edges.map((edge) => [edge.id, ZERO] as const));
 	const inputRates = new Map<string, Rational>();
 	const remainingDemand = new Map<string, Rational>();
-	for (const model of models.values()) {
-		for (const [portId, demand] of model.requiredInputs) remainingDemand.set(portId, demand);
-	}
+	for (const [portId, demand] of requiredInputs) remainingDemand.set(portId, demand);
 	const byOutput = new Map<string, TransportEdgeV3[]>();
 	for (const edge of [...plan.edges].sort((left, right) => left.id.localeCompare(right.id))) {
 		const edges = byOutput.get(edge.fromPortId) ?? [];
@@ -502,6 +566,17 @@ function runIteration(
 	}
 	const nextOutputs = new Map<string, Rational>();
 	for (const model of models.values()) {
+		if (model.node.kind === "junction") {
+			const incoming = sum(
+				model.node.ports
+					.filter((port) => port.direction === "input")
+					.map((port) => inputRates.get(port.id) ?? ZERO),
+			);
+			for (const port of model.node.ports) {
+				if (port.direction === "output") nextOutputs.set(port.id, incoming);
+			}
+			continue;
+		}
 		const efficiency = model.node.kind === "resource" ? ONE : machineEfficiency(model, inputRates);
 		for (const [portId, potential] of model.potentialOutputs) {
 			nextOutputs.set(portId, potential.multiply(efficiency));
@@ -549,6 +624,7 @@ export function calculateFactoryPlan(
 ): FactoryFlowResult {
 	const built = buildModels(plan, options);
 	const diagnostics = [...built.diagnostics];
+	const dynamicRequiredInputs = requiredInputRates(plan, built.models);
 	const cycles = findStronglyConnectedComponents(plan);
 	const outputs = new Map<string, Rational>();
 	for (const model of built.models.values()) {
@@ -564,7 +640,7 @@ export function calculateFactoryPlan(
 	let converged = plan.nodes.length === 0;
 	let iterationCount = 0;
 	for (let iteration = 1; iteration <= maxIterations; iteration += 1) {
-		const next = runIteration(plan, built.models, state.outputs, options);
+		const next = runIteration(plan, built.models, state.outputs, dynamicRequiredInputs, options);
 		iterationCount = iteration;
 		if (
 			(mapEquals(next.outputs, state.outputs) ||
@@ -607,10 +683,7 @@ export function calculateFactoryPlan(
 			nodeIds: [...unresolvedNodeIds].sort(),
 		});
 	}
-	const requiredByInputPort = new Map<string, Rational>();
-	for (const model of built.models.values()) {
-		for (const [portId, demand] of model.requiredInputs) requiredByInputPort.set(portId, demand);
-	}
+	const requiredByInputPort = new Map(dynamicRequiredInputs);
 	const incomingCountByPort = new Map<string, number>();
 	for (const edge of plan.edges) {
 		incomingCountByPort.set(edge.toPortId, (incomingCountByPort.get(edge.toPortId) ?? 0) + 1);
@@ -634,21 +707,39 @@ export function calculateFactoryPlan(
 	const nodes = [...built.models.values()]
 		.map((model): NodeFlowResult => {
 			const issue = !model.valid || unresolvedNodeIds.has(model.node.id);
+			const nodeRequiredInputs =
+				model.node.kind === "junction"
+					? new Map(
+							model.node.ports
+								.filter((port) => port.direction === "input")
+								.map((port) => [port.id, dynamicRequiredInputs.get(port.id) ?? ZERO] as const),
+						)
+					: model.requiredInputs;
+			const nodePotentialOutputs =
+				model.node.kind === "junction"
+					? new Map(
+							model.node.ports
+								.filter((port) => port.direction === "output")
+								.map((port) => [port.id, state.outputs.get(port.id) ?? ZERO] as const),
+						)
+					: model.potentialOutputs;
 			return {
 				nodeId: model.node.id,
 				kind: model.node.kind,
 				status: issue ? "unresolved" : "resolved",
-				requiredInputs: toPortResults(model.node, model.requiredInputs),
+				requiredInputs: toPortResults(model.node, nodeRequiredInputs),
 				actualInputs: toPortResults(
 					model.node,
-					ratesWithDefaults(model.requiredInputs, state.inputs),
+					ratesWithDefaults(nodeRequiredInputs, state.inputs),
 				),
-				potentialOutputs: toPortResults(model.node, model.potentialOutputs),
+				potentialOutputs: toPortResults(model.node, nodePotentialOutputs),
 				actualOutputs: toPortResults(model.node, state.outputs),
 				efficiency:
 					model.node.kind === "resource"
 						? ONE.toJSON()
-						: machineEfficiency(model, state.inputs).toJSON(),
+						: model.node.kind === "junction"
+							? junctionEfficiency(model, dynamicRequiredInputs, state.inputs).toJSON()
+							: machineEfficiency(model, state.inputs).toJSON(),
 				powerMW: issue ? 0 : model.powerMW,
 				...(model.provenance ? { provenance: model.provenance } : {}),
 			};

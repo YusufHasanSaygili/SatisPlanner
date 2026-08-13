@@ -256,7 +256,7 @@ select:focus-visible {
 
 .catalog-kind-switch {
 	display: grid;
-	grid-template-columns: 1fr 1fr;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
 	gap: 6px;
 	min-width: 0;
 	margin-top: 10px;
@@ -418,6 +418,55 @@ select:focus-visible {
 	cursor: grabbing;
 }
 
+.catalog-entry.dragging {
+	border-color: #7ec6ef;
+	opacity: 0.55;
+}
+
+.catalog-drag-preview {
+	position: fixed;
+	top: -1000px;
+	left: -1000px;
+	z-index: 9999;
+	display: flex;
+	gap: 10px;
+	align-items: center;
+	width: 230px;
+	min-height: 54px;
+	padding: 11px 14px;
+	border: 2px solid #70b8e7;
+	border-radius: 9px;
+	color: #edf8ff;
+	background: #172838;
+	box-shadow: 0 14px 32px rgb(0 0 0 / 45%);
+	font-size: 12px;
+}
+
+.catalog-drag-preview.resource {
+	border-color: #70c98b;
+}
+
+.catalog-drag-preview.junction {
+	border-color: #d6a654;
+}
+
+.junction-entry {
+	border-left: 3px solid #d6a654;
+}
+
+.junction-library-icon {
+	display: grid;
+	place-items: center;
+	width: 34px;
+	height: 34px;
+	border: 1px solid #735f37;
+	border-radius: 7px;
+	color: #f1ce88;
+	background: #302a20;
+	font-size: 10px;
+	font-weight: 800;
+}
+
 .catalog-entry img {
 	width: 34px;
 	height: 34px;
@@ -538,6 +587,51 @@ select:focus-visible {
 		0 12px 30px rgb(0 0 0 / 25%);
 }
 
+.junction-node {
+	min-height: 116px;
+	padding: 14px;
+	border: 1px solid #79643b;
+	border-radius: 10px;
+	color: #e9eef4;
+	background: linear-gradient(145deg, #30291d, #1b2936);
+	box-shadow: 0 12px 30px rgb(0 0 0 / 22%);
+}
+
+.junction-node.selected {
+	border-color: #e0b45e;
+	box-shadow:
+		0 0 0 2px rgb(224 180 94 / 22%),
+		0 12px 30px rgb(0 0 0 / 25%);
+}
+
+.junction-node-kind {
+	margin: 0 0 5px;
+	color: #d6a654;
+	font-size: 9px;
+	font-weight: 800;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.junction-node-summary {
+	margin-top: 8px;
+	color: #bfae8a;
+	font-size: 9px;
+}
+
+.junction-flow {
+	display: flex;
+	gap: 7px;
+	align-items: center;
+	justify-content: center;
+	margin-top: 14px;
+	padding: 7px;
+	border-radius: 6px;
+	color: #f0d49b;
+	background: rgb(16 22 29 / 55%);
+	font-size: 9px;
+}
+
 .resource-node-kind {
 	margin: 0 0 5px;
 	color: #70b987;
@@ -621,6 +715,12 @@ select:focus-visible {
 .port-row small {
 	color: #71879a;
 	font-size: 9px;
+}
+
+.port-row .port-rate {
+	color: #a8cdeb;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
 }
 
 .react-flow__handle {

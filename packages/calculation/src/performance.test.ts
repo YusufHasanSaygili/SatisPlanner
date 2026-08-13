@@ -90,7 +90,7 @@ function syntheticPlan(nodeCount: number): FactoryPlanV3 {
 		});
 	}
 	return {
-		schemaVersion: 5,
+		schemaVersion: 6,
 		planId: "performance-plan",
 		name: `Synthetic ${nodeCount}`,
 		createdAt: "2026-08-12T00:00:00.000Z",

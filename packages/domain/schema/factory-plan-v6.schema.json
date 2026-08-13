@@ -1,0 +1,110 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://satisplanner.dev/schema/factory-plan-v6.schema.json",
+	"title": "SatisPlanner FactoryPlan v6",
+	"type": "object",
+	"required": [
+		"schemaVersion",
+		"planId",
+		"name",
+		"createdAt",
+		"updatedAt",
+		"gameDataSnapshotId",
+		"gameProfile",
+		"localization",
+		"nodes",
+		"edges",
+		"viewport",
+		"userMetadata"
+	],
+	"properties": {
+		"schemaVersion": { "const": 6 },
+		"planId": { "type": "string", "format": "uuid" },
+		"name": { "type": "string", "minLength": 1 },
+		"createdAt": { "type": "string", "format": "date-time" },
+		"updatedAt": { "type": "string", "format": "date-time" },
+		"gameDataSnapshotId": { "type": "string", "minLength": 1 },
+		"gameProfile": {
+			"type": "object",
+			"required": [
+				"id",
+				"version",
+				"kind",
+				"recipePartsCostMultiplier",
+				"powerConsumptionMultiplier",
+				"spaceElevatorCostMultiplier",
+				"resourceNodeRandomization",
+				"resourceNodePurity",
+				"worldSeed",
+				"source"
+			],
+			"properties": {
+				"id": { "enum": ["satisfactory-1.2-default", "satisfactory-1.2-custom"] },
+				"version": { "const": "1.2" },
+				"kind": { "enum": ["default", "custom"] },
+				"recipePartsCostMultiplier": {
+					"enum": ["0.25", "0.50", "0.75", "1", "1.25", "1.50", "1.75", "2"]
+				},
+				"powerConsumptionMultiplier": { "enum": ["0.25", "0.50", "0.75", "1", "2", "5"] },
+				"spaceElevatorCostMultiplier": {
+					"enum": ["0.25", "0.50", "0.75", "1", "2", "5", "10", "25", "50", "100"]
+				},
+				"resourceNodeRandomization": {
+					"enum": [
+						"default",
+						"random",
+						"basic-resource-rich",
+						"advanced-resource-rich",
+						"fossil-fuel-rich"
+					]
+				},
+				"resourceNodePurity": {
+					"enum": [
+						"default",
+						"all-pure",
+						"mostly-pure",
+						"average",
+						"mostly-impure",
+						"all-impure",
+						"random"
+					]
+				},
+				"worldSeed": { "type": "string", "pattern": "^\\d+$" },
+				"source": {
+					"type": "object",
+					"required": ["kind", "url"],
+					"properties": {
+						"kind": { "const": "official-1.2-patch-notes" },
+						"url": { "const": "https://satisfactory.wiki.gg/wiki/Patch_1.2.0.0" }
+					},
+					"additionalProperties": true
+				}
+			},
+			"additionalProperties": true
+		},
+		"localization": {
+			"type": "object",
+			"required": ["uiLocale", "gameDataLocale", "gameDataFallbackLocale"],
+			"properties": {
+				"uiLocale": { "enum": ["en", "tr"] },
+				"gameDataLocale": { "type": "string", "minLength": 1 },
+				"gameDataFallbackLocale": { "type": "string", "minLength": 1 }
+			},
+			"additionalProperties": true
+		},
+		"nodes": { "type": "array" },
+		"edges": { "type": "array" },
+		"viewport": {
+			"type": "object",
+			"required": ["x", "y", "zoom"],
+			"properties": {
+				"x": { "type": "number" },
+				"y": { "type": "number" },
+				"zoom": { "type": "number", "exclusiveMinimum": 0 }
+			},
+			"additionalProperties": true
+		},
+		"userMetadata": { "type": "object" }
+	},
+	"additionalProperties": true
+}

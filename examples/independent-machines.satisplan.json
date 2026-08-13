@@ -117,7 +117,7 @@
 		}
 	],
 	"planId": "20000000-0000-4000-8000-000000000000",
-	"schemaVersion": 5,
+	"schemaVersion": 6,
 	"updatedAt": "2026-08-13T00:00:00.000Z",
 	"userMetadata": {
 		"exampleId": "independent-machines",
@@ -125,7 +125,7 @@
 		"expectedPlateOutputPerMinute": "20",
 		"expectedRodOutputPerMinute": "60",
 		"license": "MIT",
-		"satisPlannerVersion": "1.0.1"
+		"satisPlannerVersion": "1.0.2"
 	},
 	"viewport": { "x": 20, "y": 80, "zoom": 0.9 }
 }
