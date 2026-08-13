@@ -8,8 +8,8 @@ icon cache stay on your machine.
 
 1. Download `SatisPlanner-windows-x64-v1.0.0-setup.exe` from the
    [v1.0.0 release](https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v1.0.0).
-2. Compare its SHA-256 digest with `SHA256SUMS.txt`. The release is unsigned, so Windows may show a
-   reputation warning; do not continue if the checksum differs.
+2. The release is unsigned, so Windows may show a reputation warning. Download only from the
+   official release; advanced users can verify GitHub provenance with `gh attestation verify`.
 3. Run the current-user installer. Administrator access is not required. WebView2 may be downloaded
    on first installation if Windows does not already provide it.
 4. Read the first-run guide and choose **Start planning**.

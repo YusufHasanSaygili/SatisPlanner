@@ -66,24 +66,10 @@ jobs:
           name: SatisPlanner-macOS
           path: artifacts/macos
 
-      - uses: actions/download-artifact@v8
-        with:
-          name: SatisPlanner-web
-          path: artifacts/web
-
       - name: Prepare release staging
         run: mkdir -p dist
 
-      - name: Generate SPDX JSON SBOM
-        uses: anchore/sbom-action@v0
-        with:
-          path: .
-          format: spdx-json
-          output-file: dist/SatisPlanner-sbom.spdx.json
-          upload-artifact: false
-          upload-release-assets: false
-
-      - name: Package branded release artifacts and checksums
+      - name: Package platform release artifacts
         env:
           VERSION: ${{ steps.metadata.outputs.version }}
         shell: bash
@@ -97,29 +83,15 @@ jobs:
             artifacts/linux/SatisPlanner LICENSE THIRD-PARTY-NOTICES.md
           zip -j "dist/SatisPlanner-macos-portable-v${VERSION}.zip" \
             artifacts/macos/SatisPlanner LICENSE THIRD-PARTY-NOTICES.md
-          (cd artifacts/web && zip -r "../../dist/SatisPlanner-web-v${VERSION}.zip" .)
-          zip -r "dist/SatisPlanner-examples-v${VERSION}.zip" examples
-          zip -r "dist/SatisPlanner-documentation-v${VERSION}.zip" \
-            docs/user-guide docs/release-candidate
-          cp THIRD-PARTY-NOTICES.md dist/
-          cp CHANGELOG.md dist/
           if find dist -type f | grep -Eiq '\.(pak|utoc|ucas|uasset|uexp|sav)$'; then
             echo 'Forbidden game asset found in release staging.' >&2
             exit 1
           fi
-          (cd dist && sha256sum SatisPlanner-* THIRD-PARTY-NOTICES.md CHANGELOG.md > SHA256SUMS.txt)
-          (cd dist && sha256sum --check SHA256SUMS.txt)
 
       - name: Attest release build provenance
         uses: actions/attest@v4
         with:
-          subject-checksums: dist/SHA256SUMS.txt
-
-      - name: Attest release SBOM
-        uses: actions/attest@v4
-        with:
-          subject-checksums: dist/SHA256SUMS.txt
-          sbom-path: dist/SatisPlanner-sbom.spdx.json
+          subject-path: dist/*
 
       - name: Publish verified unsigned stable release
         env:
@@ -136,7 +108,7 @@ jobs:
             --title "SatisPlanner v${VERSION}" \
             --notes-file docs/release-candidate/RELEASE-NOTES-v1.0.0.md
 
-      - name: Verify Latest release and every checksum asset
+      - name: Verify Latest release and exact platform assets
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.metadata.outputs.tag }}
@@ -147,8 +119,11 @@ jobs:
           test "$(gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" --json isPrerelease --jq .isPrerelease)" = "false"
           mkdir verify-download
           gh release download "${TAG}" --repo "${GITHUB_REPOSITORY}" --dir verify-download
-          cp verify-download/SHA256SUMS.txt verify-download/SHA256SUMS.verify.txt
-          (cd verify-download && sha256sum --check SHA256SUMS.verify.txt)
+          test "$(find dist -maxdepth 1 -type f | wc -l)" -eq 4
+          test "$(find verify-download -maxdepth 1 -type f | wc -l)" -eq 4
+          for artifact in dist/*; do
+            cmp "${artifact}" "verify-download/$(basename "${artifact}")"
+          done
 
       - uses: actions/upload-artifact@v6
         with:

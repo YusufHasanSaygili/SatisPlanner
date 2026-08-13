@@ -3,8 +3,8 @@
 ## Windows warns about the installer
 
 v1.0.0 is unsigned because no commercial Authenticode certificate is configured. Download only from
-the official release, verify `SHA256SUMS.txt`, and optionally run `gh attestation verify <file> -R
-YusufHasanSaygili/SatisPlanner`. Do not bypass a warning if verification fails.
+the official release and optionally run `gh attestation verify <file> -R
+YusufHasanSaygili/SatisPlanner`. Do not bypass a warning if provenance verification fails.
 
 ## The game or icons are missing
 
