@@ -30,12 +30,12 @@ Kurulu oyunun localized Docs dosyalarından deterministic, provenance taşıyan 
 
 ## Delivery Record
 
-- Branch:
-- Closing SHA:
-- Remote SHA:
-- Tag:
-- GitHub Release URL:
-- CI:
-- Codex notification:
-- User approval:
-- Tarih:
+- Branch: `slice/03-game-data-import`
+- Closing SHA: `3181d25dc64f0d002d58a175ffcdb7a9ca3c76c3`
+- Remote SHA: tag ve yayımlanmış branch/main geçmişi `3181d25dc64f0d002d58a175ffcdb7a9ca3c76c3`
+- Tag: annotated `v0.4.0` → `3181d25dc64f0d002d58a175ffcdb7a9ca3c76c3`
+- GitHub Release URL: https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v0.4.0
+- CI: quality `31396576426`; verified release `31397929176` başarılı
+- Codex notification: v0.4.0 yayımlandı ve Slice 04 devam onayı istendi.
+- User approval: 2026-08-10 tarihinde kullanıcı `Devam et izin veriyorum` diyerek Slice 04 için açık onay verdi.
+- Tarih: 2026-08-10

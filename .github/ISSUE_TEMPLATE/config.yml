@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: SatisPlanner Known Limitations
+    url: https://github.com/YusufHasanSaygili/SatisPlanner/blob/main/docs/release-candidate/KNOWN-LIMITATIONS.md
+    about: Check the supported v1.0 scope before filing a bug.
+  - name: Security report
+    url: https://github.com/YusufHasanSaygili/SatisPlanner/security/advisories/new
+    about: Privately report a vulnerability; do not open a public issue.

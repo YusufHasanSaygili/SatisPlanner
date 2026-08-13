@@ -36,5 +36,5 @@ Drag/drop, connect/reject, selection ve reload E2E.
 - GitHub Release URL: https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v0.6.0
 - CI: push run `31436526324` 5/5; main run `31436528575` 5/5; release run `31437442979` 6/6 başarılı
 - Codex notification: aynı görevde `WAITING_FOR_USER_APPROVAL` onay kapısı hazırlanmıştır
-- User approval: bekleniyor; açık onay olmadan Slice 06 başlamaz
+- User approval: 2026-08-11 tarihinde kullanıcı `Devam et` diyerek Slice 06 için açık onay verdi.
 - Tarih: 2026-08-11

@@ -29,12 +29,12 @@ Missing/duplicate/renamed icon fixtures, cache invalidation, canonical path güv
 
 ## Delivery Record
 
-- Branch:
-- Closing SHA:
-- Remote SHA:
-- Tag:
-- GitHub Release URL:
-- CI:
-- Codex notification:
-- User approval:
-- Tarih:
+- Branch: `slice/04-local-icons`
+- Closing SHA: `07ce0360b3efb6a4bc88b44684b203599d9d1810`
+- Remote SHA: tag ve yayımlanmış branch/main geçmişi `07ce0360b3efb6a4bc88b44684b203599d9d1810`
+- Tag: annotated `v0.5.0` → `07ce0360b3efb6a4bc88b44684b203599d9d1810`
+- GitHub Release URL: https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v0.5.0
+- CI: quality `31407408299`; verified release `31408438094` başarılı
+- Codex notification: v0.5.0 yayımlandı ve Slice 05 devam onayı istendi.
+- User approval: Kullanıcı `Slice 5 devam` diyerek Slice 05 için açık onay verdi.
+- Tarih: 2026-08-10

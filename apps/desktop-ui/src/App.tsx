@@ -91,6 +91,7 @@ import { translate } from "./localization";
 
 const PLAN_STORAGE_KEY = "satisplanner.slice-07.factory-plan";
 const LEGACY_PLAN_STORAGE_KEY = "satisplanner.slice-06.factory-plan";
+const ONBOARDING_STORAGE_KEY = "satisplanner.onboarding.v1";
 const DRAG_MIME = "application/x-satisplanner-node-template";
 
 interface SelectionState {
@@ -1981,6 +1982,9 @@ export default function App() {
 		[],
 	);
 	const [runtimeInfo, setRuntimeInfo] = useState<RuntimeInfoResult | null>(null);
+	const [showOnboarding, setShowOnboarding] = useState(
+		() => localStorage.getItem(ONBOARDING_STORAGE_KEY) !== "complete",
+	);
 
 	useEffect(() => {
 		void requestRuntimeInfo(nativeAdapter, crypto.randomUUID()).then(setRuntimeInfo);
@@ -1988,15 +1992,63 @@ export default function App() {
 
 	const domain = getCalculationFoundationStatus();
 	const gameData = getGameDataFoundationStatus();
+	const closeOnboarding = () => {
+		localStorage.setItem(ONBOARDING_STORAGE_KEY, "complete");
+		setShowOnboarding(false);
+	};
 
 	return (
 		<div className="app-shell">
+			{showOnboarding && (
+				<div className="onboarding-backdrop">
+					<section
+						className="onboarding-dialog"
+						role="dialog"
+						aria-modal="true"
+						aria-labelledby="onboarding-title"
+					>
+						<p className="eyebrow">SatisPlanner 1.0 · first run</p>
+						<h2 id="onboarding-title">Build your first factory offline</h2>
+						<p>
+							No Satisfactory installation is required. Start with the versioned fallback catalog
+							and original generic icons, then optionally use your own local game data.
+						</p>
+						<ol>
+							<li>
+								<strong>Optional data:</strong> the read-only importer supports your own
+								Satisfactory 1.2 localized file from <code>CommunityResources/Docs</code> and
+								records build, locale, importer version and SHA-256 provenance. Native folder-picker
+								activation is not in v1.0.
+							</li>
+							<li>
+								<strong>Optional icons:</strong> the cache engine accepts an extracted local icon
+								folder and writes resized entries only to the app-owned cache. Native folder-picker
+								activation is not in v1.0; game artwork is never bundled.
+							</li>
+							<li>
+								<strong>Plan:</strong> drag a resource or machine from the library, connect matching
+								ports, then edit clock, Power Shards and Somersloops in the inspector.
+							</li>
+						</ol>
+						<p className="onboarding-note">
+							Constructor supports 1 Somersloop, Assembler 2 and Manufacturer 4. Capacity warnings
+							show requested, actual and lost rates. Autosave keeps a last-good recovery copy.
+						</p>
+						<button type="button" onClick={closeOnboarding}>
+							Start planning
+						</button>
+					</section>
+				</div>
+			)}
 			<header className="title-bar">
 				<div>
 					<p className="eyebrow">Domain-backed graph workspace</p>
 					<h1>SatisPlanner</h1>
 				</div>
 				<div className="runtime-status" role="status">
+					<button className="help-button" type="button" onClick={() => setShowOnboarding(true)}>
+						First-run guide
+					</button>
 					<span className={runtimeInfo?.ok ? "status-dot ready" : "status-dot"} />
 					{runtimeInfo === null && "Connecting to desktop contract…"}
 					{runtimeInfo?.ok &&

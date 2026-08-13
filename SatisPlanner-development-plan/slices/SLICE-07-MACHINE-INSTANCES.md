@@ -36,5 +36,5 @@ Instance isolation property test; Constructor/Assembler/Manufacturer sloop UI E2
 - GitHub Release URL: https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v0.8.0
 - CI: public repository geçişi sonrası manuel doğrulama run `31521238187` 5/5 başarılı (web quality/E2E, Rust quality/test, Linux, Windows ve macOS desktop smoke). Önceki private-repository run'ları hesap Actions bütçesi `$0` olduğu için runner'a başlamadan engellenmişti.
 - Codex notification: aynı görevde `WAITING_FOR_USER_APPROVAL` onay kapısı hazırlanmıştır
-- User approval: bekleniyor; açık onay olmadan Slice 08 başlamaz
+- User approval: 2026-08-11 tarihinde kullanıcı `Devam` diyerek Slice 08 için açık onay verdi.
 - Tarih: 2026-08-11

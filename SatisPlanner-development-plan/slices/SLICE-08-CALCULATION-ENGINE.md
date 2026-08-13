@@ -37,5 +37,5 @@ Golden rules, property conservation, byproduct loop fixture, determinism ve benc
 - GitHub Release URL: https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v0.9.0
 - CI: branch run `31523532431` 5/5; main run `31524047573` 5/5; release run `31524526793` 6/6 başarılı
 - Codex notification: aynı görevde `WAITING_FOR_USER_APPROVAL` onay kapısı hazırlanmıştır
-- User approval: bekleniyor; açık onay olmadan Slice 09 başlamaz
+- User approval: 2026-08-11 tarihinde kullanıcı `devam` diyerek Slice 09 için açık onay verdi.
 - Tarih: 2026-08-11

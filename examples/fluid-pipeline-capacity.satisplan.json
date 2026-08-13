@@ -1,0 +1,107 @@
+{
+	"createdAt": "2026-08-13T00:00:00.000Z",
+	"edges": [
+		{
+			"actualRate": { "denominator": "1", "numerator": "300" },
+			"fromPortId": "30000000-0000-4000-8000-000000000002",
+			"id": "30000000-0000-4000-8000-000000000020",
+			"itemOrFluidId": "Desc_LiquidOil_C",
+			"medium": "pipeline",
+			"requestedRate": { "denominator": "1", "numerator": "600" },
+			"toPortId": "30000000-0000-4000-8000-000000000011",
+			"transportTierId": "pipeline-mk1"
+		}
+	],
+	"gameDataSnapshotId": "fallback-graph-catalog-v3",
+	"gameProfile": {
+		"id": "satisfactory-1.2-default",
+		"kind": "default",
+		"powerConsumptionMultiplier": "1",
+		"recipePartsCostMultiplier": "1",
+		"resourceNodePurity": "default",
+		"resourceNodeRandomization": "default",
+		"source": {
+			"kind": "official-1.2-patch-notes",
+			"url": "https://satisfactory.wiki.gg/wiki/Patch_1.2.0.0"
+		},
+		"spaceElevatorCostMultiplier": "1",
+		"version": "1.2",
+		"worldSeed": "0"
+	},
+	"localization": {
+		"gameDataFallbackLocale": "en-US",
+		"gameDataLocale": "en-US",
+		"uiLocale": "en"
+	},
+	"name": "Pipeline Mk.1 Fluid Capacity",
+	"nodes": [
+		{
+			"clockPercent": "250.0000",
+			"displayName": "Crude Oil",
+			"extractorStrategyId": "oil-extractor",
+			"extractorTierId": "oil-extractor",
+			"id": "30000000-0000-4000-8000-000000000001",
+			"kind": "resource",
+			"ports": [
+				{
+					"direction": "output",
+					"id": "30000000-0000-4000-8000-000000000002",
+					"key": "output-0",
+					"materialForm": "fluid",
+					"materialId": "Desc_LiquidOil_C"
+				}
+			],
+			"position": { "x": 120, "y": 220 },
+			"powerShardCount": 3,
+			"purity": "pure",
+			"resourceId": "Desc_LiquidOil_C"
+		},
+		{
+			"buildingId": "Build_OilRefinery_C",
+			"clockPercent": "100.0000",
+			"displayName": "Refinery · Fuel",
+			"id": "30000000-0000-4000-8000-000000000010",
+			"kind": "machine",
+			"ports": [
+				{
+					"direction": "input",
+					"id": "30000000-0000-4000-8000-000000000011",
+					"key": "input-0",
+					"materialForm": "fluid",
+					"materialId": "Desc_LiquidOil_C"
+				},
+				{
+					"direction": "output",
+					"id": "30000000-0000-4000-8000-000000000012",
+					"key": "output-0",
+					"materialForm": "fluid",
+					"materialId": "Desc_LiquidFuel_C"
+				},
+				{
+					"direction": "output",
+					"id": "30000000-0000-4000-8000-000000000013",
+					"key": "output-1",
+					"materialForm": "solid",
+					"materialId": "Desc_PolymerResin_C"
+				}
+			],
+			"position": { "x": 560, "y": 220 },
+			"powerShardCount": 0,
+			"recipeId": "Recipe_LiquidFuel_C",
+			"somersloopCount": 0,
+			"standby": false
+		}
+	],
+	"planId": "30000000-0000-4000-8000-000000000000",
+	"schemaVersion": 5,
+	"updatedAt": "2026-08-13T00:00:00.000Z",
+	"userMetadata": {
+		"exampleId": "fluid-pipeline-capacity",
+		"expectedCapacityPerMinute": "300",
+		"expectedLostPerMinute": "300",
+		"expectedSourcePerMinute": "600",
+		"license": "MIT",
+		"satisPlannerVersion": "1.0.0"
+	},
+	"viewport": { "x": 40, "y": 40, "zoom": 1 }
+}

@@ -23,7 +23,7 @@ the packaged app run when no Satisfactory installation exists.
 
 ## Signing and provenance
 
-`v0.15.0` is a published development release and is **unsigned**: no Windows Authenticode,
+`v1.0.0` is the first stable release and is **unsigned**: no Windows Authenticode,
 Apple Developer ID or notarization secret is configured. Users must verify `SHA256SUMS.txt` and the
 GitHub/Sigstore build attestation. The tag workflow builds on clean GitHub-hosted runners, enforces
 the frozen pnpm/Cargo lockfiles, emits SPDX JSON SBOM and notices, scans forbidden game artwork,

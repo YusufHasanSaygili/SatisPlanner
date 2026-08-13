@@ -36,5 +36,5 @@ Tüm tier matrix unit; Coal ana acceptance E2E; color-independent accessibility 
 - GitHub Release URL: https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v0.10.0
 - CI: branch `31527682480` 5/5 success; release `31528212598` 6/6 success; local `pnpm quality` and 8/8 Playwright E2E success
 - Codex notification: `SatisPlanner v0.10.0 yayımlandı. Slice 10/16 tamamlandı. Slice 10'a devam edilsin mi?`
-- User approval: Bekleniyor; Slice 10 açık onay olmadan başlatılmayacak.
+- User approval: 2026-08-11 tarihinde kullanıcı `devam` diyerek Slice 10 için açık onay verdi.
 - Tarih: 2026-08-11

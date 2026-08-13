@@ -36,5 +36,5 @@ Purity × tier × clock matrix, shard validation, resource drag/drop E2E.
 - GitHub Release URL: https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v0.7.0
 - CI: push run `31504923694` 5/5; main run `31504927958` 5/5 başarılı. Release run `31506457238` build işleri 5/5 başarılı; publish işi GitHub billing/spending-limit nedeniyle runner'a başlamadan engellendi. Aynı run'ın doğrulanmış artifact'ları indirildi, arşiv içerikleri ve SHA-256 değerleri doğrulandı ve release GitHub CLI ile `Latest` olarak yayımlandı.
 - Codex notification: aynı görevde `WAITING_FOR_USER_APPROVAL` onay kapısı hazırlanmıştır
-- User approval: bekleniyor; açık onay olmadan Slice 07 başlamaz
+- User approval: 2026-08-11 tarihinde kullanıcı `Devam et` diyerek Slice 07 için açık onay verdi.
 - Tarih: 2026-08-11

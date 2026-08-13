@@ -3,6 +3,18 @@
 All notable SatisPlanner changes are documented here. Versions follow Semantic Versioning while
 the application remains in published development.
 
+## [1.0.0] - 2026-08-13
+
+### Stable release
+
+- Added first-run offline onboarding, complete user/troubleshooting/recovery documentation and
+  explicit credits, disclaimer, known limitations and rollback guidance.
+- Added three versioned canonical example plans with calculation goldens for Coal, independent
+  machine settings and fluid capacity.
+- Completed R-001–R-018 traceability, Definition of Done and historical Delivery Record audits.
+- Promoted the verified Windows installer and portable Windows/Linux/macOS/web artifacts to the
+  first stable release with SHA-256, SPDX SBOM and GitHub/Sigstore attestations.
+
 ## [0.15.0] - 2026-08-13
 
 ### Added

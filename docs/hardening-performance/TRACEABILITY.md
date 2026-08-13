@@ -21,6 +21,8 @@ truth; CI runs the complete unit, E2E, coverage and performance suites.
 | R-014 | S13-R014 | schema migration, import preview, atomic save and recovery unit/E2E tests |
 | R-015 | S13-R015 | slice Delivery Records plus verified remote SHA checks during release |
 | R-016 | S13-R016 | every official profile multiplier and persistence test in `game-profile.test.ts`, `formula-engine.test.ts` and profile E2E |
+| R-017 | S15-R017 | `scripts/check-release-candidate.mjs` scans product surfaces and packaging identity for SatisPlanner-only branding |
+| R-018 | S15-R018 | Slice 00–14 Delivery Records are complete and the RC gate rejects missing release/approval fields |
 
 ## Golden and property provenance
 

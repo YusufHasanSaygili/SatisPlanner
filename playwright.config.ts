@@ -13,7 +13,7 @@ export default defineConfig({
 		trace: "retain-on-failure",
 	},
 	webServer: {
-		command: "pnpm dev:web --host 127.0.0.1",
+		command: "pnpm build:web && pnpm preview:web --host 127.0.0.1",
 		url: "http://127.0.0.1:4173",
 		reuseExistingServer: !process.env.CI,
 	},

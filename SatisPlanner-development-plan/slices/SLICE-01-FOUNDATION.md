@@ -36,12 +36,12 @@ sayfasındaki Releases/Latest kartını gizlediği kullanıcı incelemesinde sap
 `v0.2.0` geçmiş kaydı korunarak release politikası düzeltilecek ve `v0.2.1`
 normal published `Latest` release olarak yayımlanacak.
 
-- Branch:
-- Closing SHA:
-- Remote SHA:
-- Tag:
-- GitHub Release URL:
-- CI:
-- Codex notification:
-- User approval:
-- Tarih:
+- Branch: `slice/01-foundation`
+- Closing SHA: `3a128ecec612d4ddfc51cab2a2eec74f0900929e`
+- Remote SHA: tag ve yayımlanmış branch/main geçmişi `3a128ecec612d4ddfc51cab2a2eec74f0900929e`
+- Tag: annotated `v0.2.1` → `3a128ecec612d4ddfc51cab2a2eec74f0900929e` (`v0.2.0` görünür Latest düzeltmesiyle superseded)
+- GitHub Release URL: https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v0.2.1
+- CI: quality `31350026534`; verified release `31350616032` başarılı
+- Codex notification: `v0.2.1` Latest düzeltmesi yayımlandı ve sonraki slice onayı istendi.
+- User approval: Kullanıcı `Slice 2 ye geç` diyerek Slice 02 için açık onay verdi.
+- Tarih: 2026-08-10

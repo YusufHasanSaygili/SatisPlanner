@@ -29,12 +29,12 @@ Property tests, serialization round-trip, invalid-state matrix.
 
 ## Delivery Record
 
-- Branch:
-- Closing SHA:
-- Remote SHA:
-- Tag:
-- GitHub Release URL:
-- CI:
-- Codex notification:
-- User approval:
-- Tarih:
+- Branch: `slice/02-domain-schema`
+- Closing SHA: `0628bcb5bfeae075b7542f812dd6a083c6cfa7ef`
+- Remote SHA: tag ve yayımlanmış branch/main geçmişi `0628bcb5bfeae075b7542f812dd6a083c6cfa7ef`
+- Tag: annotated `v0.3.0` → `0628bcb5bfeae075b7542f812dd6a083c6cfa7ef`
+- GitHub Release URL: https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v0.3.0
+- CI: quality `31390861164`; verified release `31391896651` başarılı
+- Codex notification: v0.3.0 yayımlandı ve Slice 03 devam onayı istendi.
+- User approval: Kullanıcı `Bugün güzel çalıştın ... yarın Slice 3'den başlayarak` diyerek Slice 03 için açık onay verdi.
+- Tarih: 2026-08-10

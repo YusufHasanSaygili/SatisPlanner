@@ -36,5 +36,5 @@ Packaged app E2E, install/uninstall, no-game fallback, real-game import smoke.
 - GitHub Release URL: https://github.com/YusufHasanSaygili/SatisPlanner/releases/tag/v0.15.0
 - CI: main quality https://github.com/YusufHasanSaygili/SatisPlanner/actions/runs/31674323977; verified release https://github.com/YusufHasanSaygili/SatisPlanner/actions/runs/31674862542
 - Codex notification: `SatisPlanner v0.15.0 yayımlandı. Slice 15/16 tamamlandı. Slice 15'e devam edilsin mi?`
-- User approval: Bekleniyor.
+- User approval: 2026-08-13 tarihinde kullanıcı “o zaman yap” diyerek Slice 15 ve v1.0.0 çalışması için açık onay verdi.
 - Tarih: 2026-08-13
