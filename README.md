@@ -2,9 +2,9 @@
 
 Offline-first, graph-based desktop factory planner for Satisfactory 1.2.
 
-> **Development status:** Slice 14 desktop packaging and verified release work is
-> implemented on the `slice/14-packaging-release` branch. Current-user Windows installation,
-> portable builds and verifiable supply-chain evidence form `v0.15.0`.
+> **Stable release candidate:** all 16 roadmap milestones are implemented on the
+> `slice/15-release-candidate` branch. First-run guidance, tested examples, final traceability and
+> user-ready release evidence form `v1.0.0`.
 
 [![SatisPlanner Quality](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml/badge.svg)](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml)
 
@@ -26,19 +26,20 @@ SatisPlanner will let players model the factory they will actually build:
 The full scope and the 16-slice delivery roadmap are in the
 [development plan](SatisPlanner-development-plan/00-MASTER-PLAN.md).
 
-## Current milestone: v0.15.0
+## Current milestone: v1.0.0
 
-Slice 14 turns the tested application into installable and independently verifiable artifacts:
+The first stable SatisPlanner release combines the complete MVP and release evidence:
 
-- a non-administrative, current-user Windows NSIS installer and Windows portable build;
-- portable Linux, macOS and web archives built on clean GitHub-hosted runners;
-- minimal `core:default` desktop capability scope with no broad filesystem, shell or network plugin;
-- SHA-256 checksums, SPDX JSON SBOM, third-party notices and GitHub/Sigstore attestations;
-- clean-machine install, no-game launch, autosave/reopen, uninstall and user-data retention smoke;
-- an opt-in read-only integration test against the user's own Satisfactory 1.2 Docs file.
+- independent physical machines, extraction, exact formulas, logistics bottlenecks and profiles;
+- versioned save/autosave/recovery, canonical import/export and upstream migration preview;
+- first-run offline onboarding and three calculation-golden example factories;
+- a current-user Windows installer plus portable Windows, Linux, macOS and web artifacts;
+- clean-machine, real-Docs, accessibility, 500-node performance and full regression gates;
+- SHA-256, SPDX SBOM, third-party notices and GitHub/Sigstore build attestations.
 
-Packaging decisions and clean-machine evidence are collected under
-[docs/packaging-release](docs/packaging-release). Hardening, UX, profiles, persistence, logistics, calculation,
+Start with the [user guide](docs/user-guide/GETTING-STARTED.md) and
+[example plans](examples/README.md). Read the [known limitations](docs/release-candidate/KNOWN-LIMITATIONS.md)
+and [release candidate audit](docs/release-candidate/RC-AUDIT.md). Packaging, hardening, UX, profiles, persistence, logistics, calculation,
 machine instances, resource extraction, graph UX, local icons, game-data, domain,
 foundation and baseline evidence remain under their respective documentation directories.
 
@@ -68,6 +69,9 @@ docs/game-profiles-localization/ Slice 11 profiles, multiplier and locale eviden
 docs/ux-polish/                  Slice 12 productivity and accessibility evidence
 docs/hardening-performance/     Slice 13 traceability, resilience and performance evidence
 docs/packaging-release/         Slice 14 packaging, capability and release evidence
+docs/user-guide/                SatisPlanner 1.0 onboarding and operating guides
+docs/release-candidate/         Stable audit, release notes, limitations and rollback
+examples/                       Three versioned canonical example plans
 docs/baseline/                   Audits, measurements and verification records
 ```
 

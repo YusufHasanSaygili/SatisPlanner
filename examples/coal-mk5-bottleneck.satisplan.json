@@ -1,0 +1,107 @@
+{
+	"createdAt": "2026-08-13T00:00:00.000Z",
+	"edges": [
+		{
+			"actualRate": { "denominator": "1", "numerator": "780" },
+			"fromPortId": "10000000-0000-4000-8000-000000000002",
+			"id": "10000000-0000-4000-8000-000000000020",
+			"itemOrFluidId": "Desc_Coal_C",
+			"medium": "conveyor",
+			"requestedRate": { "denominator": "1", "numerator": "1200" },
+			"toPortId": "10000000-0000-4000-8000-000000000011",
+			"transportTierId": "conveyor-mk5"
+		}
+	],
+	"gameDataSnapshotId": "fallback-graph-catalog-v3",
+	"gameProfile": {
+		"id": "satisfactory-1.2-default",
+		"kind": "default",
+		"powerConsumptionMultiplier": "1",
+		"recipePartsCostMultiplier": "1",
+		"resourceNodePurity": "default",
+		"resourceNodeRandomization": "default",
+		"source": {
+			"kind": "official-1.2-patch-notes",
+			"url": "https://satisfactory.wiki.gg/wiki/Patch_1.2.0.0"
+		},
+		"spaceElevatorCostMultiplier": "1",
+		"version": "1.2",
+		"worldSeed": "0"
+	},
+	"localization": {
+		"gameDataFallbackLocale": "en-US",
+		"gameDataLocale": "en-US",
+		"uiLocale": "en"
+	},
+	"name": "Coal Mk.5 Bottleneck",
+	"nodes": [
+		{
+			"clockPercent": "250.0000",
+			"displayName": "Coal",
+			"extractorStrategyId": "miner",
+			"extractorTierId": "miner-mk3",
+			"id": "10000000-0000-4000-8000-000000000001",
+			"kind": "resource",
+			"ports": [
+				{
+					"direction": "output",
+					"id": "10000000-0000-4000-8000-000000000002",
+					"key": "output-0",
+					"materialForm": "solid",
+					"materialId": "Desc_Coal_C"
+				}
+			],
+			"position": { "x": 120, "y": 220 },
+			"powerShardCount": 3,
+			"purity": "pure",
+			"resourceId": "Desc_Coal_C"
+		},
+		{
+			"buildingId": "Build_FoundryMk1_C",
+			"clockPercent": "100.0000",
+			"displayName": "Foundry · Steel Ingot",
+			"id": "10000000-0000-4000-8000-000000000010",
+			"kind": "machine",
+			"ports": [
+				{
+					"direction": "input",
+					"id": "10000000-0000-4000-8000-000000000012",
+					"key": "input-0",
+					"materialForm": "solid",
+					"materialId": "Desc_OreIron_C"
+				},
+				{
+					"direction": "input",
+					"id": "10000000-0000-4000-8000-000000000011",
+					"key": "input-1",
+					"materialForm": "solid",
+					"materialId": "Desc_Coal_C"
+				},
+				{
+					"direction": "output",
+					"id": "10000000-0000-4000-8000-000000000013",
+					"key": "output-0",
+					"materialForm": "solid",
+					"materialId": "Desc_SteelIngot_C"
+				}
+			],
+			"position": { "x": 560, "y": 220 },
+			"powerShardCount": 0,
+			"recipeId": "Recipe_IngotSteel_C",
+			"somersloopCount": 0,
+			"standby": false
+		}
+	],
+	"planId": "10000000-0000-4000-8000-000000000000",
+	"schemaVersion": 5,
+	"updatedAt": "2026-08-13T00:00:00.000Z",
+	"userMetadata": {
+		"exampleId": "coal-mk5-bottleneck",
+		"expectedCapacityPerMinute": "780",
+		"expectedLostPerMinute": "420",
+		"expectedSourcePerMinute": "1200",
+		"license": "MIT",
+		"satisPlannerVersion": "1.0.0"
+	},
+	"viewport": { "x": 40, "y": 40, "zoom": 1 }
+}

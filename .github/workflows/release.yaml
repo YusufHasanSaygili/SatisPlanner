@@ -9,7 +9,7 @@ on:
       tag:
         description: "Existing annotated SemVer tag"
         required: true
-        default: "v0.15.0"
+        default: "v1.0.0"
 
 permissions:
   contents: read
@@ -98,6 +98,9 @@ jobs:
           zip -j "dist/SatisPlanner-macos-portable-v${VERSION}.zip" \
             artifacts/macos/SatisPlanner LICENSE THIRD-PARTY-NOTICES.md
           (cd artifacts/web && zip -r "../../dist/SatisPlanner-web-v${VERSION}.zip" .)
+          zip -r "dist/SatisPlanner-examples-v${VERSION}.zip" examples
+          zip -r "dist/SatisPlanner-documentation-v${VERSION}.zip" \
+            docs/user-guide docs/release-candidate
           cp THIRD-PARTY-NOTICES.md dist/
           cp CHANGELOG.md dist/
           if find dist -type f | grep -Eiq '\.(pak|utoc|ucas|uasset|uexp|sav)$'; then
@@ -118,7 +121,7 @@ jobs:
           subject-checksums: dist/SHA256SUMS.txt
           sbom-path: dist/SatisPlanner-sbom.spdx.json
 
-      - name: Publish verified unsigned development release
+      - name: Publish verified unsigned stable release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.metadata.outputs.tag }}
@@ -131,7 +134,7 @@ jobs:
             --verify-tag \
             --latest \
             --title "SatisPlanner v${VERSION}" \
-            --notes "Verified unsigned SatisPlanner development artifacts from ${SHA}. Includes current-user Windows installer, portable builds, SHA-256 checksums, SPDX SBOM, third-party notices and GitHub/Sigstore attestations."
+            --notes-file docs/release-candidate/RELEASE-NOTES-v1.0.0.md
 
       - name: Verify Latest release and every checksum asset
         env:

@@ -36,6 +36,7 @@ test.beforeEach(async ({ page }) => {
 	await page.goto("/");
 	await page.evaluate(() => localStorage.clear());
 	await page.reload();
+	await page.getByRole("button", { name: "Start planning" }).click();
 	await expect(page.getByTestId("plan-persistence")).toContainText("Saved");
 });
 
@@ -71,7 +72,64 @@ test("renders the SatisPlanner graph shell and searchable fallback library", asy
 	await expect(matches.nth(0)).toContainText("Build_ConstructorMk1_C::Recipe_IronPlate_C");
 	await expect(matches.nth(1)).toContainText("Build_ConstructorMk1_C::Recipe_IronRod_C");
 	await expect(page.getByRole("status").first()).toContainText(
-		"Contract v2 · browser-mock · v0.15.0",
+		"Contract v2 · browser-mock · v1.0.0",
+	);
+});
+
+test("first-run guide explains offline data, icons and core planning without game files", async ({
+	page,
+}) => {
+	await page.evaluate(() => localStorage.removeItem("satisplanner.onboarding.v1"));
+	await page.reload();
+	const guide = page.getByRole("dialog", { name: "Build your first factory offline" });
+	await expect(guide).toContainText("CommunityResources/Docs");
+	await expect(guide).toContainText("read-only");
+	await expect(guide).toContainText("app-owned cache");
+	await expect(guide).toContainText("Native folder-picker activation is not in v1.0");
+	await expect(guide).toContainText("Constructor supports 1 Somersloop");
+	await expect(guide).toContainText("Assembler 2 and Manufacturer 4");
+	await guide.getByRole("button", { name: "Start planning" }).click();
+	await expect(page.getByLabel("Factory canvas")).toBeVisible();
+	await page.getByRole("button", { name: "First-run guide" }).click();
+	await expect(guide).toBeVisible();
+});
+
+test("v1.0 example plans preview, load and expose their golden scenarios", async ({ page }) => {
+	await page.getByText("Save, import & migration").click();
+	const importExample = async (name: string) => {
+		await page.getByLabel("Import plan file").setInputFiles(path.resolve("examples", name));
+		await page.getByRole("button", { name: "Preview plan import" }).click();
+		await expect(page.getByLabel("Plan migration report")).toContainText("No schema migration required");
+		await page.getByRole("button", { name: "Apply imported plan" }).click();
+	};
+
+	await importExample("coal-mk5-bottleneck.satisplan.json");
+	await expect(page.getByLabel("Transport bottlenecks")).toContainText("420/min lost");
+	await expect(page.locator(".react-flow__node")).toHaveCount(2);
+
+	await importExample("independent-machines.satisplan.json");
+	await expect(page.locator(".react-flow__node-machine")).toHaveCount(3);
+	await page
+		.locator(".react-flow__node-machine")
+		.filter({ hasText: "Constructor · Iron Rod" })
+		.getByText("Constructor · Iron Rod", { exact: true })
+		.click();
+	await expect(page.getByLabel("Clock percent")).toHaveValue("200.0000");
+	await expect(page.getByLabel("Set machine to 2 Power Shards")).toHaveAttribute(
+		"aria-pressed",
+		"true",
+	);
+	await expect(page.getByLabel("Set 1 Somersloops, 2 times multiplier")).toHaveAttribute(
+		"aria-pressed",
+		"true",
+	);
+	await expect(page.getByLabel("Machine calculation results")).toContainText("0 actual / 60 potential");
+
+	await importExample("fluid-pipeline-capacity.satisplan.json");
+	await expect(page.getByLabel("Transport bottlenecks")).toContainText("300/min lost");
+	await expect(page.locator(".react-flow__edge")).toHaveAttribute(
+		"aria-label",
+		/Warning: transport capacity bottleneck/,
 	);
 });
 

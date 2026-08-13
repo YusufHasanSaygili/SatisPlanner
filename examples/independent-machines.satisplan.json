@@ -1,0 +1,131 @@
+{
+	"createdAt": "2026-08-13T00:00:00.000Z",
+	"edges": [],
+	"gameDataSnapshotId": "fallback-graph-catalog-v3",
+	"gameProfile": {
+		"id": "satisfactory-1.2-default",
+		"kind": "default",
+		"powerConsumptionMultiplier": "1",
+		"recipePartsCostMultiplier": "1",
+		"resourceNodePurity": "default",
+		"resourceNodeRandomization": "default",
+		"source": {
+			"kind": "official-1.2-patch-notes",
+			"url": "https://satisfactory.wiki.gg/wiki/Patch_1.2.0.0"
+		},
+		"spaceElevatorCostMultiplier": "1",
+		"version": "1.2",
+		"worldSeed": "0"
+	},
+	"localization": {
+		"gameDataFallbackLocale": "en-US",
+		"gameDataLocale": "en-US",
+		"uiLocale": "en"
+	},
+	"name": "Independent Constructor and Assembler",
+	"nodes": [
+		{
+			"buildingId": "Build_ConstructorMk1_C",
+			"clockPercent": "100.0000",
+			"displayName": "Constructor · Iron Plate",
+			"id": "20000000-0000-4000-8000-000000000001",
+			"kind": "machine",
+			"ports": [
+				{
+					"direction": "input",
+					"id": "20000000-0000-4000-8000-000000000002",
+					"key": "input-0",
+					"materialForm": "solid",
+					"materialId": "Desc_IronIngot_C"
+				},
+				{
+					"direction": "output",
+					"id": "20000000-0000-4000-8000-000000000003",
+					"key": "output-0",
+					"materialForm": "solid",
+					"materialId": "Desc_IronPlate_C"
+				}
+			],
+			"position": { "x": 120, "y": 120 },
+			"powerShardCount": 0,
+			"recipeId": "Recipe_IronPlate_C",
+			"somersloopCount": 0,
+			"standby": false
+		},
+		{
+			"buildingId": "Build_ConstructorMk1_C",
+			"clockPercent": "200.0000",
+			"displayName": "Constructor · Iron Rod",
+			"id": "20000000-0000-4000-8000-000000000010",
+			"kind": "machine",
+			"ports": [
+				{
+					"direction": "input",
+					"id": "20000000-0000-4000-8000-000000000011",
+					"key": "input-0",
+					"materialForm": "solid",
+					"materialId": "Desc_IronIngot_C"
+				},
+				{
+					"direction": "output",
+					"id": "20000000-0000-4000-8000-000000000012",
+					"key": "output-0",
+					"materialForm": "solid",
+					"materialId": "Desc_IronRod_C"
+				}
+			],
+			"position": { "x": 440, "y": 120 },
+			"powerShardCount": 2,
+			"recipeId": "Recipe_IronRod_C",
+			"somersloopCount": 1,
+			"standby": false
+		},
+		{
+			"buildingId": "Build_AssemblerMk1_C",
+			"clockPercent": "150.0000",
+			"displayName": "Assembler · Reinforced Iron Plate",
+			"id": "20000000-0000-4000-8000-000000000020",
+			"kind": "machine",
+			"ports": [
+				{
+					"direction": "input",
+					"id": "20000000-0000-4000-8000-000000000021",
+					"key": "input-0",
+					"materialForm": "solid",
+					"materialId": "Desc_IronPlate_C"
+				},
+				{
+					"direction": "input",
+					"id": "20000000-0000-4000-8000-000000000022",
+					"key": "input-1",
+					"materialForm": "solid",
+					"materialId": "Desc_IronScrew_C"
+				},
+				{
+					"direction": "output",
+					"id": "20000000-0000-4000-8000-000000000023",
+					"key": "output-0",
+					"materialForm": "solid",
+					"materialId": "Desc_IronPlateReinforced_C"
+				}
+			],
+			"position": { "x": 760, "y": 120 },
+			"powerShardCount": 1,
+			"recipeId": "Recipe_IronPlateReinforced_C",
+			"somersloopCount": 2,
+			"standby": false
+		}
+	],
+	"planId": "20000000-0000-4000-8000-000000000000",
+	"schemaVersion": 5,
+	"updatedAt": "2026-08-13T00:00:00.000Z",
+	"userMetadata": {
+		"exampleId": "independent-machines",
+		"expectedAssemblerOutputPerMinute": "15",
+		"expectedPlateOutputPerMinute": "20",
+		"expectedRodOutputPerMinute": "60",
+		"license": "MIT",
+		"satisPlannerVersion": "1.0.0"
+	},
+	"viewport": { "x": 20, "y": 80, "zoom": 0.9 }
+}

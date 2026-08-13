@@ -33,7 +33,7 @@ if (-not $app) {
 $installRoot = $app.DirectoryName
 
 $versionOutput = & $app.FullName --version
-if ($LASTEXITCODE -ne 0 -or $versionOutput -notmatch '^SatisPlanner 0\.15\.0$') {
+if ($LASTEXITCODE -ne 0 -or $versionOutput -notmatch '^SatisPlanner 1\.0\.0$') {
     throw "Installed binary version smoke failed: $versionOutput"
 }
 
