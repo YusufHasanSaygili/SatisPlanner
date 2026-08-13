@@ -3,6 +3,17 @@
 All notable SatisPlanner changes are documented here. Versions follow Semantic Versioning while
 the application remains in published development.
 
+## [1.0.4] - 2026-08-13
+
+### Fixed
+
+- Replaced frame-by-frame plan projection during node dragging with React Flow's native controlled
+  node-change stream, preventing resources, machines and logistics cards from disappearing during
+  fast pointer movement.
+- Kept transient drag positions inside the canvas and persisted only the final drop position, so
+  history and autosave still record one deliberate move.
+- Removed drag-time opacity/filter compositing that could flash on slower Windows WebView GPUs.
+
 ## [1.0.3] - 2026-08-13
 
 ### Fixed

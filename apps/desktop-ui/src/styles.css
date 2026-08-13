@@ -556,8 +556,7 @@ select:focus-visible {
 .react-flow__node.dragging {
 	z-index: 20;
 	cursor: grabbing;
-	filter: brightness(1.08);
-	opacity: 0.94;
+	will-change: transform;
 }
 
 .machine-node {

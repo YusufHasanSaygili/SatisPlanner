@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "SatisPlanner",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "identifier": "dev.satisplanner.desktop",
   "build": {
     "beforeDevCommand": "pnpm dev:web",

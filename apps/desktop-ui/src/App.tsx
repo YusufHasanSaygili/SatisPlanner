@@ -85,6 +85,7 @@ import {
 	Position,
 	ReactFlow,
 	ReactFlowProvider,
+	useNodesState,
 	useReactFlow,
 	type Viewport,
 } from "@xyflow/react";
@@ -92,6 +93,7 @@ import {
 	type DragEvent as ReactDragEvent,
 	useCallback,
 	useEffect,
+	useLayoutEffect,
 	useMemo,
 	useRef,
 	useState,
@@ -382,7 +384,9 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 	const initialCatalogSnapshot = useMemo(restoreCatalogSnapshot, []);
 	const history = useRef(new PlanCommandHistory(initialPlan));
 	const clipboardFallback = useRef("");
+	const draggingNodeIds = useRef(new Set<string>());
 	const [plan, setPlanState] = useState<FactoryPlanV3>(initialPlan);
+	const [flowNodes, setFlowNodes, onFlowNodesChange] = useNodesState<GraphCanvasNode>([]);
 	const [catalogSnapshot, setCatalogSnapshot] = useState<CatalogSnapshot | undefined>(
 		initialCatalogSnapshot,
 	);
@@ -393,9 +397,6 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 	);
 	const [, setHistoryRevision] = useState(0);
 	const [selection, setSelection] = useState<SelectionState>({ nodeIds: [], edgeIds: [] });
-	const [liveNodePositions, setLiveNodePositions] = useState<
-		ReadonlyMap<string, { readonly x: number; readonly y: number }>
-	>(new Map());
 	const [diagnosticCursor, setDiagnosticCursor] = useState(-1);
 	const [sloopCursor, setSloopCursor] = useState(-1);
 	const [minimapFilter, setMinimapFilter] = useState<"all" | "machine" | "resource" | "junction">(
@@ -482,14 +483,22 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 			),
 		[flowResult.nodes, plan, selection],
 	);
-	const flowNodes = useMemo(
-		() =>
-			projection.nodes.map((node) => {
-				const livePosition = liveNodePositions.get(node.id);
-				return livePosition ? { ...node, position: { ...livePosition }, dragging: true } : node;
-			}),
-		[liveNodePositions, projection.nodes],
-	);
+	useLayoutEffect(() => {
+		setFlowNodes((currentNodes) => {
+			const currentById = new Map(currentNodes.map((node) => [node.id, node] as const));
+			return projection.nodes.map((projectedNode) => {
+				const currentNode = currentById.get(projectedNode.id);
+				const isDragging = draggingNodeIds.current.has(projectedNode.id);
+				return {
+					...projectedNode,
+					...(currentNode?.measured ? { measured: currentNode.measured } : {}),
+					position:
+						isDragging && currentNode ? { ...currentNode.position } : projectedNode.position,
+					dragging: isDragging,
+				};
+			});
+		});
+	}, [projection.nodes, setFlowNodes]);
 	const flowEdges = useMemo(
 		() =>
 			projection.edges.map((edge) => {
@@ -1655,24 +1664,20 @@ function GraphWorkspace({ nativeAdapter }: { readonly nativeAdapter: NativeAdapt
 					edges={flowEdges}
 					nodeTypes={nodeTypes}
 					defaultViewport={plan.viewport}
+					onNodesChange={onFlowNodesChange}
 					onConnect={connect}
 					isValidConnection={validatePreview}
-					onNodeDrag={(_event, node) =>
-						setLiveNodePositions((current) => {
-							const previous = current.get(node.id);
-							if (previous?.x === node.position.x && previous.y === node.position.y) return current;
-							const next = new Map(current);
-							next.set(node.id, { ...node.position });
-							return next;
-						})
-					}
+					onNodeDragStart={(_event, node) => draggingNodeIds.current.add(node.id)}
 					onNodeDragStop={(_event, node) => {
+						draggingNodeIds.current.delete(node.id);
+						setFlowNodes((currentNodes) =>
+							currentNodes.map((currentNode) =>
+								currentNode.id === node.id
+									? { ...currentNode, position: { ...node.position }, dragging: false }
+									: currentNode,
+							),
+						);
 						setPlan((current) => movePlanNode(current, node.id, node.position), "Move node");
-						setLiveNodePositions((current) => {
-							const next = new Map(current);
-							next.delete(node.id);
-							return next;
-						});
 					}}
 					onNodeClick={(event, node) =>
 						setSelection((current) => {
@@ -2472,7 +2477,7 @@ export default function App() {
 						aria-modal="true"
 						aria-labelledby="onboarding-title"
 					>
-						<p className="eyebrow">SatisPlanner 1.0.3 · first run</p>
+						<p className="eyebrow">SatisPlanner 1.0.4 · first run</p>
 						<h2 id="onboarding-title">Build your first factory offline</h2>
 						<p>
 							No Satisfactory installation is required. The bundled catalog contains 13 extractable

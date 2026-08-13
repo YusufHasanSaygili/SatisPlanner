@@ -94,7 +94,7 @@ test("renders the SatisPlanner graph shell and searchable fallback library", asy
 	await expect(matches.first()).toContainText("Constructor");
 	await expect(matches.first()).toContainText("48 recipes");
 	await expect(page.getByRole("status").first()).toContainText(
-		"Contract v2 · browser-mock · v1.0.3",
+		"Contract v2 · browser-mock · v1.0.4",
 	);
 });
 
@@ -297,7 +297,17 @@ test("drag/drop, connect validation, inspector commands and reload remain domain
 	if (!before) throw new Error("Expected the constructor node to be visible.");
 	await page.mouse.move(before.x + 100, before.y + 20);
 	await page.mouse.down();
-	await page.mouse.move(before.x + 160, before.y + 80, { steps: 8 });
+	await page.mouse.move(before.x + 104, before.y + 24, { steps: 1 });
+	for (const target of [
+		{ x: before.x + 175, y: before.y + 95 },
+		{ x: before.x + 115, y: before.y + 40 },
+		{ x: before.x + 185, y: before.y + 105 },
+	]) {
+		await page.mouse.move(target.x, target.y, { steps: 1 });
+		await expect(constructorNode).toBeVisible();
+		await expect(constructorNode).toHaveCount(1);
+		await expect(constructorNode).toHaveCSS("opacity", "1");
+	}
 	const duringDrag = await constructorNode.boundingBox();
 	expect(duringDrag?.x).toBeGreaterThan(before.x + 30);
 	expect(duringDrag?.y).toBeGreaterThan(before.y + 30);
