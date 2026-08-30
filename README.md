@@ -1,96 +1,41 @@
 # SatisPlanner
 
-Offline-first, graph-based desktop factory planner for Satisfactory 1.2.
+SatisPlanner helps you plan Satisfactory factories before building them in the game. Add machines, connect production lines and check item flow, power use and transport limits.
 
-> **Stable release candidate:** all 16 roadmap milestones are implemented on the
-> `slice/15-release-candidate` branch. First-run guidance, tested examples, final traceability and
-> user-ready release evidence form `v1.0.4`.
+## Download
 
-[![SatisPlanner Quality](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml/badge.svg)](https://github.com/YusufHasanSaygili/SatisPlanner/actions/workflows/build.yaml)
+The [latest release](https://github.com/YusufHasanSaygili/SatisPlanner/releases/latest) includes:
 
-[Releases](https://github.com/YusufHasanSaygili/SatisPlanner/releases)
+- a Windows installer
+- a portable Windows build
+- portable Linux and macOS builds
 
-## Product goal
+For the current release, see the [getting started guide](docs/user-guide/GETTING-STARTED.md) and the [example factories](examples/README.md).
 
-SatisPlanner will let players model the factory they will actually build:
+## What it handles
 
-- every production machine is an independent physical instance;
-- clock, Power Shard, Somersloop and standby settings belong to that instance;
-- resource purity, extractor tier, conveyor and pipeline capacities are part of
-  the graph;
-- exact steady-state material flow, power usage and bottlenecks are calculated
-  outside the UI in deterministic domain functions;
-- plans, imported game data and local icon caches remain offline and
-  user-controlled.
+- Individual machine settings, including clock speed, Power Shards, Somersloops and standby
+- Miners and extractors with resource purity and tier settings
+- Recipes, inputs, outputs and steady-state production rates
+- Conveyor and pipeline capacity checks
+- Power consumption
+- Bottleneck warnings
+- Save files, autosave and recovery
+- Import and export
+- Local game-data and icon imports
 
-The full scope and the 16-slice delivery roadmap are in the
-[development plan](SatisPlanner-development-plan/00-MASTER-PLAN.md).
+Plans and imported data stay on your computer.
 
-## Current milestone: v1.0.4
+## Development
 
-The first stable SatisPlanner release combines the complete MVP and release evidence:
-
-- independent physical machines, extraction, exact formulas, logistics bottlenecks and profiles;
-- versioned save/autosave/recovery, canonical import/export and upstream migration preview;
-- first-run offline onboarding and three calculation-golden example factories;
-- a current-user Windows installer plus portable Windows, Linux, macOS and web artifacts;
-- clean-machine, real-Docs, accessibility, 500-node performance and full regression gates;
-- SHA-256, SPDX SBOM, third-party notices and GitHub/Sigstore build attestations.
-
-Start with the [user guide](docs/user-guide/GETTING-STARTED.md) and
-[example plans](examples/README.md). Read the [known limitations](docs/release-candidate/KNOWN-LIMITATIONS.md)
-and [release candidate audit](docs/release-candidate/RC-AUDIT.md). Packaging, hardening, UX, profiles, persistence, logistics, calculation,
-machine instances, resource extraction, graph UX, local icons, game-data, domain,
-foundation and baseline evidence remain under their respective documentation directories.
-
-## Repository layout
-
-```text
-SatisPlanner-development-plan/   Product, architecture and slice/task plans
-apps/desktop-ui/                  React + React Flow application shell
-packages/domain/                 Framework-independent domain boundary
-packages/game-data/              Normalized game-data boundary
-packages/calculation/            Deterministic calculation boundary
-packages/graph-adapter/           Domain-to-React-Flow projection boundary
-src-tauri/                        Narrow native runtime and capability policy
-tests/e2e/                        Browser shell smoke tests
-tests/fixtures/upstream-fcs/      Portable upstream save-format fixture
-docs/foundation/                  Slice 01 architecture and verification evidence
-docs/domain/                      Slice 02 domain/schema verification evidence
-docs/game-data/                   Slice 03 import and snapshot verification evidence
-docs/local-icons/                 Slice 04 cache, artwork and extractor evidence
-docs/graph-ux/                    Slice 05 graph UX and persistence evidence
-docs/resource-extraction/        Slice 06 extraction model and inspector evidence
-docs/machine-instances/          Slice 07 machine binding and isolation evidence
-docs/calculation-engine/         Slice 08 formula, flow and diagnostics evidence
-docs/logistics-bottlenecks/      Slice 09 transport capacity and UX evidence
-docs/persistence-migration/      Slice 10 save, recovery and import evidence
-docs/game-profiles-localization/ Slice 11 profiles, multiplier and locale evidence
-docs/ux-polish/                  Slice 12 productivity and accessibility evidence
-docs/hardening-performance/     Slice 13 traceability, resilience and performance evidence
-docs/packaging-release/         Slice 14 packaging, capability and release evidence
-docs/user-guide/                SatisPlanner 1.0 onboarding and operating guides
-docs/release-candidate/         Stable audit, release notes, limitations and rollback
-examples/                       Three versioned canonical example plans
-docs/baseline/                   Audits, measurements and verification records
-```
-
-The retired upstream C++ runtime, bundled game assets and disposable rewrite
-spike were removed after the `v0.11.0` parity and migration gates passed. Their
-audit records remain under `docs/baseline/`; the original source is reproducible
-from the attributed upstream commit and the immutable pre-cleanup Git history.
-
-## Develop and verify
-
-Requirements: Node.js 24, pnpm 11.16.0 or a newer pnpm 11 release, and the stable Rust toolchain. From the
-repository root:
+You need Node.js 24, pnpm 11.16 or newer in the 11.x line, and the stable Rust toolchain.
 
 ```powershell
 pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-The full frontend/package quality gate is one command:
+Run the main checks:
 
 ```powershell
 pnpm quality
@@ -98,7 +43,7 @@ pnpm test:e2e
 pnpm desktop:bundle:windows
 ```
 
-Desktop-native checks and the release-mode shell build are:
+Check the Tauri side separately:
 
 ```powershell
 cargo fmt --manifest-path src-tauri/Cargo.toml --check
@@ -107,40 +52,28 @@ cargo test --manifest-path src-tauri/Cargo.toml
 pnpm desktop:build
 ```
 
-`pnpm quality` also runs controlled negative probes proving that lint,
-typecheck and unit-test failures return non-zero status. The package boundary
-gate prevents React, React Flow and Tauri imports from entering core packages.
+## Where things are
 
-## Game data and artwork policy
+```text
+apps/desktop-ui/       React interface
+packages/domain/       Factory and machine models
+packages/game-data/    Imported Satisfactory data
+packages/calculation/  Production and power calculations
+packages/graph-adapter Graph view adapter
+src-tauri/              Desktop shell
+tests/e2e/              Browser tests
+examples/               Example factories
+docs/user-guide/        User documentation
+```
 
-SatisPlanner releases do not redistribute Coffee Stain Studios game artwork or
-raw `CommunityResources/Docs` dumps. The importer reads localized game data
-from the user's own installation without modifying it and stores only a
-normalized, provenance-bearing catalog snapshot. The icon resolver reads a
-user-selected extracted folder without modifying it and writes resized WebP
-entries only to an app-owned cache. Original generic fallback visuals remain
-available when local assets are missing; automatic `.pak` extraction is not
-shipped.
+The longer design and development notes are under `docs/` and `SatisPlanner-development-plan/`.
 
-The upstream runtime build artifacts produced during Slice 00 CI are retained
-only as short-lived private build evidence and are not attached to SatisPlanner
-releases because they contain upstream-bundled game assets.
+## Game files
 
-## Upstream attribution
+SatisPlanner does not ship Coffee Stain Studios artwork or raw game-data dumps. You can point it at files from your own Satisfactory installation. Imported data is copied into SatisPlanner's own format; the game installation is not changed.
 
-SatisPlanner uses
-[adepierre/ficsit-companion](https://github.com/adepierre/ficsit-companion) as
-an upstream source, behavior, save-format and architecture reference. The
-audited baseline is commit `d5c449a` (upstream tag `v1.2.2`) and remains locally
-tagged as `upstream-d5c449a`.
+## Credits
 
-The upstream project is MIT licensed, Copyright (c) 2024 adepierre. Its license
-and attribution are preserved in [LICENSE](LICENSE). Dear ImGui and ImGui Node
-Editor credits inherited from the baseline are recorded in the baseline
-inventory and will be included in third-party notices before distribution.
+The project uses [adepierre/ficsit-companion](https://github.com/adepierre/ficsit-companion) as a reference for behavior, file formats and architecture. Its MIT license and attribution are kept in [LICENSE](LICENSE).
 
-## Disclaimer
-
-SatisPlanner is an independent fan-made planning tool. It is not affiliated
-with, endorsed by or an official product of Coffee Stain Studios. Satisfactory
-and related game artwork and names belong to their respective owners.
+SatisPlanner is a fan-made project. It is not affiliated with or endorsed by Coffee Stain Studios.
