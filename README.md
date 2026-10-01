@@ -66,8 +66,6 @@ examples/               Example factories
 docs/user-guide/        User documentation
 ```
 
-The longer design and development notes are under `docs/` and `SatisPlanner-development-plan/`.
-
 ## Game files
 
 SatisPlanner does not ship Coffee Stain Studios artwork or raw game-data dumps. You can point it at files from your own Satisfactory installation. Imported data is copied into SatisPlanner's own format; the game installation is not changed.

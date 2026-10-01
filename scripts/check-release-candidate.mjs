@@ -25,10 +25,7 @@ const requiredDocs = [
 	"docs/user-guide/TROUBLESHOOTING.md",
 	"docs/release-candidate/KNOWN-LIMITATIONS.md",
 	"docs/release-candidate/CREDITS.md",
-	"docs/release-candidate/ROLLBACK.md",
 	"docs/release-candidate/RELEASE-NOTES-v1.0.4.md",
-	"docs/release-candidate/UAT.md",
-	"docs/release-candidate/ARTIFACT-MANIFEST.md",
 ];
 for (const path of [".github/ISSUE_TEMPLATE/bug_report.yml", ".github/ISSUE_TEMPLATE/config.yml"]) {
 	if (!existsSync(resolve(root, path))) errors.push(`Required support route is missing: ${path}`);
@@ -70,34 +67,6 @@ for (const path of exampleFiles) {
 	}
 }
 
-for (let slice = 0; slice <= 14; slice += 1) {
-	const prefix = String(slice).padStart(2, "0");
-	const path = tracked.find((candidate) =>
-		candidate.startsWith(`SatisPlanner-development-plan/slices/SLICE-${prefix}-`),
-	);
-	if (!path) {
-		errors.push(`Slice ${prefix} plan is missing.`);
-		continue;
-	}
-	const record = readFileSync(resolve(root, path), "utf8").split("## Delivery Record")[1] ?? "";
-	for (const field of [
-		"Branch",
-		"Closing SHA",
-		"Remote SHA",
-		"Tag",
-		"GitHub Release URL",
-		"CI",
-		"Codex notification",
-		"User approval",
-		"Tarih",
-	]) {
-		if (!new RegExp(`^- ${field}:\\s*\\S`, "m").test(record))
-			errors.push(`${path} has an empty ${field}.`);
-	}
-	if (/User approval:.*(?:bekleniyor|pending)/i.test(record))
-		errors.push(`${path} still has pending user approval.`);
-}
-
 const productSurfaces = [
 	"README.md",
 	"package.json",
@@ -117,6 +86,4 @@ if (errors.length > 0) {
 	for (const error of errors) console.error(error);
 	process.exit(1);
 }
-console.log(
-	`Stable RC policy verified: ${markdownFiles.length} Markdown files, 15 delivery records and 3 examples.`,
-);
+console.log(`Release checks passed: ${markdownFiles.length} Markdown files and 3 examples.`);

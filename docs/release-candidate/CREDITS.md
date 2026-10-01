@@ -7,7 +7,7 @@ the four platform packages; dependency and license records remain versioned in t
 
 The controlled rewrite used [adepierre/ficsit-companion](https://github.com/adepierre/ficsit-companion)
 as an MIT-licensed behavior, architecture and migration reference at commit `d5c449a` / tag `v1.2.2`.
-Its original copyright notice remains in the repository license and audit history.
+Its original copyright notice remains in the repository license.
 
 SatisPlanner is an independent fan-made tool. It is not affiliated with, endorsed by, sponsored by
 or an official product of Coffee Stain Studios. Satisfactory, its data, artwork and related names are

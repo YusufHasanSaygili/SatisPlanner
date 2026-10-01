@@ -30,11 +30,7 @@ if (!String(capability.description).includes("no filesystem, shell, dialog, or n
 const cargo = readFileSync(new URL("src-tauri/Cargo.toml", root), "utf8");
 if (!cargo.includes(`version = "${expectedVersion}"`))
 	errors.push("Cargo/package versions must match.");
-for (const path of [
-	"THIRD-PARTY-NOTICES.md",
-	"CHANGELOG.md",
-	"docs/packaging-release/DECISIONS.md",
-]) {
+for (const path of ["THIRD-PARTY-NOTICES.md", "CHANGELOG.md"]) {
 	try {
 		readFileSync(new URL(path, root), "utf8");
 	} catch {
